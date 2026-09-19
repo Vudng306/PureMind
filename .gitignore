@@ -1,0 +1,19 @@
+.env
+.env.local
+.idea/
+.vscode/
+
+# backend
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+backend/uploads/
+
+# frontend
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts

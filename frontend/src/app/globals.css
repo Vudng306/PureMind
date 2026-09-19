@@ -1,0 +1,281 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* "Trang giấy" palette; three reading themes (PRD 6.1, SRS FR-RDR-05). Values are "r g b". */
+:root,
+[data-theme="light"] {
+  --bg: 244 239 228;
+  --surface: 255 252 245;
+  --ink: 43 38 32;
+  --body: 62 56 47;
+  --muted: 107 100 90;
+  --line: 226 217 200;
+  --field: 213 203 184;
+  --soft: 234 226 210;
+  --page: 255 255 255;
+  --accent: 47 75 124;
+  --on-accent: 255 255 255;
+  --menu: 43 38 32;
+  --menu-fg: 244 239 228;
+  --danger: 138 46 34;
+  --danger-soft: 246 227 224;
+  --success: 47 90 63;
+  --success-soft: 225 234 223;
+  --shadow: 43 38 32;
+  --shadow-alpha: 0.14;
+  color-scheme: light;
+}
+
+[data-theme="sepia"] {
+  --bg: 235 221 195;
+  --surface: 245 234 213;
+  --ink: 58 46 30;
+  --body: 74 60 41;
+  --muted: 107 91 68;
+  --line: 217 198 164;
+  --field: 205 185 150;
+  --soft: 226 209 178;
+  --page: 247 238 221;
+  --accent: 122 74 30;
+  --on-accent: 255 255 255;
+  --menu: 58 46 30;
+  --menu-fg: 245 234 213;
+  --danger: 138 46 34;
+  --danger-soft: 240 214 200;
+  --success: 64 90 47;
+  --success-soft: 222 226 196;
+  --shadow: 58 46 30;
+  --shadow-alpha: 0.18;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: 27 26 23;
+  --surface: 36 34 30;
+  --ink: 237 230 216;
+  --body: 214 206 191;
+  --muted: 166 158 144;
+  --line: 55 52 46;
+  --field: 72 68 60;
+  --soft: 46 43 38;
+  --page: 36 34 30;
+  --accent: 157 182 223;
+  --on-accent: 20 20 20;
+  --menu: 237 230 216;
+  --menu-fg: 27 26 23;
+  --danger: 242 179 166;
+  --danger-soft: 58 35 32;
+  --success: 160 206 160;
+  --success-soft: 36 52 38;
+  --shadow: 0 0 0;
+  --shadow-alpha: 0.5;
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: rgb(var(--bg));
+  color: rgb(var(--ink));
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 2px;
+}
+
+::placeholder {
+  color: rgb(var(--muted) / 0.85);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] px-[18px] text-[15px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-accent font-semibold text-on-accent hover:bg-accent/90;
+  }
+  .btn-dark {
+    @apply btn bg-ink font-semibold text-bg hover:bg-ink/90;
+  }
+  .btn-outline {
+    @apply btn border border-field bg-transparent text-ink hover:bg-soft;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink hover:bg-soft;
+  }
+  .btn-danger {
+    @apply btn bg-[#A33A2B] font-semibold text-white hover:bg-[#8F3124];
+  }
+  .icon-btn {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-transparent text-ink transition-colors hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .input {
+    @apply h-12 w-full rounded-lg border border-field bg-surface px-3.5 text-base text-ink focus:border-accent focus:outline-none;
+  }
+  .field-label {
+    @apply flex flex-col gap-1.5 text-sm font-medium;
+  }
+  .card {
+    @apply rounded-[14px] border border-line bg-surface;
+  }
+  .chip {
+    @apply inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-field bg-transparent px-4 text-sm text-body transition-colors hover:bg-soft;
+  }
+  .chip[aria-pressed="true"],
+  .chip[aria-selected="true"],
+  .chip[aria-checked="true"] {
+    @apply border-ink bg-ink font-semibold text-bg hover:bg-ink;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold tracking-[0.1em] text-muted;
+  }
+  .dialog {
+    @apply m-auto max-h-[calc(100vh-32px)] w-[min(calc(100vw-32px),580px)] rounded-2xl border border-line bg-surface p-0 text-ink shadow-pop backdrop:bg-[rgb(43_38_32/0.4)];
+  }
+}
+
+/* Document kind colors (library covers, badges) */
+.kind-pdf {
+  background-color: #eeddd6;
+  color: #7e3526;
+}
+.kind-epub {
+  background-color: #e3dfee;
+  color: #473a7e;
+}
+.kind-web {
+  background-color: #dce7ec;
+  color: #244e63;
+}
+[data-theme="dark"] .kind-pdf {
+  background-color: #3a2724;
+  color: #f0b3a6;
+}
+[data-theme="dark"] .kind-epub {
+  background-color: #2d2a3f;
+  color: #c3b8f2;
+}
+[data-theme="dark"] .kind-web {
+  background-color: #1f3140;
+  color: #9ccbeb;
+}
+
+/* PDF.js layers */
+.pdf-page {
+  position: relative;
+  margin: 0 auto;
+  box-shadow: 0 10px 30px rgb(var(--shadow) / var(--shadow-alpha));
+  background: white;
+}
+.pdf-page canvas {
+  display: block;
+}
+[data-theme="dark"] .pdf-page canvas {
+  filter: invert(0.88) hue-rotate(180deg);
+}
+/* Highlights drawn over the original PDF page (colors from .hl-bg-*) */
+/* The layer blends as a whole: the marks are in their own stacking context (z-index), so blending
+   each mark alone would only see the transparent layer and hide the printed text. */
+.pdf-marks {
+  mix-blend-mode: multiply; /* keeps the printed text readable on light pages */
+}
+[data-theme="dark"] .pdf-marks {
+  mix-blend-mode: normal; /* dark marks are translucent */
+}
+.pdf-mark {
+  position: absolute;
+  border-radius: 2px;
+}
+.pdf-mark-active {
+  box-shadow: inset 0 -2px 0 rgb(var(--accent));
+}
+.pdf-mark-flash {
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 1px;
+}
+
+/* Reader highlights with meaning (painted with the CSS Custom Highlight API; React DOM is never mutated) */
+::highlight(pm-hl-yellow) {
+  background-color: #f5dc8c;
+}
+::highlight(pm-hl-green) {
+  background-color: #cfe6c2;
+}
+::highlight(pm-hl-blue) {
+  background-color: #cfe0f5;
+}
+::highlight(pm-hl-pink) {
+  background-color: #f4d0dc;
+}
+::highlight(pm-hl-purple) {
+  background-color: #e3d8f5;
+}
+[data-theme="dark"] ::highlight(pm-hl-yellow) {
+  background-color: rgb(232 190 90 / 0.34);
+}
+[data-theme="dark"] ::highlight(pm-hl-green) {
+  background-color: rgb(120 190 120 / 0.3);
+}
+[data-theme="dark"] ::highlight(pm-hl-blue) {
+  background-color: rgb(110 160 230 / 0.32);
+}
+[data-theme="dark"] ::highlight(pm-hl-pink) {
+  background-color: rgb(230 120 160 / 0.3);
+}
+[data-theme="dark"] ::highlight(pm-hl-purple) {
+  background-color: rgb(165 130 225 / 0.32);
+}
+/* Same colors as regular backgrounds (quotes outside the reader) */
+.hl-bg-yellow {
+  background-color: #f5dc8c;
+}
+.hl-bg-green {
+  background-color: #cfe6c2;
+}
+.hl-bg-blue {
+  background-color: #cfe0f5;
+}
+.hl-bg-pink {
+  background-color: #f4d0dc;
+}
+.hl-bg-purple {
+  background-color: #e3d8f5;
+}
+[data-theme="dark"] .hl-bg-yellow {
+  background-color: rgb(232 190 90 / 0.34);
+}
+[data-theme="dark"] .hl-bg-green {
+  background-color: rgb(120 190 120 / 0.3);
+}
+[data-theme="dark"] .hl-bg-blue {
+  background-color: rgb(110 160 230 / 0.32);
+}
+[data-theme="dark"] .hl-bg-pink {
+  background-color: rgb(230 120 160 / 0.3);
+}
+[data-theme="dark"] .hl-bg-purple {
+  background-color: rgb(165 130 225 / 0.32);
+}
+::highlight(pm-hl-active) {
+  text-decoration: underline 2px rgb(var(--accent));
+  text-underline-offset: 4px;
+}
+/* Briefly marks the highlight a link opened (FR-HL-05) */
+::highlight(pm-hl-flash) {
+  background-color: rgb(var(--accent) / 0.4);
+}
+/* Search snippets */
+mark.pm-mark {
+  background-color: rgb(250 204 21 / 0.45);
+  color: inherit;
+  border-radius: 2px;
+}
+
+/* In-document find (FR-RDR-04) */
+::highlight(pm-find) {
+  background-color: rgb(250 204 21 / 0.45);
+}
+::highlight(pm-find-current) {
+  background-color: rgb(249 115 22 / 0.75);
+}
