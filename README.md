@@ -66,7 +66,7 @@ docker compose up --build
 Backend tự chạy migration (`alembic upgrade head`) mỗi khi khởi động. Dữ liệu database và tệp tải lên được lưu trong volume `pgdata` và `uploads`.
 
 Lưu ý:
-- Nếu máy đã có PostgreSQL chiếm cổng 5432, thêm `POSTGRES_PORT=5440` (hoặc một cổng trống khác) vào `.env`.
+- Nếu cổng 5432, 8000 hoặc 3000 đã bị chiếm, đặt `POSTGRES_PORT`, `BACKEND_PORT` hoặc `FRONTEND_PORT` trong `.env`. Khi đổi cổng backend hoặc frontend, sửa luôn `NEXT_PUBLIC_API_URL` (ví dụ `http://localhost:8100`) và `CORS_ORIGINS` (ví dụ `http://localhost:3100`) cho khớp.
 - Các biến `NEXT_PUBLIC_*` được đóng gói vào frontend lúc build, nên sau khi sửa chúng phải build lại image bằng `docker compose up --build`.
 
 ## 3. Chạy trên máy để phát triển
@@ -153,7 +153,7 @@ Mở <http://localhost:3000>, đăng ký tài khoản rồi thêm tài liệu đ
 | `OPENAI_MODEL` | `backend/.env`, `.env` | không | Mặc định `gpt-4.1-mini`. |
 | `WEB_FETCH_CONTACT` | `backend/.env`, `.env` | không | URL hoặc email đưa vào User-Agent khi lưu link. Một số trang như Wikipedia yêu cầu có thông tin này. Để trống thì dùng giá trị đầu tiên của `CORS_ORIGINS`. Khi deploy thật, hãy đặt URL hoặc email liên hệ thật. |
 | `UPLOAD_DIR` | `backend/.env` | không | Thư mục lưu tệp tải lên. Đường dẫn tương đối được tính từ `backend/`. Mặc định `uploads`. |
-| `POSTGRES_PORT` | `.env` | không | Cổng PostgreSQL mà Docker mở ra máy. Mặc định `5432`. |
+| `POSTGRES_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | `.env` | không | Cổng mà Docker mở ra máy cho PostgreSQL, backend và frontend. Mặc định `5432`, `8000`, `3000`. |
 | `SUPABASE_ANON_KEY` | `.env` | có (Docker) | Publishable key, dùng khi build frontend trong Docker. |
 | `NEXT_PUBLIC_API_URL` | `frontend/.env.local`, `.env` | có | Địa chỉ backend. Mặc định `http://localhost:8000`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | `frontend/.env.local` | có | Giống `SUPABASE_URL`. |
