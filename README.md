@@ -152,6 +152,7 @@ Mở <http://localhost:3000>, đăng ký tài khoản rồi thêm tài liệu đ
 | `OPENAI_API_KEY` | `backend/.env`, `.env` | cho tính năng AI | Chỉ để ở backend. |
 | `OPENAI_MODEL` | `backend/.env`, `.env` | không | Mặc định `gpt-4.1-mini`. |
 | `WEB_FETCH_CONTACT` | `backend/.env`, `.env` | không | URL hoặc email đưa vào User-Agent khi lưu link. Một số trang như Wikipedia yêu cầu có thông tin này. Để trống thì dùng giá trị đầu tiên của `CORS_ORIGINS`. Khi deploy thật, hãy đặt URL hoặc email liên hệ thật. |
+| `LOG_LEVEL` | `backend/.env`, `.env` | không | Mức log, mặc định `INFO`. Log luôn ở dạng JSON. |
 | `UPLOAD_DIR` | `backend/.env` | không | Thư mục lưu tệp tải lên. Đường dẫn tương đối được tính từ `backend/`. Mặc định `uploads`. |
 | `POSTGRES_PORT`, `BACKEND_PORT`, `FRONTEND_PORT` | `.env` | không | Cổng mà Docker mở ra máy cho PostgreSQL, backend và frontend. Mặc định `5432`, `8000`, `3000`. |
 | `SUPABASE_ANON_KEY` | `.env` | có (Docker) | Publishable key, dùng khi build frontend trong Docker. |
@@ -166,10 +167,35 @@ cd backend && pytest
 ```
 
 Test backend dùng SQLite tạm, token Supabase giả lập và OpenAI giả lập, nên không cần mạng hay key thật.
+Lệnh trên đo luôn độ bao phủ và **báo lỗi nếu dưới 70%** (NFR-MNT-01).
+
+```bash
+cd backend && ruff check app tests && ruff format --check app tests
+```
 
 ```bash
 cd frontend && npm test && npm run lint && npm run typecheck && npm run build
 ```
+
+> Đừng chạy `npm run build` khi `npm run dev` đang chạy: hai lệnh dùng chung thư mục `.next` và
+> server dev sẽ hỏng. Nếu lỡ chạy, xóa `frontend/.next` rồi khởi động lại `npm run dev`.
+
+GitHub Actions chạy đúng các lệnh trên cho mỗi push và pull request — xem
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+## Log
+
+Backend ghi log dạng JSON, mỗi dòng một object, ra stdout (NFR-OBS-01):
+
+```json
+{"ts": "2026-09-20T03:19:36.762+00:00", "level": "INFO", "logger": "app.request", "message": "request",
+ "request_id": "960dd5e6...", "method": "GET", "path": "/api/documents", "endpoint": "/api/documents",
+ "status": 200, "duration_ms": 984.0, "user_id": "aeb2aa51-..."}
+```
+
+Mỗi request có một `request_id`; nếu client gửi header `X-Request-ID` thì giá trị đó được giữ nguyên và
+trả lại trong response. Log không bao giờ chứa token, nội dung tài liệu hay query string.
+Lệnh gọi OpenAI được ghi kèm model, số token và thời gian, không ghi nội dung (NFR-OBS-02).
 
 ## Xử lý sự cố
 
