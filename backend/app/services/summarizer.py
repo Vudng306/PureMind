@@ -159,7 +159,9 @@ def parse_summary(text: str) -> SummaryContent:
         raise ValueError("not an object")
 
     def strings(value) -> list[str]:
-        return [s.strip() for s in value if isinstance(s, str) and s.strip()] if isinstance(value, list) else []
+        return (
+            [s.strip() for s in value if isinstance(s, str) and s.strip()] if isinstance(value, list) else []
+        )
 
     keywords: list[str] = []
     for k in strings(data.get("keywords")):
@@ -190,8 +192,10 @@ async def _condense(settings: Settings, text: str, language: Language, usage: Us
         async with gate:
             res = await chat(
                 settings,
-                [{"role": "system", "content": _system(language)},
-                 {"role": "user", "content": _part_prompt(part, i, len(parts))}],
+                [
+                    {"role": "system", "content": _system(language)},
+                    {"role": "user", "content": _part_prompt(part, i, len(parts))},
+                ],
                 purpose="summary_part",
                 max_tokens=1500,
             )
@@ -202,7 +206,9 @@ async def _condense(settings: Settings, text: str, language: Language, usage: Us
     return "\n\n".join(f"[Part {i + 1}]\n{n}" for i, n in enumerate(notes))
 
 
-async def summarize(settings: Settings, title: str, content: str, language: Language) -> tuple[SummaryContent, Usage]:
+async def summarize(
+    settings: Settings, title: str, content: str, language: Language
+) -> tuple[SummaryContent, Usage]:
     usage = Usage()
     body, from_notes = content, False
     for _ in range(3):  # each round shrinks the text several times; 3 rounds cover any upload size

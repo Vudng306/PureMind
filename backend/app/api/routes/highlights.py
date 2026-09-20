@@ -10,9 +10,9 @@ from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.documents import _owned_document
 from app.models import Document, Highlight, User
 from app.schemas import (
-    HighlightBase,
     AnnotationsImport,
     AnnotationsImportResult,
+    HighlightBase,
     HighlightCategory,
     HighlightColor,
     HighlightCreate,
@@ -102,7 +102,9 @@ async def create_highlight(payload: HighlightCreate, user: CurrentUser, session:
 
 
 @router.patch("/highlights/{highlight_id}", response_model=HighlightOut)
-async def update_highlight(highlight_id: uuid.UUID, payload: HighlightUpdate, user: CurrentUser, session: SessionDep):
+async def update_highlight(
+    highlight_id: uuid.UUID, payload: HighlightUpdate, user: CurrentUser, session: SessionDep
+):
     """FR-HL-03, FR-HL-04."""
     hl = await _owned_highlight(session, user, highlight_id)
     data = payload.model_dump(exclude_unset=True)
@@ -143,19 +145,33 @@ async def delete_note(highlight_id: uuid.UUID, user: CurrentUser, session: Sessi
 async def import_annotations(payload: AnnotationsImport, user: CurrentUser, session: SessionDep):
     """One-time move of browser-local data. Idempotent: known ids, existing notes and progress are kept."""
     wanted = {h.document_id for h in payload.highlights} | set(payload.notes) | set(payload.progress)
-    docs = {
-        d.id: d
-        for d in (
-            await session.scalars(select(Document).where(Document.user_id == user.id, Document.id.in_(wanted)))
-        ).all()
-    } if wanted else {}
+    docs = (
+        {
+            d.id: d
+            for d in (
+                await session.scalars(
+                    select(Document).where(Document.user_id == user.id, Document.id.in_(wanted))
+                )
+            ).all()
+        }
+        if wanted
+        else {}
+    )
 
     ids = [h.id for h in payload.highlights if h.id]
-    existing = set((await session.scalars(select(Highlight.id).where(Highlight.id.in_(ids)))).all()) if ids else set()
+    existing = (
+        set((await session.scalars(select(Highlight.id).where(Highlight.id.in_(ids)))).all())
+        if ids
+        else set()
+    )
 
     added = 0
     for h in payload.highlights:
-        if h.document_id not in docs or (h.id and h.id in existing) or _position_error(docs[h.document_id], h):
+        if (
+            h.document_id not in docs
+            or (h.id and h.id in existing)
+            or _position_error(docs[h.document_id], h)
+        ):
             continue
         data = h.model_dump(exclude={"id", "document_id", "created_at"})
         hl = Highlight(id=h.id or uuid.uuid4(), user_id=user.id, document_id=h.document_id, **data)
@@ -182,5 +198,8 @@ async def import_annotations(payload: AnnotationsImport, user: CurrentUser, sess
 
     await session.commit()
     return AnnotationsImportResult(
-        highlights=added, notes=notes, progress=progress, unknown_documents=sorted(wanted - set(docs), key=str)
+        highlights=added,
+        notes=notes,
+        progress=progress,
+        unknown_documents=sorted(wanted - set(docs), key=str),
     )

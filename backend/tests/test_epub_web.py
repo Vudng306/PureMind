@@ -53,7 +53,9 @@ def make_epub(first_entry_ok: bool = True, **overrides) -> bytes:
 
 async def test_upload_epub_extracts_chapters(client, auth):
     h = auth()
-    r = await client.post("/api/documents/upload", headers=h, files={"file": ("sach.epub", make_epub(), "application/epub+zip")})
+    r = await client.post(
+        "/api/documents/upload", headers=h, files={"file": ("sach.epub", make_epub(), "application/epub+zip")}
+    )
     assert r.status_code == 201, r.text
     doc = r.json()
     assert doc["extraction_status"] == "done"
@@ -72,7 +74,9 @@ async def test_upload_epub_extracts_chapters(client, auth):
 
 async def test_epub_signature_is_checked(client, auth):
     r = await client.post(
-        "/api/documents/upload", headers=auth(), files={"file": ("fake.epub", make_epub(first_entry_ok=False), "application/epub+zip")}
+        "/api/documents/upload",
+        headers=auth(),
+        files={"file": ("fake.epub", make_epub(first_entry_ok=False), "application/epub+zip")},
     )
     assert r.status_code == 422
 
@@ -93,13 +97,24 @@ async def test_rate_limit_uploads(client, auth, monkeypatch):
 
 # ------------------------------------------------------------------ SSRF / save link
 
+
 @pytest.mark.parametrize(
     "ip,public",
     [
-        ("127.0.0.1", False), ("10.0.0.1", False), ("172.16.5.4", False), ("192.168.1.1", False),
-        ("169.254.169.254", False), ("0.0.0.0", False), ("100.64.0.1", False), ("224.0.0.1", False),
-        ("::1", False), ("fe80::1", False), ("fc00::1", False), ("::ffff:127.0.0.1", False),
-        ("93.184.216.34", True), ("2606:4700:4700::1111", True),
+        ("127.0.0.1", False),
+        ("10.0.0.1", False),
+        ("172.16.5.4", False),
+        ("192.168.1.1", False),
+        ("169.254.169.254", False),
+        ("0.0.0.0", False),
+        ("100.64.0.1", False),
+        ("224.0.0.1", False),
+        ("::1", False),
+        ("fe80::1", False),
+        ("fc00::1", False),
+        ("::ffff:127.0.0.1", False),
+        ("93.184.216.34", True),
+        ("2606:4700:4700::1111", True),
     ],
 )
 def test_is_public_ip(ip, public):
@@ -152,10 +167,14 @@ def fake_web(monkeypatch):
 
 async def test_save_article(client, auth, fake_web):
     fake_web.dns["blog.example.com"] = ["93.184.216.34"]
-    fake_web.routes["blog.example.com/posts/1"] = httpx.Response(200, headers={"content-type": "text/html; charset=utf-8"}, content=ARTICLE)
+    fake_web.routes["blog.example.com/posts/1"] = httpx.Response(
+        200, headers={"content-type": "text/html; charset=utf-8"}, content=ARTICLE
+    )
     h = auth()
 
-    r = await client.post("/api/documents/save-url", headers=h, json={"url": "https://blog.example.com/posts/1"})
+    r = await client.post(
+        "/api/documents/save-url", headers=h, json={"url": "https://blog.example.com/posts/1"}
+    )
     assert r.status_code == 201, r.text
     doc = r.json()
     assert doc["title"] == "Vi sao can doc cham"
@@ -169,26 +188,43 @@ async def test_save_article(client, auth, fake_web):
     req = fake_web.requests[0]
     assert req.url.host == "93.184.216.34" and req.headers["host"] == "blog.example.com"
 
-    again = await client.post("/api/documents/save-url", headers=h, json={"url": "https://blog.example.com/posts/1"})
+    again = await client.post(
+        "/api/documents/save-url", headers=h, json={"url": "https://blog.example.com/posts/1"}
+    )
     assert again.status_code == 200 and again.json()["id"] == doc["id"]
     assert len(fake_web.requests) == 1
 
-    other_user = await client.post("/api/documents/save-url", headers=auth(), json={"url": "https://blog.example.com/posts/1"})
+    other_user = await client.post(
+        "/api/documents/save-url", headers=auth(), json={"url": "https://blog.example.com/posts/1"}
+    )
     assert other_user.status_code == 201 and other_user.json()["id"] != doc["id"]
 
 
 async def test_save_online_pdf(client, auth, fake_web):
     fake_web.dns["files.example.com"] = ["93.184.216.34"]
-    fake_web.routes["files.example.com/papers/attention.pdf"] = httpx.Response(200, headers={"content-type": "application/pdf"}, content=text_pdf(2))
+    fake_web.routes["files.example.com/papers/attention.pdf"] = httpx.Response(
+        200, headers={"content-type": "application/pdf"}, content=text_pdf(2)
+    )
     h = auth()
-    r = await client.post("/api/documents/save-url", headers=h, json={"url": "https://files.example.com/papers/attention.pdf"})
+    r = await client.post(
+        "/api/documents/save-url", headers=h, json={"url": "https://files.example.com/papers/attention.pdf"}
+    )
     assert r.status_code == 201, r.text
     doc = r.json()
     assert doc["file_type"] == "pdf" and doc["page_count"] == 2 and doc["extraction_status"] == "done"
     assert (await client.get(f"/api/documents/{doc['id']}/file", headers=h)).status_code == 200
 
 
-@pytest.mark.parametrize("url", ["ftp://example.com/a", "javascript:alert(1)", "http://user:pw@example.com/", "not a url", "https://" + "a" * 2050])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "ftp://example.com/a",
+        "javascript:alert(1)",
+        "http://user:pw@example.com/",
+        "not a url",
+        "https://" + "a" * 2050,
+    ],
+)
 async def test_save_url_invalid(client, auth, url):
     r = await client.post("/api/documents/save-url", headers=auth(), json={"url": url})
     assert r.status_code == 422
@@ -216,8 +252,12 @@ async def test_save_url_blocks_internal_addresses(client, auth, fake_web, url, d
 
 async def test_redirect_to_internal_address_is_blocked(client, auth, fake_web):
     fake_web.dns["short.example.com"] = ["93.184.216.34"]
-    fake_web.routes["short.example.com/x"] = httpx.Response(302, headers={"location": "http://127.0.0.1:8000/api/healthz"})
-    r = await client.post("/api/documents/save-url", headers=auth(), json={"url": "http://short.example.com/x"})
+    fake_web.routes["short.example.com/x"] = httpx.Response(
+        302, headers={"location": "http://127.0.0.1:8000/api/healthz"}
+    )
+    r = await client.post(
+        "/api/documents/save-url", headers=auth(), json={"url": "http://short.example.com/x"}
+    )
     assert r.status_code == 422 and r.json()["detail"] == "Không thể lưu đường link này."
     assert len(fake_web.requests) == 1
 
@@ -225,21 +265,29 @@ async def test_redirect_to_internal_address_is_blocked(client, auth, fake_web):
 async def test_too_many_redirects_and_http_errors(client, auth, fake_web):
     fake_web.dns["loop.example.com"] = ["93.184.216.34"]
     fake_web.routes["loop.example.com/a"] = httpx.Response(301, headers={"location": "/a"})
-    r = await client.post("/api/documents/save-url", headers=auth(), json={"url": "http://loop.example.com/a"})
+    r = await client.post(
+        "/api/documents/save-url", headers=auth(), json={"url": "http://loop.example.com/a"}
+    )
     assert r.status_code == 422 and r.json()["detail"].startswith("Không truy cập được")
     assert len(fake_web.requests) == web.MAX_REDIRECTS + 1
 
-    r = await client.post("/api/documents/save-url", headers=auth(), json={"url": "http://loop.example.com/missing"})
+    r = await client.post(
+        "/api/documents/save-url", headers=auth(), json={"url": "http://loop.example.com/missing"}
+    )
     assert r.status_code == 422 and r.json()["detail"].startswith("Không truy cập được")
 
-    r = await client.post("/api/documents/save-url", headers=auth(), json={"url": "http://nxdomain.example.com/"})
+    r = await client.post(
+        "/api/documents/save-url", headers=auth(), json={"url": "http://nxdomain.example.com/"}
+    )
     assert r.status_code == 422 and r.json()["detail"].startswith("Không truy cập được")
 
 
 async def test_response_size_limit(client, auth, fake_web, monkeypatch):
     monkeypatch.setattr(web, "MAX_BYTES", 1000)
     fake_web.dns["big.example.com"] = ["93.184.216.34"]
-    fake_web.routes["big.example.com/"] = httpx.Response(200, headers={"content-type": "text/html"}, content=b"<p>" + b"x" * 5000)
+    fake_web.routes["big.example.com/"] = httpx.Response(
+        200, headers={"content-type": "text/html"}, content=b"<p>" + b"x" * 5000
+    )
     r = await client.post("/api/documents/save-url", headers=auth(), json={"url": "http://big.example.com/"})
     assert r.status_code == 422
 
@@ -255,7 +303,10 @@ def test_nested_lists_are_kept():
 
 def test_article_inside_negative_wrapper_is_kept():
     # vnexpress.net wraps the whole story in <div class="sidebar-1">, next to a real sidebar.
-    story = "".join(f"<p>Đoạn {i}: AI đang thay đổi cách doanh nghiệp xây dựng phần mềm, từng bước một.</p>" for i in range(6))
+    story = "".join(
+        f"<p>Đoạn {i}: AI đang thay đổi cách doanh nghiệp xây dựng phần mềm, từng bước một.</p>"
+        for i in range(6)
+    )
     html = f"""<html><head><title>Tiêu đề bài</title></head><body><!-- end header -->
     <div class="sidebar-1"><article class="fck_detail"><h1>Tiêu đề bài</h1>{story}</article></div>
     <div class="sidebar-2"><p>Tin nổi bật trong ngày hôm nay, đọc thêm ngay tại đây nhé.</p></div>
@@ -271,7 +322,9 @@ def test_article_inside_negative_wrapper_is_kept():
 async def test_refusing_site_gets_a_specific_message(client, auth, fake_web):
     fake_web.dns["wiki.example.org"] = ["93.184.216.34"]
     fake_web.routes["wiki.example.org/wiki/A"] = httpx.Response(403, text="Please respect our robot policy")
-    r = await client.post("/api/documents/save-url", headers=auth(), json={"url": "https://wiki.example.org/wiki/A"})
+    r = await client.post(
+        "/api/documents/save-url", headers=auth(), json={"url": "https://wiki.example.org/wiki/A"}
+    )
     assert r.status_code == 422 and "không cho phép PureMind" in r.json()["detail"]
     # a contact is sent so such sites can tell who is fetching (defaults to the app's URL)
     assert fake_web.requests[0].headers["user-agent"].endswith("PureMindReader/1.0 (+http://localhost:3000)")
@@ -284,7 +337,9 @@ def test_user_agent_contact_is_sanitized():
 
 
 def test_hidden_blocks_and_related_links_are_dropped():
-    story = "".join(f"<p>Đoạn {i}: nội dung chính của bài viết, đủ dài để được tính là văn xuôi.</p>" for i in range(5))
+    story = "".join(
+        f"<p>Đoạn {i}: nội dung chính của bài viết, đủ dài để được tính là văn xuôi.</p>" for i in range(5)
+    )
     html = f"""<html><head><title>Bài</title></head><body><article>{story}
     <p>Theo <a href="https://example.org/src">nguồn này</a>, kết quả đã được kiểm chứng kỹ lưỡng.</p>
     <div class="box-more"><a href="https://news.example.com/1">Tin khác một</a> <a href="https://news.example.com/2">Tin khác hai</a></div>

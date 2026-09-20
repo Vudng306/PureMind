@@ -46,7 +46,9 @@ async def test_highlight_crud(client, auth):
     assert created["document_id"] == doc
     assert (await create(client, h, doc, id=client_id)).status_code == 409
 
-    r = await client.patch(f"/api/highlights/{client_id}", headers=h, json={"color": "purple", "category": "question"})
+    r = await client.patch(
+        f"/api/highlights/{client_id}", headers=h, json={"color": "purple", "category": "question"}
+    )
     assert r.status_code == 200 and r.json()["color"] == "purple" and r.json()["category"] == "question"
     # Unset fields are left alone; category null removes the category (FR-HL-04 step 2).
     r = await client.patch(f"/api/highlights/{client_id}", headers=h, json={"category": None})
@@ -66,7 +68,9 @@ async def test_highlight_note(client, auth):
     doc = await new_doc(client, h)
     hl = (await create(client, h, doc)).json()
 
-    r = await client.put(f"/api/highlights/{hl['id']}/note", headers=h, json={"content": "Vì sao **quan trọng**"})
+    r = await client.put(
+        f"/api/highlights/{hl['id']}/note", headers=h, json={"content": "Vì sao **quan trọng**"}
+    )
     assert r.status_code == 200 and r.json()["note"] == "Vì sao **quan trọng**"
     r = await client.put(f"/api/highlights/{hl['id']}/note", headers=h, json={"content": "x" * 10001})
     assert r.status_code == 422 and r.json()["detail"] == "Ghi chú tối đa 10.000 ký tự."
@@ -79,7 +83,12 @@ async def test_highlight_filters_and_paging(client, auth):
     doc = await new_doc(client, h)
     for i in range(5):
         await create(
-            client, h, doc, block_id=f"b{i}", color="blue" if i % 2 else "yellow", category="concept" if i < 2 else None
+            client,
+            h,
+            doc,
+            block_id=f"b{i}",
+            color="blue" if i % 2 else "yellow",
+            category="concept" if i < 2 else None,
         )
     assert (await items(client, h, "?color=blue"))["total"] == 2
     assert (await items(client, h, "?category=concept"))["total"] == 2
@@ -97,7 +106,9 @@ async def test_highlight_validation(client, auth):
         payload(selected_text=""),
         payload(category="misc"),
     ):
-        assert (await client.post("/api/highlights", headers=h, json={**bad, "document_id": doc})).status_code == 422
+        assert (
+            await client.post("/api/highlights", headers=h, json={**bad, "document_id": doc})
+        ).status_code == 422
     r = await create(client, h, doc, selected_text="x" * 5001)
     assert r.status_code == 422 and "5.000" in r.json()["detail"]
 
@@ -108,8 +119,12 @@ async def test_highlights_are_private(client, auth):
     hl = (await create(client, alice, doc)).json()
 
     assert (await create(client, bob, doc)).status_code == 404
-    assert (await client.patch(f"/api/highlights/{hl['id']}", headers=bob, json={"color": "blue"})).status_code == 404
-    assert (await client.put(f"/api/highlights/{hl['id']}/note", headers=bob, json={"content": "x"})).status_code == 404
+    assert (
+        await client.patch(f"/api/highlights/{hl['id']}", headers=bob, json={"color": "blue"})
+    ).status_code == 404
+    assert (
+        await client.put(f"/api/highlights/{hl['id']}/note", headers=bob, json={"content": "x"})
+    ).status_code == 404
     assert (await client.delete(f"/api/highlights/{hl['id']}", headers=bob)).status_code == 404
     assert (await items(client, bob))["total"] == 0
 
@@ -125,14 +140,18 @@ async def test_deleting_document_removes_its_highlights(client, auth):
 async def test_document_note_and_read_fraction(client, auth):
     h = auth()
     doc = await new_doc(client, h)
-    r = await client.patch(f"/api/documents/{doc}", headers=h, json={"note": "Ôn lại chương 2", "read_fraction": 0.42})
+    r = await client.patch(
+        f"/api/documents/{doc}", headers=h, json={"note": "Ôn lại chương 2", "read_fraction": 0.42}
+    )
     assert r.status_code == 200, r.text
     assert r.json()["note"] == "Ôn lại chương 2" and r.json()["read_fraction"] == 0.42
 
     listed = (await client.get("/api/documents", headers=h)).json()
     assert listed[0]["read_fraction"] == 0.42 and "note" not in listed[0]
 
-    assert (await client.patch(f"/api/documents/{doc}", headers=h, json={"read_fraction": 1.5})).status_code == 422
+    assert (
+        await client.patch(f"/api/documents/{doc}", headers=h, json={"read_fraction": 1.5})
+    ).status_code == 422
     assert (await client.patch(f"/api/documents/{doc}", headers=h, json={"note": ""})).json()["note"] == ""
 
 
@@ -174,14 +193,22 @@ async def test_reader_preferences_extended(client, auth):
         "line_height": 1.8,
         "column_width": 600,
         "default_mode": "original",
-        "color_labels": {"yellow": "Quan trọng", "green": "", "blue": "Khái niệm", "pink": "Hỏi thầy", "purple": ""},
+        "color_labels": {
+            "yellow": "Quan trọng",
+            "green": "",
+            "blue": "Khái niệm",
+            "pink": "Hỏi thầy",
+            "purple": "",
+        },
     }
     r = await client.patch("/api/account", headers=h, json={"reading_preferences": prefs})
     assert r.status_code == 200, r.text
     assert r.json()["reading_preferences"] == prefs
 
     for bad in ({"line_height": 2}, {"column_width": 700}, {"color_labels": {"yellow": "x" * 25}}):
-        assert (await client.patch("/api/account", headers=h, json={"reading_preferences": bad})).status_code == 422
+        assert (
+            await client.patch("/api/account", headers=h, json={"reading_preferences": bad})
+        ).status_code == 422
 
 
 async def test_pdf_page_highlight(client, auth):
@@ -189,7 +216,13 @@ async def test_pdf_page_highlight(client, auth):
     h = auth()
     doc = await new_doc(client, h)
     rects = [{"x": 0.1, "y": 0.2, "w": 0.5, "h": 0.03}, {"x": 0.1, "y": 0.235, "w": 0.3, "h": 0.03}]
-    body = {"document_id": doc, "selected_text": "mô hình đoán đúng", "page_number": 2, "rects": rects, "color": "blue"}
+    body = {
+        "document_id": doc,
+        "selected_text": "mô hình đoán đúng",
+        "page_number": 2,
+        "rects": rects,
+        "color": "blue",
+    }
     r = await client.post("/api/highlights", headers=h, json=body)
     assert r.status_code == 201, r.text
     out = r.json()
@@ -207,5 +240,7 @@ async def test_pdf_page_highlight(client, auth):
         {**body, "block_id": "b1"},  # partial text anchor
     ):
         assert (await client.post("/api/highlights", headers=h, json=bad)).status_code == 422, bad
-    r = await client.post("/api/highlights", headers=h, json={**body, "page_number": 3})  # the PDF has 2 pages
+    r = await client.post(
+        "/api/highlights", headers=h, json={**body, "page_number": 3}
+    )  # the PDF has 2 pages
     assert r.status_code == 422 and r.json()["detail"] == "Trang không tồn tại trong tài liệu."

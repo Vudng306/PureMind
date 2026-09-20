@@ -12,7 +12,9 @@ from app.core.config import Settings
 from app.services.openai_client import Usage, chat_stream
 from app.services.summarizer import Language
 
-MAX_NOTE_CHARS = 2000  # a long note is cut in the prompt; the highlight text itself is at most 5,000 characters
+MAX_NOTE_CHARS = (
+    2000  # a long note is cut in the prompt; the highlight text itself is at most 5,000 characters
+)
 MAX_OUTPUT_TOKENS = 16_000
 MAX_TITLE = 255
 
@@ -24,10 +26,22 @@ CATEGORY_NAME = {
     "review": "to review",
 }
 HEADINGS = {
-    "vi": {"overview": "Tổng quan", "glossary": "Thuật ngữ", "term": "Thuật ngữ", "meaning": "Giải thích",
-           "source": "Nguồn", "questions": "Câu hỏi ôn tập"},
-    "en": {"overview": "Overview", "glossary": "Glossary", "term": "Term", "meaning": "Explanation",
-           "source": "Source", "questions": "Review questions"},
+    "vi": {
+        "overview": "Tổng quan",
+        "glossary": "Thuật ngữ",
+        "term": "Thuật ngữ",
+        "meaning": "Giải thích",
+        "source": "Nguồn",
+        "questions": "Câu hỏi ôn tập",
+    },
+    "en": {
+        "overview": "Overview",
+        "glossary": "Glossary",
+        "term": "Term",
+        "meaning": "Explanation",
+        "source": "Source",
+        "questions": "Review questions",
+    },
 }
 LANGUAGE_NAME = {"vi": "Vietnamese", "en": "English"}
 
@@ -96,15 +110,23 @@ def user_prompt(sources: list[Source]) -> str:
     return "\n".join(lines)
 
 
-async def write(settings: Settings, sources: list[Source], language: Language, usage: Usage) -> AsyncIterator[str]:
+async def write(
+    settings: Settings, sources: list[Source], language: Language, usage: Usage
+) -> AsyncIterator[str]:
     """Stream the notebook's Markdown (FR-NB-02 steps 3–4)."""
     categories = {s.category for s in sources}
     messages = [
-        {"role": "system", "content": system_prompt(language, "concept" in categories,
-                                                    bool(categories & {"question", "review"}))},
+        {
+            "role": "system",
+            "content": system_prompt(
+                language, "concept" in categories, bool(categories & {"question", "review"})
+            ),
+        },
         {"role": "user", "content": user_prompt(sources)},
     ]
-    async for delta in chat_stream(settings, messages, purpose="notebook", usage=usage, max_tokens=MAX_OUTPUT_TOKENS):
+    async for delta in chat_stream(
+        settings, messages, purpose="notebook", usage=usage, max_tokens=MAX_OUTPUT_TOKENS
+    ):
         yield delta
 
 

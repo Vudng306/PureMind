@@ -15,7 +15,10 @@ from tests.pdfs import image_only_pdf, text_pdf
 
 GOOD = {
     "key_points": ["Ý một.", "Ý hai.", "Ý ba.", "Ý ba."],
-    "concepts": [{"term": "Học máy", "explanation": "Máy học từ dữ liệu."}, {"term": " ", "explanation": "x"}],
+    "concepts": [
+        {"term": "Học máy", "explanation": "Máy học từ dữ liệu."},
+        {"term": " ", "explanation": "x"},
+    ],
     "conclusion": "Kết luận ngắn.",
     "keywords": ["học máy", "Học Máy", "dữ liệu", "mô hình", "tổng quát hóa", "nhiễu"],
 }
@@ -56,14 +59,18 @@ def ai(monkeypatch):
 
 async def new_doc(client, headers, pdf: bytes | None = None) -> str:
     r = await client.post(
-        "/api/documents/upload", headers=headers, files={"file": ("bai.pdf", pdf or text_pdf(2), "application/pdf")}
+        "/api/documents/upload",
+        headers=headers,
+        files={"file": ("bai.pdf", pdf or text_pdf(2), "application/pdf")},
     )
     assert r.status_code == 201, r.text
     return r.json()["id"]
 
 
 async def consent(client, headers):
-    r = await client.patch("/api/account", headers=headers, json={"reading_preferences": {"ai_consent": True}})
+    r = await client.patch(
+        "/api/account", headers=headers, json={"reading_preferences": {"ai_consent": True}}
+    )
     assert r.status_code == 200, r.text
 
 
@@ -85,7 +92,13 @@ async def test_summary_create_view_regenerate(client, auth, ai):
     s = r.json()
     assert s["key_points"] == ["Ý một.", "Ý hai.", "Ý ba.", "Ý ba."]
     assert s["concepts"] == [{"term": "Học máy", "explanation": "Máy học từ dữ liệu."}]  # blank term dropped
-    assert s["keywords"] == ["học máy", "dữ liệu", "mô hình", "tổng quát hóa", "nhiễu"]  # case-insensitive dedupe
+    assert s["keywords"] == [
+        "học máy",
+        "dữ liệu",
+        "mô hình",
+        "tổng quát hóa",
+        "nhiễu",
+    ]  # case-insensitive dedupe
     assert s["ai_model"] == "gpt-test" and s["language"] in ("vi", "en")
     assert fake.calls[0]["json_schema"]["strict"] is True
     user_msg = fake.calls[0]["messages"][1]["content"]
@@ -99,17 +112,28 @@ async def test_summary_create_view_regenerate(client, auth, ai):
     ai({**GOOD, "conclusion": "Short conclusion."})
     r = await client.post(f"/api/documents/{doc}/summary", headers=h, json={"language": "en"})
     assert r.status_code == 201 and r.json()["language"] == "en"
-    assert (await client.get(f"/api/documents/{doc}/summary", headers=h)).json()["conclusion"] == "Short conclusion."
+    assert (await client.get(f"/api/documents/{doc}/summary", headers=h)).json()[
+        "conclusion"
+    ] == "Short conclusion."
     async with SessionLocal() as session:
-        rows = await session.scalar(select(func.count()).select_from(Summary).where(Summary.document_id == uuid.UUID(doc)))
+        rows = await session.scalar(
+            select(func.count()).select_from(Summary).where(Summary.document_id == uuid.UUID(doc))
+        )
         assert rows == 1
-        tokens = await session.scalar(select(Summary.prompt_tokens).where(Summary.document_id == uuid.UUID(doc)))
+        tokens = await session.scalar(
+            select(Summary.prompt_tokens).where(Summary.document_id == uuid.UUID(doc))
+        )
         assert tokens == 100
 
     # Deleting the document deletes its summary.
     assert (await client.delete(f"/api/documents/{doc}", headers=h)).status_code == 204
     async with SessionLocal() as session:
-        assert await session.scalar(select(func.count()).select_from(Summary).where(Summary.document_id == uuid.UUID(doc))) == 0
+        assert (
+            await session.scalar(
+                select(func.count()).select_from(Summary).where(Summary.document_id == uuid.UUID(doc))
+            )
+            == 0
+        )
 
 
 async def test_invalid_answer_is_retried_once(client, auth, ai):
@@ -166,7 +190,9 @@ async def test_ai_failure_and_limits(client, auth, ai, monkeypatch):
 
 
 async def test_long_documents_are_summarised_in_parts(monkeypatch):
-    settings = get_settings().model_copy(update={"summary_single_request_tokens": 300, "summary_chunk_tokens": 200})
+    settings = get_settings().model_copy(
+        update={"summary_single_request_tokens": 300, "summary_chunk_tokens": 200}
+    )
     fake = FakeAI("- ghi chú phần", GOOD)
     fake.answers = ["- ghi chú phần"] * 3 + [GOOD]
     monkeypatch.setattr(summarizer, "chat", fake)
@@ -196,20 +222,30 @@ def test_helpers():
 
 async def test_openai_client_retries_server_errors(monkeypatch):
     seen: list[dict] = []
-    replies = [httpx.Response(500), httpx.Response(200, json={
-        "choices": [{"message": {"content": "{}"}, "finish_reason": "stop"}],
-        "usage": {"prompt_tokens": 7, "completion_tokens": 3},
-    })]
+    replies = [
+        httpx.Response(500),
+        httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": "{}"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 7, "completion_tokens": 3},
+            },
+        ),
+    ]
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append({"auth": request.headers["Authorization"], "body": json.loads(request.content)})
         return replies.pop(0)
 
     real = httpx.AsyncClient
-    monkeypatch.setattr(openai_client.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw))
+    monkeypatch.setattr(
+        openai_client.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw)
+    )
     settings = get_settings().model_copy(update={"openai_api_key": "sk-x", "openai_model": "gpt-test"})
 
-    res = await openai_client.chat(settings, [{"role": "user", "content": "hi"}], purpose="t", json_schema={"name": "x"})
+    res = await openai_client.chat(
+        settings, [{"role": "user", "content": "hi"}], purpose="t", json_schema={"name": "x"}
+    )
     assert res.text == "{}" and res.usage.prompt_tokens == 7 and len(seen) == 2
     assert seen[0]["auth"] == "Bearer sk-x" and seen[0]["body"]["model"] == "gpt-test"
     assert seen[0]["body"]["response_format"]["type"] == "json_schema"

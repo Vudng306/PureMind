@@ -2,11 +2,25 @@
 
 import enum
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
-from sqlalchemy import JSON, BigInteger, Boolean, CheckConstraint, Date, DateTime, Enum, Float, ForeignKey, Index, Integer
-from sqlalchemy import String, Text
-from sqlalchemy import UniqueConstraint, Uuid
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -14,7 +28,7 @@ JsonType = JSON().with_variant(JSONB(), "postgresql")
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Base(DeclarativeBase):
@@ -120,7 +134,8 @@ class Highlight(TimestampMixin, Base):
     __table_args__ = (
         Index("ix_highlights_document_created", "document_id", "created_at"),
         CheckConstraint(
-            "block_id IS NULL OR (start_offset >= 0 AND end_offset > start_offset)", name="ck_highlights_offsets"
+            "block_id IS NULL OR (start_offset >= 0 AND end_offset > start_offset)",
+            name="ck_highlights_offsets",
         ),
         CheckConstraint(
             "(block_id IS NOT NULL AND start_offset IS NOT NULL AND end_offset IS NOT NULL)"

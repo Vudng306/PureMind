@@ -9,10 +9,51 @@ import re
 from bs4 import BeautifulSoup, NavigableString, Tag
 from bs4.element import PreformattedString
 
-STRIP_TAGS = ["script", "style", "noscript", "template", "svg", "canvas", "nav", "header", "footer", "form",
-              "iframe", "button", "input", "select", "textarea", "aside"]
-BLOCK_TAGS = {"p", "div", "section", "article", "main", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre",
-              "ul", "ol", "li", "table", "figure", "figcaption", "hr", "dl", "dt", "dd", "body", "html"}
+STRIP_TAGS = [
+    "script",
+    "style",
+    "noscript",
+    "template",
+    "svg",
+    "canvas",
+    "nav",
+    "header",
+    "footer",
+    "form",
+    "iframe",
+    "button",
+    "input",
+    "select",
+    "textarea",
+    "aside",
+]
+BLOCK_TAGS = {
+    "p",
+    "div",
+    "section",
+    "article",
+    "main",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "blockquote",
+    "pre",
+    "ul",
+    "ol",
+    "li",
+    "table",
+    "figure",
+    "figcaption",
+    "hr",
+    "dl",
+    "dt",
+    "dd",
+    "body",
+    "html",
+}
 
 
 NESTED_ITEM = re.compile(r"^\s+(-|\d+\.)\s")

@@ -10,7 +10,9 @@ async def setup_library(client, headers):
         files={"file": ("ml.pdf", text_pdf(2, title="Machine learning"), "application/pdf")},
     )
     doc = r.json()
-    await client.patch(f"/api/documents/{doc['id']}", headers=headers, json={"note": "review gradient descent before exam"})
+    await client.patch(
+        f"/api/documents/{doc['id']}", headers=headers, json={"note": "review gradient descent before exam"}
+    )
     for text, note, category in (
         ("overfitting happens when the model memorises noise", "ask about regularisation", "question"),
         ("gradient descent updates weights step by step", "", "concept"),
@@ -40,7 +42,11 @@ async def test_search_groups_results_by_type(client, auth):
     body = r.json()
     assert body["highlights"]["total"] == 1
     hit = body["highlights"]["items"][0]
-    assert hit["document_id"] == doc["id"] and hit["document_title"] == doc["title"] and hit["category"] == "concept"
+    assert (
+        hit["document_id"] == doc["id"]
+        and hit["document_title"] == doc["title"]
+        and hit["category"] == "concept"
+    )
     assert f"{START}gradient{END}" in hit["snippet"]
     # The document note matches too.
     assert [n["kind"] for n in body["notes"]["items"]] == ["document_note"]
@@ -56,7 +62,9 @@ async def test_search_filters_and_validation(client, auth):
     h = auth()
     await setup_library(client, h)
     only = (await client.get("/api/search?q=gradient&types=highlight", headers=h)).json()
-    assert only["highlights"]["total"] == 1 and only["notes"]["total"] == 0 and only["documents"]["total"] == 0
+    assert (
+        only["highlights"]["total"] == 1 and only["notes"]["total"] == 0 and only["documents"]["total"] == 0
+    )
 
     filtered = (await client.get("/api/search?q=gradient&category=question", headers=h)).json()
     assert filtered["highlights"]["total"] == 0

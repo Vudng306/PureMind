@@ -48,7 +48,11 @@ def extract_epub(path: Path, fallback_title: str) -> ExtractionResult:
 
         base = posixpath.dirname(rootfile)
         manifest = {
-            item.get("id"): (posixpath.normpath(posixpath.join(base, item.get("href", ""))), item.get("media-type", ""), item.get("properties", ""))
+            item.get("id"): (
+                posixpath.normpath(posixpath.join(base, item.get("href", ""))),
+                item.get("media-type", ""),
+                item.get("properties", ""),
+            )
             for item in opf.findall(".//opf:manifest/opf:item", NS)
         }
         title_el = opf.find(".//dc:title", NS)
@@ -67,7 +71,9 @@ def extract_epub(path: Path, fallback_title: str) -> ExtractionResult:
             for el in soup.find_all(True):
                 if el.decomposed:
                     continue
-                hint = " ".join([*(el.get("class") or []), el.get("id") or "", el.get("epub:type") or ""]).lower()
+                hint = " ".join(
+                    [*(el.get("class") or []), el.get("id") or "", el.get("epub:type") or ""]
+                ).lower()
                 if any(h in hint for h in JUNK_HINTS):
                     el.decompose()
             body = soup.body or soup

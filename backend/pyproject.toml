@@ -24,6 +24,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "aiosqlite>=0.20",
     "ruff>=0.6",
+    "pytest-cov>=5",
 ]
 
 [build-system]
@@ -38,7 +39,30 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
+# FR-MNT-01: the auth/documents/highlights/notes modules must stay above 70% line coverage.
+addopts = "--cov=app --cov-report=term-missing --cov-fail-under=70"
 
 [tool.ruff]
 line-length = 110
 target-version = "py311"
+
+[tool.ruff.lint]
+# Pinned explicitly so a new ruff release cannot change what CI enforces.
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    "B008",    # FastAPI declares dependencies as default arguments: Depends(), File(), Form().
+    "E501",    # `ruff format` owns line length; what is left are prompt strings it cannot split.
+    "RUF001",  # Vietnamese copy legitimately uses “ ” – ʼ …
+    "RUF002",
+    "RUF003",
+    "UP042",   # str+Enum, not StrEnum: str(member) must stay "SourceType.web" for the stored values.
+]
+
+[tool.coverage.run]
+source = ["app"]
+# SQLAlchemy async runs route bodies inside greenlets; without this coverage misses most of them.
+concurrency = ["thread", "greenlet"]
+omit = ["app/alembic/*"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]

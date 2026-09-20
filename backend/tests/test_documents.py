@@ -109,7 +109,9 @@ async def test_file_download_supports_range(client, auth):
 async def test_update_and_delete_document(client, auth):
     h = auth()
     doc = (await upload(client, h, text_pdf(3))).json()
-    r = await client.patch(f"/api/documents/{doc['id']}", headers=h, json={"last_read_page": 2, "title": " Mới "})
+    r = await client.patch(
+        f"/api/documents/{doc['id']}", headers=h, json={"last_read_page": 2, "title": " Mới "}
+    )
     assert r.status_code == 200 and r.json()["last_read_page"] == 2 and r.json()["title"] == "Mới"
     r = await client.patch(f"/api/documents/{doc['id']}", headers=h, json={"last_read_page": 9})
     assert r.status_code == 422
@@ -154,7 +156,9 @@ async def test_avatar_upload_resize_and_delete(client, auth):
     assert img.status_code == 200
     assert max(Image.open(io.BytesIO(img.content)).size) == 256
 
-    bad = await client.put("/api/account/avatar", headers=h, files={"file": ("x.png", b"GIF89a....", "image/png")})
+    bad = await client.put(
+        "/api/account/avatar", headers=h, files={"file": ("x.png", b"GIF89a....", "image/png")}
+    )
     assert bad.status_code == 422
     assert (await client.delete("/api/account/avatar", headers=h)).json()["avatar_url"] is None
 
@@ -200,7 +204,9 @@ def test_extract_pdf_tables_and_speed(tmp_path):
     t = tmp_path / "t.pdf"
     t.write_bytes(table_pdf())
     content = extract_pdf(t, "t").content
-    assert "|ML|Machine learning|AI|" in content.replace(" ", "").replace("Machinelearning", "Machine learning")
+    assert "|ML|Machine learning|AI|" in content.replace(" ", "").replace(
+        "Machinelearning", "Machine learning"
+    )
 
     big = tmp_path / "big.pdf"
     big.write_bytes(text_pdf(100))

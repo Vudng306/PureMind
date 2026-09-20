@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validat
 
 from app.models import ExtractionStatus, SourceType
 
-
 HighlightColor = Literal["yellow", "green", "blue", "pink", "purple"]
 HighlightCategory = Literal["important", "concept", "question", "example", "review"]
 MAX_SELECTION = 5000  # FR-HL-01, MSG-22

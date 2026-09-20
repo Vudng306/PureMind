@@ -85,8 +85,12 @@ async def create_summary(
     summary.conclusion = content_out.conclusion
     summary.keywords = content_out.keywords
     summary.search_text = "\n".join(
-        [*content_out.key_points, *(f"{c.term}: {c.explanation}" for c in content_out.concepts),
-         content_out.conclusion, ", ".join(content_out.keywords)]
+        [
+            *content_out.key_points,
+            *(f"{c.term}: {c.explanation}" for c in content_out.concepts),
+            content_out.conclusion,
+            ", ".join(content_out.keywords),
+        ]
     )
     summary.language = language
     summary.ai_model = settings.openai_model

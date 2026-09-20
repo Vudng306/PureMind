@@ -2,11 +2,10 @@ import uuid
 from pathlib import Path
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from fastapi.responses import FileResponse
 import httpx
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -156,7 +155,9 @@ async def _commit_new_link(session: AsyncSession, doc: Document, user: User, url
         return None
     except IntegrityError:
         await session.rollback()
-        existing = await session.scalar(select(Document).where(Document.user_id == user.id, Document.url == url))
+        existing = await session.scalar(
+            select(Document).where(Document.user_id == user.id, Document.url == url)
+        )
         if existing is None:
             raise
         return JSONResponse(DocumentOut.model_validate(existing).model_dump(mode="json"), status_code=200)

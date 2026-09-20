@@ -14,7 +14,9 @@ from app.services import notebook_writer, openai_client
 from app.services.openai_client import AIError, Usage
 from tests.test_highlights import create, new_doc
 
-NOTEBOOK = "# Học máy cơ bản\n\n## Tổng quan\nMô hình học từ dữ liệu [1].\n\n## Câu hỏi ôn tập\n1. Vì sao? [2]"
+NOTEBOOK = (
+    "# Học máy cơ bản\n\n## Tổng quan\nMô hình học từ dữ liệu [1].\n\n## Câu hỏi ôn tập\n1. Vì sao? [2]"
+)
 
 
 class FakeStream:
@@ -29,7 +31,7 @@ class FakeStream:
         if isinstance(self.answer, Exception):
             raise self.answer
         for i in range(0, len(self.answer), 10):
-            yield self.answer[i:i + 10]
+            yield self.answer[i : i + 10]
         usage.add(Usage(50, 30))
 
 
@@ -51,7 +53,9 @@ def ai(monkeypatch):
 
 
 async def consent(client, headers):
-    r = await client.patch("/api/account", headers=headers, json={"reading_preferences": {"ai_consent": True}})
+    r = await client.patch(
+        "/api/account", headers=headers, json={"reading_preferences": {"ai_consent": True}}
+    )
     assert r.status_code == 200, r.text
 
 
@@ -102,7 +106,9 @@ async def test_generate_edit_save_delete(client, auth, ai):
 
     # Edit and save (FR-NB-03/04).
     r = await client.patch(
-        f"/api/notebooks/{nb['id']}", headers=h, json={"title": "  Ôn tập  ", "content": "Mới [1]", "status": "saved"}
+        f"/api/notebooks/{nb['id']}",
+        headers=h,
+        json={"title": "  Ôn tập  ", "content": "Mới [1]", "status": "saved"},
     )
     assert r.status_code == 200 and r.json()["title"] == "Ôn tập" and r.json()["status"] == "saved"
     r = await client.patch(f"/api/notebooks/{nb['id']}", headers=h, json={"content": "x" * 200_001})
@@ -118,7 +124,9 @@ async def test_generate_edit_save_delete(client, auth, ai):
     # Other users see nothing.
     other = auth()
     assert (await client.get(f"/api/notebooks/{nb['id']}", headers=other)).status_code == 404
-    assert (await client.patch(f"/api/notebooks/{nb['id']}", headers=other, json={"title": "a"})).status_code == 404
+    assert (
+        await client.patch(f"/api/notebooks/{nb['id']}", headers=other, json={"title": "a"})
+    ).status_code == 404
     assert (await client.get("/api/notebooks", headers=other)).json() == []
 
     # Deleting a notebook leaves its highlights alone.
@@ -194,7 +202,9 @@ async def test_generate_validation(client, auth, ai, monkeypatch):
 
     # A given title wins over the heading; duplicates are ignored.
     r = await client.post(
-        "/api/notebooks/generate", headers=h, json={"highlight_ids": ids + ids, "title": "Tên riêng", "language": "en"}
+        "/api/notebooks/generate",
+        headers=h,
+        json={"highlight_ids": ids + ids, "title": "Tên riêng", "language": "en"},
     )
     assert r.status_code == 201 and r.json()["title"] == "Tên riêng" and len(r.json()["sources"]) == 1
     assert "Write in English" in fake.calls[-1][0]["content"]
@@ -282,7 +292,9 @@ async def test_notebooks_are_searchable(client, auth, ai):
     hit = r.json()["notebooks"]["items"][0]
     assert hit["kind"] == "notebook" and hit["id"] == nb["id"] and hit["document_id"] is None
     assert hit["document_title"] == "Học máy cơ bản"
-    assert (await client.get("/api/search", headers=auth(), params={"q": "cơ bản"})).json()["notebooks"]["total"] == 0
+    assert (await client.get("/api/search", headers=auth(), params={"q": "cơ bản"})).json()["notebooks"][
+        "total"
+    ] == 0
 
 
 async def test_openai_stream(monkeypatch):
@@ -303,7 +315,9 @@ async def test_openai_stream(monkeypatch):
         return replies.pop(0)
 
     real = httpx.AsyncClient
-    monkeypatch.setattr(openai_client.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw))
+    monkeypatch.setattr(
+        openai_client.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw)
+    )
     settings = get_settings().model_copy(update={"openai_api_key": "sk-x", "openai_model": "gpt-test"})
 
     usage = Usage()
@@ -312,7 +326,11 @@ async def test_openai_stream(monkeypatch):
     assert seen[0]["stream"] is True and seen[0]["stream_options"] == {"include_usage": True}
 
     # A cut-off answer is an error.
-    replies[:] = [httpx.Response(200, content=sse({"choices": [{"delta": {"content": "a"}, "finish_reason": "length"}]}))]
+    replies[:] = [
+        httpx.Response(
+            200, content=sse({"choices": [{"delta": {"content": "a"}, "finish_reason": "length"}]})
+        )
+    ]
     with pytest.raises(AIError):
         _ = [d async for d in openai_client.chat_stream(settings, [], purpose="t", usage=Usage())]
 
@@ -323,7 +341,11 @@ def test_writer_helpers():
     assert notebook_writer.title_from("không có") is None
     assert notebook_writer.cited("a [1] b [12][3] [x]") == {1, 12, 3}
     prompt = notebook_writer.user_prompt(
-        [notebook_writer.Source(text="a\n  b", category="question", note="n" * 3000, document_title="T", page=4)]
+        [
+            notebook_writer.Source(
+                text="a\n  b", category="question", note="n" * 3000, document_title="T", page=4
+            )
+        ]
     )
     assert '[1] from "T", page 4 — marked as question' in prompt and "Text: a b" in prompt
     assert "n" * 2000 + "…" in prompt and "n" * 2001 not in prompt

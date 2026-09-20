@@ -1,5 +1,6 @@
 """Local file storage (SRS 3.3 "Kho tệp"). Files are only served through ownership-checked API routes."""
 
+import contextlib
 import re
 import unicodedata
 import uuid
@@ -62,7 +63,5 @@ async def save_upload(file: UploadFile, subdir: str, filename: str, max_bytes: i
 def delete_file(settings: Settings, relative: str | None) -> None:
     if not relative:
         return
-    try:
+    with contextlib.suppress(OSError, ValueError):
         resolve(settings, relative).unlink(missing_ok=True)
-    except (OSError, ValueError):
-        pass

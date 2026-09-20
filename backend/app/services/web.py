@@ -70,7 +70,12 @@ def is_public_ip(value: str) -> bool:
     if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
         ip = ip.ipv4_mapped
     return ip.is_global and not (
-        ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
     )
 
 
@@ -103,7 +108,9 @@ async def _checked_ips(url: httpx.URL) -> list[str]:
     return sorted(ips, key=lambda ip: ":" in ip)
 
 
-async def _send_pinned(client: httpx.AsyncClient, url: httpx.URL, ips: list[str], agent: str) -> httpx.Response:
+async def _send_pinned(
+    client: httpx.AsyncClient, url: httpx.URL, ips: list[str], agent: str
+) -> httpx.Response:
     """Connect to a vetted IP (no second DNS lookup, so no DNS rebinding) while keeping Host and TLS SNI."""
     host_header = url.host if url.port is None else f"{url.host}:{url.port}"
     last_error: Exception | None = None
@@ -155,7 +162,10 @@ async def fetch_url(raw_url: str, contact: str = "") -> FetchResult:
                                 raise FetchFailed
                         return FetchResult(
                             url=str(url),
-                            content_type=response.headers.get("content-type", "").split(";")[0].strip().lower(),
+                            content_type=response.headers.get("content-type", "")
+                            .split(";")[0]
+                            .strip()
+                            .lower(),
                             body=bytes(body),
                         )
                     finally:
@@ -333,4 +343,6 @@ def extract_article(html: bytes, url: str) -> Article:
     first, _, rest = content.partition("\n\n")
     if re.fullmatch(r"#{1,3} (.+)", first) and _same_text(first.lstrip("# "), title):
         content = rest
-    return Article(title=title[:500], content=content, word_count=word_count(content), published_at=published_at)
+    return Article(
+        title=title[:500], content=content, word_count=word_count(content), published_at=published_at
+    )

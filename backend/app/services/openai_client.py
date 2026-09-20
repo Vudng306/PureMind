@@ -79,7 +79,11 @@ async def chat(
             last = e
             log.warning(
                 "openai call failed purpose=%s model=%s attempt=%d duration_ms=%d error=%s",
-                purpose, settings.openai_model, attempt + 1, (time.monotonic() - started) * 1000, e,
+                purpose,
+                settings.openai_model,
+                attempt + 1,
+                (time.monotonic() - started) * 1000,
+                e,
             )
             # Timeouts and network errors are worth one more try; a malformed answer or a 4xx is not.
             if not (isinstance(e, httpx.HTTPError) or getattr(e, "retryable", False)):
@@ -87,7 +91,10 @@ async def chat(
             continue
         log.info(
             "openai call ok purpose=%s model=%s prompt_tokens=%d completion_tokens=%d duration_ms=%d",
-            purpose, settings.openai_model, usage.prompt_tokens, usage.completion_tokens,
+            purpose,
+            settings.openai_model,
+            usage.prompt_tokens,
+            usage.completion_tokens,
             (time.monotonic() - started) * 1000,
         )
         return Completion(text, usage)
@@ -121,36 +128,42 @@ async def chat_stream(
         finish: str | None = None
         got = Usage()
         try:
-            async with httpx.AsyncClient(timeout=settings.openai_timeout_seconds) as client:
-                async with client.stream(
+            async with (
+                httpx.AsyncClient(timeout=settings.openai_timeout_seconds) as client,
+                client.stream(
                     "POST",
                     f"{settings.openai_base_url.rstrip('/')}/chat/completions",
                     headers={"Authorization": f"Bearer {settings.openai_api_key}"},
                     json=body,
-                ) as res:
-                    if res.status_code != 200:
-                        raise AIError(f"HTTP {res.status_code}", retryable=res.status_code in RETRY_STATUS)
-                    async for line in res.aiter_lines():
-                        if not line.startswith("data:"):
-                            continue
-                        data = line[5:].strip()
-                        if data == "[DONE]":
-                            break
-                        chunk = json.loads(data)
-                        if u := chunk.get("usage"):
-                            got = Usage(int(u.get("prompt_tokens") or 0), int(u.get("completion_tokens") or 0))
-                        for choice in chunk.get("choices") or []:
-                            if text := (choice.get("delta") or {}).get("content"):
-                                sent = True
-                                yield text
-                            finish = choice.get("finish_reason") or finish
+                ) as res,
+            ):
+                if res.status_code != 200:
+                    raise AIError(f"HTTP {res.status_code}", retryable=res.status_code in RETRY_STATUS)
+                async for line in res.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        break
+                    chunk = json.loads(data)
+                    if u := chunk.get("usage"):
+                        got = Usage(int(u.get("prompt_tokens") or 0), int(u.get("completion_tokens") or 0))
+                    for choice in chunk.get("choices") or []:
+                        if text := (choice.get("delta") or {}).get("content"):
+                            sent = True
+                            yield text
+                        finish = choice.get("finish_reason") or finish
             if finish not in (None, "stop") or not sent:
                 raise AIError(f"finish_reason={finish}")
         except (httpx.HTTPError, AIError, KeyError, TypeError, json.JSONDecodeError) as e:
             last = e
             log.warning(
                 "openai stream failed purpose=%s model=%s attempt=%d duration_ms=%d error=%s",
-                purpose, settings.openai_model, attempt + 1, (time.monotonic() - started) * 1000, e,
+                purpose,
+                settings.openai_model,
+                attempt + 1,
+                (time.monotonic() - started) * 1000,
+                e,
             )
             if sent or not (isinstance(e, httpx.HTTPError) or getattr(e, "retryable", False)):
                 break
@@ -158,7 +171,10 @@ async def chat_stream(
         usage.add(got)
         log.info(
             "openai stream ok purpose=%s model=%s prompt_tokens=%d completion_tokens=%d duration_ms=%d",
-            purpose, settings.openai_model, got.prompt_tokens, got.completion_tokens,
+            purpose,
+            settings.openai_model,
+            got.prompt_tokens,
+            got.completion_tokens,
             (time.monotonic() - started) * 1000,
         )
         return

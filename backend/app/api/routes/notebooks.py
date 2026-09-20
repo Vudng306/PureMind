@@ -104,8 +104,13 @@ async def _owned_notebook(session: AsyncSession, user: User, notebook_id: uuid.U
 async def _out(session: AsyncSession, nb: Notebook) -> NotebookOut:
     rows = (
         await session.execute(
-            select(NotebookHighlight.position, Highlight, Document.title, Document.source_type,
-                   Document.original_filename)
+            select(
+                NotebookHighlight.position,
+                Highlight,
+                Document.title,
+                Document.source_type,
+                Document.original_filename,
+            )
             .join(Highlight, Highlight.id == NotebookHighlight.highlight_id)
             .join(Document, Document.id == Highlight.document_id)
             .where(NotebookHighlight.notebook_id == nb.id)
@@ -113,12 +118,19 @@ async def _out(session: AsyncSession, nb: Notebook) -> NotebookOut:
         )
     ).all()
     return NotebookOut(
-        id=nb.id, title=nb.title, content=nb.content, status=nb.status, ai_model=nb.ai_model,
-        created_at=nb.created_at, updated_at=nb.updated_at,
+        id=nb.id,
+        title=nb.title,
+        content=nb.content,
+        status=nb.status,
+        ai_model=nb.ai_model,
+        created_at=nb.created_at,
+        updated_at=nb.updated_at,
         sources=[
             NotebookSource(
-                position=r.position, highlight=HighlightOut.model_validate(r.Highlight, from_attributes=True),
-                document_title=r.title, file_type=file_type_of(r.source_type, r.original_filename),
+                position=r.position,
+                highlight=HighlightOut.model_validate(r.Highlight, from_attributes=True),
+                document_title=r.title,
+                file_type=file_type_of(r.source_type, r.original_filename),
             )
             for r in rows
         ],
@@ -132,8 +144,9 @@ def _sources(rows: list[tuple]) -> tuple[list[uuid.UUID], list[notebook_writer.S
         key=lambda r: (r[1].title.lower(), str(r[1].id), r[0].page_number or 0, r[0].created_at),
     )
     return [h.id for h, _ in rows], [
-        notebook_writer.Source(text=h.selected_text, category=h.category, note=h.note, document_title=d.title,
-                               page=h.page_number)
+        notebook_writer.Source(
+            text=h.selected_text, category=h.category, note=h.note, document_title=d.title, page=h.page_number
+        )
         for h, d in rows
     ]
 
@@ -143,11 +156,17 @@ async def _save_draft(
 ) -> NotebookOut:
     """FR-NB-02 steps 5–6: store the draft with its sources and count one AI request."""
     content = notebook_writer.clean_output(content)[:MAX_NOTEBOOK_CHARS]
-    title = title or notebook_writer.title_from(content) or f"Notebook {utcnow().astimezone(ai_quota.VN):%d/%m/%Y}"
+    title = (
+        title
+        or notebook_writer.title_from(content)
+        or f"Notebook {utcnow().astimezone(ai_quota.VN):%d/%m/%Y}"
+    )
     async with SessionLocal() as session:
         # A highlight deleted while the AI was writing is simply not linked.
         alive = set((await session.scalars(select(Highlight.id).where(Highlight.id.in_(ids)))).all())
-        nb = Notebook(user_id=user_id, title=title, content=content, status="draft", ai_model=settings.openai_model)
+        nb = Notebook(
+            user_id=user_id, title=title, content=content, status="draft", ai_model=settings.openai_model
+        )
         nb.sources = [
             NotebookHighlight(highlight_id=hid, position=n) for n, hid in enumerate(ids, 1) if hid in alive
         ]
@@ -171,7 +190,7 @@ async def _snapshot(session: AsyncSession, nb: Notebook) -> None:
     if versions and versions[0].title == nb.title and versions[0].content == nb.content:
         return
     session.add(NotebookVersion(notebook_id=nb.id, title=nb.title, content=nb.content))
-    for old in versions[MAX_NOTEBOOK_VERSIONS - 1:]:
+    for old in versions[MAX_NOTEBOOK_VERSIONS - 1 :]:
         await session.delete(old)
 
 
@@ -237,7 +256,9 @@ async def generate_notebook(
             _running.discard(user_id)
 
     return StreamingResponse(
-        events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 
@@ -247,8 +268,12 @@ async def list_notebooks(user: CurrentUser, session: SessionDep, highlight_id: u
     cutoff = utcnow() - timedelta(days=DRAFT_DAYS)
     stale = (
         await session.scalars(
-            select(Notebook.id).where(Notebook.user_id == user.id, Notebook.status == "draft",
-                                      Notebook.opened_at < cutoff, Notebook.updated_at < cutoff)
+            select(Notebook.id).where(
+                Notebook.user_id == user.id,
+                Notebook.status == "draft",
+                Notebook.opened_at < cutoff,
+                Notebook.updated_at < cutoff,
+            )
         )
     ).all()
     if stale:  # DR-03, done lazily when the list is opened
@@ -257,8 +282,14 @@ async def list_notebooks(user: CurrentUser, session: SessionDep, highlight_id: u
 
     count = func.count(NotebookHighlight.highlight_id)
     stmt = (
-        select(Notebook.id, Notebook.title, Notebook.status, Notebook.created_at, Notebook.updated_at,
-               count.label("source_count"))
+        select(
+            Notebook.id,
+            Notebook.title,
+            Notebook.status,
+            Notebook.created_at,
+            Notebook.updated_at,
+            count.label("source_count"),
+        )
         .outerjoin(NotebookHighlight, NotebookHighlight.notebook_id == Notebook.id)
         .where(Notebook.user_id == user.id)
         .group_by(Notebook.id)
@@ -267,7 +298,9 @@ async def list_notebooks(user: CurrentUser, session: SessionDep, highlight_id: u
     if highlight_id:
         cites = select(NotebookHighlight.notebook_id).where(NotebookHighlight.highlight_id == highlight_id)
         stmt = stmt.where(Notebook.id.in_(cites))
-    return [NotebookListItem.model_validate(r, from_attributes=True) for r in (await session.execute(stmt)).all()]
+    return [
+        NotebookListItem.model_validate(r, from_attributes=True) for r in (await session.execute(stmt)).all()
+    ]
 
 
 @router.get("/{notebook_id}", response_model=NotebookOut)
@@ -283,7 +316,9 @@ async def get_notebook(notebook_id: uuid.UUID, user: CurrentUser, session: Sessi
 
 
 @router.patch("/{notebook_id}", response_model=NotebookOut)
-async def update_notebook(notebook_id: uuid.UUID, payload: NotebookUpdate, user: CurrentUser, session: SessionDep):
+async def update_notebook(
+    notebook_id: uuid.UUID, payload: NotebookUpdate, user: CurrentUser, session: SessionDep
+):
     """FR-NB-03/04: edit the title, content and sources; `status: "saved"` saves a draft."""
     nb = await _owned_notebook(session, user, notebook_id)
     if payload.title is not None:
@@ -296,7 +331,9 @@ async def update_notebook(notebook_id: uuid.UUID, payload: NotebookUpdate, user:
         ids = _unique(payload.highlight_ids)
         _check_count(ids, allow_empty=True)  # every source may have been deleted with its document
         await _owned_highlights(session, user.id, ids)
-        links = (await session.scalars(select(NotebookHighlight).where(NotebookHighlight.notebook_id == nb.id))).all()
+        links = (
+            await session.scalars(select(NotebookHighlight).where(NotebookHighlight.notebook_id == nb.id))
+        ).all()
         kept = {link.highlight_id: link for link in links}
         for link in links:
             if link.highlight_id not in ids:
@@ -331,8 +368,12 @@ async def list_versions(notebook_id: uuid.UUID, user: CurrentUser, session: Sess
     nb = await _owned_notebook(session, user, notebook_id)
     rows = (
         await session.execute(
-            select(NotebookVersion.id, NotebookVersion.title, NotebookVersion.created_at,
-                   func.length(NotebookVersion.content).label("chars"))
+            select(
+                NotebookVersion.id,
+                NotebookVersion.title,
+                NotebookVersion.created_at,
+                func.length(NotebookVersion.content).label("chars"),
+            )
             .where(NotebookVersion.notebook_id == nb.id)
             .order_by(NotebookVersion.created_at.desc())
         )
