@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
+from app.core.logging import bind_user
 from app.core.messages import MSG
 from app.core.security import InvalidToken, verify_access_token
 from app.db.session import get_session
@@ -31,6 +32,7 @@ async def get_current_user(request: Request, session: SessionDep, settings: Sett
     except InvalidToken:
         raise _unauthorized() from None
 
+    bind_user(request.scope, claims.user_id)  # NFR-OBS-01: the rest of this request logs under the user
     user = await session.get(User, claims.user_id)
     if user is None:
         if not claims.email:

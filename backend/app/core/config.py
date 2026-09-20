@@ -6,7 +6,6 @@ from typing import Annotated
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-
 # Paths are anchored to backend/, whatever the working directory (uvicorn may be started from the repo root).
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 ENV_FILE = BACKEND_DIR / ".env"
@@ -16,6 +15,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
     environment: str = "development"
+    log_level: str = "INFO"  # NFR-OBS-01; logs are always JSON on stdout.
     database_url: str = "postgresql+asyncpg://puremind:puremind@localhost:5432/puremind"
     # Comma-separated in env files (e.g. "http://a,http://b"); NoDecode skips JSON parsing.
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:3000"])
