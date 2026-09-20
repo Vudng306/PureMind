@@ -5,13 +5,11 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import {
-  CATEGORIES,
-  CATEGORY_LABEL,
+  CATEGORY_FOR_COLOR,
   MAX_HIGHLIGHT_NOTE,
   saveDocumentNote,
   useHighlightActions,
   type Highlight,
-  type HighlightCategory,
 } from "@/lib/annotations";
 import { useDocument } from "@/lib/documents";
 import { MSG } from "@/lib/messages";
@@ -113,7 +111,8 @@ function HighlightCard({
             aria-label={`Đổi thành ${colorLabel(labels, c)}`}
             title={colorLabel(labels, c)}
             aria-pressed={c === h.color}
-            onClick={() => updateHighlight(h.id, { color: c })}
+            // The color is the category: picking one says what the passage is (FR-HL-04).
+            onClick={() => updateHighlight(h.id, { color: c, category: CATEGORY_FOR_COLOR[c] })}
             className="flex h-9 w-[20px] items-center justify-center"
           >
             <span
@@ -147,22 +146,6 @@ function HighlightCard({
             Không định vị được đoạn này — nội dung tài liệu đã thay đổi. Highlight và ghi chú vẫn được giữ.
           </p>
         ))}
-      <div className="flex flex-wrap gap-1" role="group" aria-label="Danh mục">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c}
-            type="button"
-            aria-pressed={h.category === c}
-            // Choosing the current category again removes it (FR-HL-04).
-            onClick={() => updateHighlight(h.id, { category: h.category === c ? null : c })}
-            className={`h-7 rounded-full border px-2.5 text-xs ${
-              h.category === c ? "border-ink bg-ink font-semibold text-bg" : "border-line text-muted hover:border-ink hover:text-ink"
-            }`}
-          >
-            {CATEGORY_LABEL[c]}
-          </button>
-        ))}
-      </div>
       {editing ? (
         <div className="flex flex-col gap-2">
           <textarea
@@ -281,7 +264,6 @@ export function ReaderPanel({
   const qc = useQueryClient();
   const { data: doc } = useDocument(docId);
   const [filter, setFilter] = useState<HighlightColor | "all">("all");
-  const [catFilter, setCatFilter] = useState<HighlightCategory | "all">("all");
   const [draft, setDraft] = useState(doc?.note ?? "");
   const [status, setStatus] = useState<"saved" | "dirty" | "saving" | "error">("saved");
   const sent = useRef(doc?.note ?? "");
@@ -317,10 +299,8 @@ export function ReaderPanel({
   }, [draft, status]);
 
   const sorted = [...highlights].sort((a, b) => (a.page ?? 0) - (b.page ?? 0) || a.createdAt.localeCompare(b.createdAt));
-  const shown = sorted.filter(
-    (h) => (filter === "all" || h.color === filter) && (catFilter === "all" || h.category === catFilter),
-  );
-  const usedCategories = CATEGORIES.filter((c) => highlights.some((h) => h.category === c));
+  // Filtering by color is filtering by category: the two are the same choice (CATEGORY_FOR_COLOR).
+  const shown = sorted.filter((h) => filter === "all" || h.color === filter);
   const lost = new Set(lostIds);
   const lostText = highlights.filter((h) => lost.has(h.id) && !h.rects).length;
   const tabs: [PanelTab, string][] = [
@@ -386,22 +366,6 @@ export function ReaderPanel({
                     </button>
                   );
                 })}
-              </div>
-            )}
-            {usedCategories.length > 0 && (
-              <div aria-label="Lọc theo danh mục" className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-muted">Danh mục:</span>
-                {usedCategories.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    aria-pressed={catFilter === c}
-                    onClick={() => setCatFilter(catFilter === c ? "all" : c)}
-                    className="chip h-[30px] px-2.5 text-xs"
-                  >
-                    {CATEGORY_LABEL[c]} · {highlights.filter((h) => h.category === c).length}
-                  </button>
-                ))}
               </div>
             )}
             {lostText > 0 && (

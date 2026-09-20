@@ -12,7 +12,14 @@ import type { PdfSelection, PdfViewerHandle } from "@/components/pdf-viewer";
 import { ReaderPanel, type PanelTab } from "@/components/reader-panel";
 import { SelectionMenu } from "@/components/selection-menu";
 import { Alert, Spinner } from "@/components/ui";
-import { MAX_SELECTION, flushHighlightEdits, useHighlightActions, useHighlights, type Highlight } from "@/lib/annotations";
+import {
+  CATEGORY_FOR_COLOR,
+  MAX_SELECTION,
+  flushHighlightEdits,
+  useHighlightActions,
+  useHighlights,
+  type Highlight,
+} from "@/lib/annotations";
 import { KIND_LABEL, origin } from "@/lib/doc-view";
 import { documentsKey, updateDocument, useDocument } from "@/lib/documents";
 import { parseMarkdown, type Inline } from "@/lib/markdown";
@@ -331,8 +338,9 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
     );
     let h: Highlight;
     if (existing) {
-      updateHighlight(existing.id, { color });
-      h = { ...existing, color };
+      const category = CATEGORY_FOR_COLOR[color];
+      updateHighlight(existing.id, { color, category });
+      h = { ...existing, color, category };
     } else if (onPdf) {
       // FR-HL-01 step 2: on the original page the position is the page plus normalised rectangles.
       h = addHighlight({
@@ -343,6 +351,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
         rects: sel.rects,
         text: sel.text,
         color,
+        category: CATEGORY_FOR_COLOR[color],
         page: sel.page,
       });
     } else {
@@ -354,6 +363,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
         rects: null,
         text: sel.text,
         color,
+        category: CATEGORY_FOR_COLOR[color],
         page: hasPages ? (blockPage.get(sel.blockId) ?? null) : null,
       });
     }

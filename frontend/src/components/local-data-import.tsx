@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
-import { MAX_HIGHLIGHT_NOTE, MAX_SELECTION, highlightsKey, toDto, type Highlight } from "@/lib/annotations";
+import { CATEGORY_FOR_COLOR, MAX_HIGHLIGHT_NOTE, MAX_SELECTION, highlightsKey, toDto, type Highlight } from "@/lib/annotations";
 import { api } from "@/lib/api";
 import { documentsKey } from "@/lib/documents";
 import { HIGHLIGHT_COLORS } from "@/lib/preferences";
@@ -102,7 +102,7 @@ export function LocalDataImport() {
 
     const body = {
       highlights: highlights.map((h) => ({
-        ...toDto({ ...h, category: null, rects: null, note: (h.note ?? "").slice(0, MAX_HIGHLIGHT_NOTE), page: h.page ?? null }),
+        ...toDto({ ...h, category: CATEGORY_FOR_COLOR[h.color], rects: null, note: (h.note ?? "").slice(0, MAX_HIGHLIGHT_NOTE), page: h.page ?? null }),
         id: UUID.test(h.id) ? h.id : null,
         created_at: h.createdAt,
       })),

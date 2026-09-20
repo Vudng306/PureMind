@@ -45,6 +45,23 @@ export const CATEGORY_LABEL: Record<HighlightCategory, string> = {
   review: "Cần ôn tập",
 };
 
+/**
+ * The color a reader picks already says what they meant by the passage, so it also sets the category.
+ * Only the category reaches the AI: a color means whatever that one reader decided it means, while
+ * `category` is the same five values for everyone (FR-HL-04, FR-NB-02).
+ *
+ * Every highlight gets its color's category and nothing in the UI sets one by hand, so the five colors
+ * and the five categories are one choice for the reader. They remain two fields (FR-HL-04): a renamed
+ * color label never changes the value the AI reads.
+ */
+export const CATEGORY_FOR_COLOR: Record<HighlightColor, HighlightCategory> = {
+  yellow: "important",
+  green: "example",
+  blue: "concept",
+  pink: "question",
+  purple: "review",
+};
+
 export interface HighlightDto {
   id: string;
   document_id: string;
