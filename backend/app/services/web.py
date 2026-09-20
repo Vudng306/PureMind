@@ -10,7 +10,7 @@ from datetime import datetime
 import httpx
 from bs4 import BeautifulSoup, Tag
 
-from app.services.html_markdown import clean_soup, html_to_markdown, word_count
+from app.services.html_markdown import absolutize_images, clean_soup, html_to_markdown, word_count
 
 TIMEOUT_SECONDS = 20
 MAX_REDIRECTS = 5
@@ -338,6 +338,7 @@ def extract_article(html: bytes, url: str) -> Article:
 
     container = _best_container(soup)
     _drop_link_lists(container)
+    absolutize_images(container, url)
     content = html_to_markdown(container)
     # The reader already shows the title: drop a leading "# Title" repeating it.
     first, _, rest = content.partition("\n\n")

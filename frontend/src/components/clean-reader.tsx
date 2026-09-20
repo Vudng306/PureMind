@@ -139,6 +139,30 @@ const BlockView = memo(function BlockView({ block }: { block: Block }) {
           </table>
         </div>
       );
+    case "image":
+      return (
+        <figure {...common} className="mb-[18px] select-none">
+          {/* Articles link images on any host; next/image would need every one of them in an allowlist. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={block.src}
+            alt={block.alt}
+            loading="lazy"
+            // The source site learns nothing about who is reading, and referer-based hotlink blocks do not trigger.
+            referrerPolicy="no-referrer"
+            className="mx-auto max-h-[70vh] w-auto max-w-full rounded-lg"
+            onError={(e) => {
+              // A removed or blocked image would otherwise leave a broken icon in the middle of the text.
+              e.currentTarget.closest("figure")?.setAttribute("hidden", "");
+            }}
+          />
+          {block.alt && (
+            <figcaption className="mt-1.5 text-center font-sans text-[0.72em] leading-normal text-muted">
+              {block.alt}
+            </figcaption>
+          )}
+        </figure>
+      );
     case "pagebreak":
       return (
         <div

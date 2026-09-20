@@ -2,6 +2,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -47,6 +48,20 @@ class Settings(BaseSettings):
     @property
     def web_contact(self) -> str:
         return self.web_fetch_contact.strip() or (self.cors_origins[0] if self.cors_origins else "")
+
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def normalise_database_url(cls, v: str) -> str:
+        """Accept the URL a managed host hands out (Railway, Render, Heroku, Supabase).
+
+        They all publish the libpq form, `postgresql://…`, while SQLAlchemy needs the driver named;
+        and asyncpg rejects libpq-only query parameters such as `sslmode`, which it configures itself.
+        """
+        parts = urlsplit(v)
+        if parts.scheme not in ("postgres", "postgresql", "postgresql+asyncpg"):
+            return v  # SQLite in the tests, or a driver someone chose on purpose
+        query = [(k, val) for k, val in parse_qsl(parts.query) if k not in ("sslmode", "channel_binding")]
+        return urlunsplit(("postgresql+asyncpg", parts.netloc, parts.path, urlencode(query), parts.fragment))
 
     @field_validator("upload_dir", mode="after")
     @classmethod

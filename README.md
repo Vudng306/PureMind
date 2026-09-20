@@ -140,6 +140,78 @@ npm run dev
 
 Mở <http://localhost:3000>, đăng ký tài khoản rồi thêm tài liệu đầu tiên.
 
+## Deploy lên Railway
+
+Dự án lên Railway thành **ba service trong cùng một project**: PostgreSQL, backend và frontend. Cả hai
+service ứng dụng dùng Dockerfile sẵn có; `backend/railway.json` và `frontend/railway.json` khai báo builder,
+health check và chính sách khởi động lại nên không phải cấu hình tay.
+
+### 1. Đẩy code lên GitHub
+
+Railway deploy từ một nhánh GitHub, nên nhánh muốn chạy phải được push trước.
+
+### 2. Tạo PostgreSQL
+
+Trong project Railway: **New → Database → Add PostgreSQL**.
+
+Bản migration đầu tiên cần extension `unaccent` cho tìm kiếm không dấu (FR-SRCH-01) — đây là contrib
+trusted nên Postgres của Railway tạo được. `pgvector` chỉ dành cho tìm kiếm ngữ nghĩa sau này; nếu không có
+thì migration bỏ qua chứ không fail.
+
+### 3. Service backend
+
+**New → GitHub Repo**, chọn repo này, rồi trong **Settings → Root Directory** điền `backend`.
+
+Biến môi trường (**Variables**):
+
+| Biến | Giá trị |
+|---|---|
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` — tham chiếu service Postgres, không chép tay |
+| `ENVIRONMENT` | `production` |
+| `CORS_ORIGINS` | domain của service frontend, ví dụ `https://puremind-web.up.railway.app` |
+| `UPLOAD_DIR` | `/data/uploads` |
+| `SUPABASE_URL` | Project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | secret key |
+| `OPENAI_API_KEY` | khóa OpenAI |
+| `WEB_FETCH_CONTACT` | email hoặc URL liên hệ thật |
+
+Không cần đặt `PORT`: Railway tự cấp và container dùng đúng biến đó. `DATABASE_URL` của Railway ở dạng
+`postgresql://…`; backend tự đổi sang driver `asyncpg` và bỏ tham số `sslmode` mà asyncpg không nhận.
+
+**Bắt buộc**: thêm **Volume** gắn vào `/data/uploads`. Không có volume thì mọi PDF/EPUB người dùng tải lên
+sẽ mất sau mỗi lần deploy, trong khi bản ghi trong cơ sở dữ liệu vẫn còn.
+
+Rồi **Settings → Networking → Generate Domain** để lấy domain công khai.
+
+### 4. Service frontend
+
+Thêm một service nữa từ cùng repo, **Root Directory** là `frontend`.
+
+| Biến | Giá trị |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | domain của backend, ví dụ `https://puremind-api.up.railway.app` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | publishable/anon key |
+
+Ba biến này được đọc **lúc build** và nướng thẳng vào JavaScript gửi xuống trình duyệt. Đổi chúng thì phải
+deploy lại mới có tác dụng. Cũng vì vậy, tuyệt đối không đặt secret vào biến `NEXT_PUBLIC_*`.
+
+Sinh domain cho service này, rồi quay lại backend cập nhật `CORS_ORIGINS` cho khớp.
+
+### 5. Supabase
+
+Trong **Authentication → URL Configuration**, thêm domain frontend vào *Site URL* và *Redirect URLs*. Thiếu
+bước này thì đăng nhập sẽ quay về `localhost`.
+
+### 6. Kiểm tra
+
+```bash
+curl https://<backend>/api/healthz
+```
+
+Phải trả về `{"status":"ok"}`. Ở `ENVIRONMENT=production`, `/api/docs` trả 404 và phản hồi có thêm
+`Strict-Transport-Security` — đó là hành vi đúng, không phải lỗi.
+
 ## Biến môi trường
 
 | Biến | File | Bắt buộc | Mô tả |

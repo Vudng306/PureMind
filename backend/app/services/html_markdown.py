@@ -1,10 +1,12 @@
 """Minimal, dependency-light HTML -> Markdown conversion shared by EPUB and web extraction.
 
 Output uses only the Markdown subset the frontend clean-text renderer understands:
-headings, paragraphs, blockquotes, fenced code, lists, tables, **bold**, *italic*, `code`, [links](http...).
+headings, paragraphs, blockquotes, fenced code, lists, tables, images, **bold**, *italic*, `code`,
+[links](http...).
 """
 
 import re
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, NavigableString, Tag
 from bs4.element import PreformattedString
@@ -58,6 +60,61 @@ BLOCK_TAGS = {
 
 NESTED_ITEM = re.compile(r"^\s+(-|\d+\.)\s")
 
+# An image is always its own block, even when the page wrapped it in a paragraph next to a caption.
+IMAGE_MD = re.compile(r"(!\[[^\]]*\]\([^)\s]+\))")
+# Lazy-loading pages leave a placeholder in `src` and keep the real address in one of these.
+SRC_ATTRS = ("src", "data-src", "data-original", "data-lazy-src", "data-echo")
+
+
+def _image(node: Tag) -> str:
+    """`![alt](url)` once the source is an absolute http(s) URL, otherwise a marker for the spot.
+
+    EPUB images live inside the container and PDF images inside the file, so there is no address the
+    reader could load; those keep the placeholder, now carrying the alt text.
+    """
+    alt = re.sub(r"[\[\]]", "", re.sub(r"\s+", " ", node.get("alt") or "")).strip()[:200]
+    src = (node.get("src") or "").strip()
+    if not re.match(r"^https?://", src, re.I):
+        return f"*[Hình ảnh: {alt}]*" if alt else "*[Hình ảnh]*"
+    return f"![{alt}]({src.replace(' ', '%20').replace(')', '%29')})"
+
+
+def _best_src(img: Tag) -> str:
+    """The largest candidate in srcset, else the first attribute holding a real address."""
+    candidates: list[tuple[int, str]] = []
+    for entry in (img.get("srcset") or "").split(","):
+        parts = entry.split()
+        if parts:
+            width = int(parts[1][:-1]) if len(parts) > 1 and parts[1].endswith("w") else 0
+            candidates.append((width, parts[0]))
+    if candidates:
+        return max(candidates)[1]
+    for attr in SRC_ATTRS:
+        value = (img.get(attr) or "").strip()
+        if value and not value.startswith("data:"):
+            return value
+    return ""
+
+
+def absolutize_images(root: Tag, base_url: str) -> None:
+    """Resolve every <img> to an absolute address, and drop the ones that are not content.
+
+    Called before the conversion, so `_image` only ever sees a URL the reader can actually load.
+    """
+    for img in root.find_all("img"):
+        try:  # a 1x1 spacer or tracking pixel is not an illustration
+            if min(int(img.get("width") or 99), int(img.get("height") or 99)) <= 2:
+                img.decompose()
+                continue
+        except ValueError:
+            pass
+        src = _best_src(img)
+        resolved = urljoin(base_url, src) if src else ""
+        if re.match(r"^https?://", resolved, re.I):
+            img["src"] = resolved
+        else:
+            img.decompose()
+
 
 def _escape(text: str) -> str:
     return re.sub(r"([*_`\[\]|])", r"\\\1", text)
@@ -75,7 +132,7 @@ def _inline(node, *, in_code: bool = False) -> str:
     if name == "br":
         return " "
     if name == "img":
-        return "*[Hình ảnh]*"
+        return _image(node)
     inner = "".join(_inline(c, in_code=in_code or name == "code") for c in node.children)
     stripped = inner.strip()
     if not stripped:
@@ -87,6 +144,10 @@ def _inline(node, *, in_code: bool = False) -> str:
     if name == "code" and not in_code:
         return f"`{stripped.replace('`', '')}`"
     if name == "a":
+        # Wikipedia links every image to its file page: keep the image, drop the wrapper, because
+        # [![](img)](page) is neither a link the renderer shows nor an image it recognises.
+        if IMAGE_MD.search(stripped):
+            return stripped
         href = (node.get("href") or "").strip()
         if re.match(r"^https?://", href, re.I):
             return f"[{stripped}]({href.replace(')', '%29').replace(' ', '%20')})"
@@ -118,8 +179,9 @@ def _blocks(tag: Tag, out: list[str], list_depth: int = 0) -> None:
     def flush():
         text = re.sub(r"\s+", " ", "".join(buffer)).strip()
         buffer.clear()
-        if text:
-            out.append(text)
+        for part in IMAGE_MD.split(text):
+            if part.strip():
+                out.append(part.strip())
 
     for child in tag.children:
         if isinstance(child, NavigableString):

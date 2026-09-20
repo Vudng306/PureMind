@@ -21,7 +21,13 @@ extraction_status = postgresql.ENUM(
 
 
 def upgrade() -> None:
-    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
+    # pgvector is kept for the planned semantic search; nothing queries a vector column yet, so a managed
+    # Postgres without the extension must not fail the whole migration. unaccent is a trusted contrib
+    # module and FR-SRCH-01 does need it, so that one is allowed to fail loudly.
+    op.execute(
+        "DO $$ BEGIN CREATE EXTENSION IF NOT EXISTS vector; "
+        "EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'pgvector unavailable: %', SQLERRM; END $$"
+    )
     op.execute("CREATE EXTENSION IF NOT EXISTS unaccent")
     source_type.create(op.get_bind(), checkfirst=True)
     extraction_status.create(op.get_bind(), checkfirst=True)

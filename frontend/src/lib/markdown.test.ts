@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { findMatches, normalize } from "./find";
 import { parseInline, parseMarkdown } from "./markdown";
 
+const NL = String.fromCharCode(10);
+
 describe("parseMarkdown", () => {
   const md = [
     "# Chapter 1",
@@ -45,6 +47,31 @@ describe("parseMarkdown", () => {
     expect(links[0].t === "link" && links[0].href).toBe("https://example.org");
     expect(JSON.stringify(para.c)).not.toContain("javascript");
     expect(JSON.stringify(para.c)).toContain("bad");
+  });
+
+  it("makes an image its own block and refuses unsafe sources", () => {
+    const blocks = parseMarkdown(
+      [
+        "Trước ảnh.",
+        "",
+        "![Biểu đồ doanh thu](https://cdn.example.org/a.jpg)",
+        "",
+        "![xấu](javascript:alert(1))",
+      ].join(NL),
+    );
+    expect(blocks.map((b) => b.t)).toEqual(["paragraph", "image", "paragraph"]);
+    const image = blocks[1];
+    if (image.t !== "image") throw new Error("expected an image block");
+    expect(image).toMatchObject({ src: "https://cdn.example.org/a.jpg", alt: "Biểu đồ doanh thu" });
+  });
+
+  it("keeps ids of other blocks when an image is added", () => {
+    const before = parseMarkdown(["Đoạn một.", "", "Đoạn hai."].join(NL));
+    const after = parseMarkdown(
+      ["Đoạn một.", "", "![ảnh](https://cdn.example.org/a.jpg)", "", "Đoạn hai."].join(NL),
+    );
+    // Highlights are anchored by block id, so inserting an image must not move the text around it.
+    expect([after[0].id, after[2].id]).toEqual([before[0].id, before[1].id]);
   });
 
   it("gives stable, unique block ids", () => {

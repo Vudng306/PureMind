@@ -358,3 +358,82 @@ def test_relative_upload_dir_is_anchored_to_backend(monkeypatch):
 
     monkeypatch.chdir(BACKEND_DIR.parent)
     assert Settings(upload_dir="uploads").upload_dir == BACKEND_DIR / "uploads"
+
+
+def test_images_become_markdown_with_absolute_urls():
+    """FR-RDR-05: an illustration is part of the article, so clean text carries it, not a hole."""
+    from bs4 import BeautifulSoup
+
+    from app.services.html_markdown import absolutize_images, html_to_markdown
+
+    html = """<article>
+    <p>Mở đầu.</p>
+    <figure><img src="/i/a.jpg" alt="Biểu đồ doanh thu"><figcaption>Nguồn: VnExpress</figcaption></figure>
+    <p><img data-src="https://cdn.x/b.png" alt="lazy"></p>
+    <p><img srcset="https://cdn.x/s.jpg 320w, https://cdn.x/l.jpg 1200w" alt="rộng"></p>
+    <p><img src="https://t.co/px.gif" width="1" height="1" alt=""></p>
+    <p><img src="data:image/gif;base64,R0lGOD" alt="nhúng"></p>
+    </article>"""
+    root = BeautifulSoup(html, "html.parser").find("article")
+    absolutize_images(root, "https://vnexpress.net/bai/123.html")
+    blocks = html_to_markdown(root).split("\n\n")
+
+    # Relative source resolved against the article URL, and the image is its own block.
+    assert blocks[:3] == [
+        "Mở đầu.",
+        "![Biểu đồ doanh thu](https://vnexpress.net/i/a.jpg)",
+        "Nguồn: VnExpress",
+    ]
+    assert "![lazy](https://cdn.x/b.png)" in blocks  # the real address hides in data-src
+    assert "![rộng](https://cdn.x/l.jpg)" in blocks  # the widest srcset candidate
+    # A tracking pixel and an inline data: URI are not illustrations.
+    assert not any("t.co" in b or "data:" in b for b in blocks)
+
+
+def test_image_without_a_loadable_url_keeps_its_alt_text():
+    """EPUB images live inside the container, so the spot is marked and the alt text kept."""
+    from bs4 import BeautifulSoup
+
+    from app.services.html_markdown import html_to_markdown
+
+    soup = BeautifulSoup('<p><img src="../images/fig1.png" alt="Sơ đồ kiến trúc"></p>', "html.parser")
+    assert html_to_markdown(soup) == "*[Hình ảnh: Sơ đồ kiến trúc]*"
+
+
+def test_image_wrapped_in_a_link_stays_an_image():
+    """Wikipedia links each image to its file page; the wrapper must not leak into the text."""
+    from bs4 import BeautifulSoup
+
+    from app.services.html_markdown import absolutize_images, html_to_markdown
+
+    html = '<div><p><a href="https://vi.wikipedia.org/wiki/T%E1%BA%ADp_tin:A.jpg">'
+    html += '<img src="//upload.wikimedia.org/a.jpg" alt="Robot Kismet"></a></p><p>Đoạn sau.</p></div>'
+    root = BeautifulSoup(html, "html.parser").find("div")
+    absolutize_images(root, "https://vi.wikipedia.org/wiki/AI")
+
+    # Protocol-relative source resolved to https, and no stray "](...)" left behind.
+    assert html_to_markdown(root).split("\n\n") == [
+        "![Robot Kismet](https://upload.wikimedia.org/a.jpg)",
+        "Đoạn sau.",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("given", "expected"),
+    [
+        # What Railway, Render and Heroku publish.
+        (
+            "postgresql://u:p@host.railway.internal:5432/railway",
+            "postgresql+asyncpg://u:p@host.railway.internal:5432/railway",
+        ),
+        ("postgres://u:p@host:5432/db", "postgresql+asyncpg://u:p@host:5432/db"),
+        # asyncpg configures TLS itself and rejects the libpq parameters.
+        ("postgresql://u:p@host:5432/db?sslmode=require", "postgresql+asyncpg://u:p@host:5432/db"),
+        # An URL that already names the driver is left alone.
+        ("postgresql+asyncpg://u:p@host:5432/db", "postgresql+asyncpg://u:p@host:5432/db"),
+    ],
+)
+def test_managed_database_urls_are_normalised(given, expected):
+    from app.core.config import Settings
+
+    assert Settings(database_url=given).database_url == expected

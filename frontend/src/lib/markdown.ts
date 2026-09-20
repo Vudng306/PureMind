@@ -16,6 +16,7 @@ export type Block =
   | { id: string; t: "code"; v: string }
   | { id: string; t: "list"; ordered: boolean; items: { depth: number; c: Inline[] }[] }
   | { id: string; t: "table"; rows: Inline[][][] }
+  | { id: string; t: "image"; src: string; alt: string }
   | { id: string; t: "pagebreak"; page: number };
 
 type BlockData = Block extends infer B ? (B extends Block ? Omit<B, "id"> : never) : never;
@@ -31,6 +32,9 @@ function hash(s: string): string {
 }
 
 const SAFE_HREF = /^https?:\/\//i;
+
+/** A whole line that is nothing but one image, which is how the extractors emit them. */
+const IMAGE_LINE = /^!\[([^\]]*)\]\((\S+)\)$/;
 
 export function parseInline(src: string): Inline[] {
   const out: Inline[] = [];
@@ -147,6 +151,12 @@ export function parseMarkdown(md: string): Block[] {
       i++;
       const v = body.join("\n");
       push("```" + v, { t: "code", v });
+      continue;
+    }
+    const image = IMAGE_LINE.exec(line.trim());
+    if (image && SAFE_HREF.test(image[2])) {
+      push(line, { t: "image", src: image[2], alt: image[1] });
+      i++;
       continue;
     }
     const heading = /^(#{1,6})\s+(.*)$/.exec(line);

@@ -11,4 +11,5 @@ RUN useradd --create-home appuser && mkdir -p /data/uploads && chown -R appuser 
 USER appuser
 
 EXPOSE 8000
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"]
+# $PORT is set by the host (Railway, Render, Fly); 8000 is the local docker-compose default.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]
