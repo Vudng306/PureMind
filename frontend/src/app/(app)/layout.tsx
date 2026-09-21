@@ -16,11 +16,11 @@ import { useAccount } from "@/lib/queries";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { useUi } from "@/lib/ui-store";
 
+// Highlight và Tìm kiếm không nằm trên thanh này: highlight đọc ngay trong tài liệu, còn tìm kiếm
+// đã có ô Ctrl K bên phải. Hai trang vẫn sống ở /highlights và /search.
 const NAV = [
   { href: "/library", label: "Thư viện" },
-  { href: "/highlights", label: "Highlight" },
   { href: "/notebooks", label: "Notebook" },
-  { href: "/search", label: "Tìm kiếm" },
   { href: "/settings", label: "Cài đặt" },
 ];
 

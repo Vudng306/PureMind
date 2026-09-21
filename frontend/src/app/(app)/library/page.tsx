@@ -289,9 +289,6 @@ export default function LibraryPage() {
       })
       .sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0] ?? readable.find((d) => !d.is_read);
   const contPct = cont ? pctOf(cont) : 0;
-  const contHighlight = cont
-    ? highlights.filter((h) => h.docId === cont.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
-    : undefined;
 
   async function confirmDelete() {
     if (!toDelete) return;
@@ -344,7 +341,7 @@ export default function LibraryPage() {
       {actionError && <Alert>{actionError}</Alert>}
 
       {cont && (
-        <section className="grid overflow-hidden rounded-[14px] border border-line bg-surface md:grid-cols-2">
+        <section className="overflow-hidden rounded-[14px] border border-line bg-surface">
           <div className="flex flex-col gap-3.5 px-6 py-7 sm:px-9 sm:py-8">
             <span className="eyebrow">ĐỌC TIẾP</span>
             <span className="line-clamp-3 font-serif text-3xl font-medium leading-[1.15] sm:text-4xl">{cont.title}</span>
@@ -358,23 +355,6 @@ export default function LibraryPage() {
               {contPct > 0 ? "Đọc tiếp" : "Bắt đầu đọc"}
               <Icon name="arrow" />
             </Link>
-          </div>
-          <div className="flex flex-col justify-center gap-3 bg-soft px-6 py-7 font-serif text-[19px] leading-relaxed text-body sm:px-9 sm:py-8">
-            {contHighlight ? (
-              <>
-                <span className="font-sans text-xs tracking-[0.08em] text-muted">
-                  HIGHLIGHT GẦN NHẤT{contHighlight.page ? ` · TRANG ${contHighlight.page}` : ""}
-                </span>
-                <Link href={`/reader/${cont.id}?hl=${contHighlight.id}`} className="line-clamp-5">
-                  <span className={`box-decoration-clone hl-bg-${contHighlight.color}`}>{contHighlight.text}</span>
-                </Link>
-              </>
-            ) : (
-              <>
-                <span className="font-sans text-xs tracking-[0.08em] text-muted">HIGHLIGHT</span>
-                <span className="text-muted">Bôi đen một câu khi đọc để lưu lại ý chính — nó sẽ hiện ở đây.</span>
-              </>
-            )}
           </div>
         </section>
       )}
