@@ -18,10 +18,11 @@ import { COLOR_DOT, HIGHLIGHT_COLORS, colorLabel, usePreferences, type Highlight
 import { useUi } from "@/lib/ui-store";
 
 import { Icon } from "./icons";
+import { ChatPanel } from "./chat-panel";
 import { SummaryPanel } from "./summary-panel";
 import { ConfirmDialog } from "./ui";
 
-export type PanelTab = "highlights" | "notes" | "ai";
+export type PanelTab = "highlights" | "notes" | "ai" | "chat";
 
 function HighlightCard({
   h,
@@ -240,6 +241,7 @@ export function ReaderPanel({
   onEditing,
   onJump,
   aiQuote,
+  onClearQuote,
   onKeyword,
   canHighlight,
   lostIds,
@@ -253,8 +255,10 @@ export function ReaderPanel({
   editingId: string | null;
   onEditing: (id: string | null) => void;
   onJump: (h: Highlight) => void;
+  /** A passage the reader selected to ask AI about (FR-RDR-06), shown in the chat tab. */
   aiQuote: string | null;
-  /** A summary keyword was chosen: find it in the document (FR-SUM-01 output). */
+  onClearQuote: () => void;
+  /** A summary keyword or a cited passage was chosen: find it in the document (FR-RDR-04). */
   onKeyword: (keyword: string) => void;
   canHighlight: boolean;
   /** Highlights that could not be placed in the current text (FR-HL-02). */
@@ -307,6 +311,7 @@ export function ReaderPanel({
     ["highlights", `Highlight · ${highlights.length}`],
     ["notes", "Ghi chú"],
     ["ai", "Tóm tắt AI"],
+    ["chat", "Hỏi đáp"],
   ];
 
   return (
@@ -432,19 +437,10 @@ export function ReaderPanel({
           </div>
         )}
 
-        {tab === "ai" && (
-          <div className="flex flex-col gap-5">
-            {aiQuote && (
-              <div className="flex flex-col gap-2.5 rounded-xl border border-line p-3.5">
-                <span className="text-xs text-muted">Đoạn đang hỏi</span>
-                <span className="font-serif text-[15px] leading-normal text-ink">“{aiQuote}”</span>
-                <span className="rounded-lg bg-soft px-3 py-2.5 text-sm text-muted">
-                  Giải thích một đoạn bằng AI chưa có trong phiên bản này. Bạn có thể tạo tóm tắt cả tài liệu bên dưới.
-                </span>
-              </div>
-            )}
-            <SummaryPanel docId={docId} onKeyword={onKeyword} />
-          </div>
+        {tab === "ai" && <SummaryPanel docId={docId} onKeyword={onKeyword} />}
+
+        {tab === "chat" && (
+          <ChatPanel docId={docId} quote={aiQuote} onClearQuote={onClearQuote} onFind={onKeyword} />
         )}
       </div>
     </aside>

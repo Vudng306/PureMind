@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     summary_single_request_tokens: int = 100_000  # FR-SUM-01 step 3
     summary_chunk_tokens: int = 8_000
 
+    # Chat with a document (FR-CHAT). Chat answers cost far fewer tokens than a summary or a notebook,
+    # so questions have their own, larger daily allowance instead of sharing the 20 AI requests.
+    chat_daily_quota: int = 50
+    openai_embedding_model: str = "text-embedding-3-small"
+    embedding_dimensions: int = 1536
+    chat_chunk_tokens: int = 400  # size of one indexed passage
+    chat_context_chunks: int = 8  # passages given to the model with a question
+    chat_history_messages: int = 8  # earlier turns kept in the prompt
+
     # Save-by-link (FR-DOC-03): a URL or e-mail put in the User-Agent so sites can reach the operator.
     # Some sites (e.g. Wikipedia) refuse crawlers without one. Empty = the first CORS origin (the app's URL).
     web_fetch_contact: str = ""

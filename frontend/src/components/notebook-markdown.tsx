@@ -8,8 +8,11 @@ import type { NotebookSource } from "@/lib/notebooks";
 
 type Sources = Map<number, NotebookSource>;
 
+/** How a [n] citation is drawn; the Markdown itself does not know what it points at. */
+export type RefRenderer = (n: number) => React.ReactNode;
+
 /** A [n] citation: opens the source highlight in the reader, or says the source is gone (FR-NB-05). */
-function Ref({ n, sources }: { n: number; sources: Sources | null }) {
+function NotebookRef({ n, sources }: { n: number; sources: Sources | null }) {
   const cls = "mx-px rounded px-1 py-px align-[0.1em] font-sans text-[0.72em] font-semibold";
   if (!sources) return <span className={`${cls} bg-soft text-muted`}>{n}</span>; // still being written
   const s = sources.get(n);
@@ -32,33 +35,35 @@ function Ref({ n, sources }: { n: number; sources: Sources | null }) {
   );
 }
 
-function Text({ v, sources }: { v: string; sources: Sources | null }) {
+function Text({ v, renderRef }: { v: string; renderRef: RefRenderer }) {
   const parts = v.split(/\[(\d{1,3})\]/);
   if (parts.length === 1) return <>{v}</>;
   return (
     <>
-      {parts.map((p, i) => (i % 2 ? <Ref key={i} n={Number(p)} sources={sources} /> : <Fragment key={i}>{p}</Fragment>))}
+      {parts.map((p, i) => (
+        <Fragment key={i}>{i % 2 ? renderRef(Number(p)) : p}</Fragment>
+      ))}
     </>
   );
 }
 
-function Inlines({ nodes, sources }: { nodes: Inline[]; sources: Sources | null }) {
+function Inlines({ nodes, renderRef }: { nodes: Inline[]; renderRef: RefRenderer }) {
   return (
     <>
       {nodes.map((n, i) => {
         switch (n.t) {
           case "text":
-            return <Text key={i} v={n.v} sources={sources} />;
+            return <Text key={i} v={n.v} renderRef={renderRef} />;
           case "strong":
             return (
               <strong key={i} className="font-semibold text-ink">
-                <Inlines nodes={n.c} sources={sources} />
+                <Inlines nodes={n.c} renderRef={renderRef} />
               </strong>
             );
           case "em":
             return (
               <em key={i}>
-                <Inlines nodes={n.c} sources={sources} />
+                <Inlines nodes={n.c} renderRef={renderRef} />
               </em>
             );
           case "code":
@@ -70,7 +75,7 @@ function Inlines({ nodes, sources }: { nodes: Inline[]; sources: Sources | null 
           case "link":
             return (
               <a key={i} href={n.href} target="_blank" rel="noopener noreferrer nofollow" className="text-accent underline underline-offset-2">
-                <Inlines nodes={n.c} sources={sources} />
+                <Inlines nodes={n.c} renderRef={renderRef} />
               </a>
             );
         }
@@ -79,7 +84,7 @@ function Inlines({ nodes, sources }: { nodes: Inline[]; sources: Sources | null 
   );
 }
 
-function BlockView({ block, sources }: { block: Block; sources: Sources | null }) {
+function BlockView({ block, renderRef }: { block: Block; renderRef: RefRenderer }) {
   switch (block.t) {
     case "heading": {
       const Tag = `h${block.level + 1}` as "h2" | "h3" | "h4"; // h1 is the page title
@@ -90,20 +95,20 @@ function BlockView({ block, sources }: { block: Block; sources: Sources | null }
       }[block.level];
       return (
         <Tag className={`leading-[1.25] text-ink ${cls}`}>
-          <Inlines nodes={block.c} sources={sources} />
+          <Inlines nodes={block.c} renderRef={renderRef} />
         </Tag>
       );
     }
     case "paragraph":
       return (
         <p className="mb-4">
-          <Inlines nodes={block.c} sources={sources} />
+          <Inlines nodes={block.c} renderRef={renderRef} />
         </p>
       );
     case "quote":
       return (
         <blockquote className="mb-4 border-l-[3px] border-line pl-4 italic text-muted">
-          <Inlines nodes={block.c} sources={sources} />
+          <Inlines nodes={block.c} renderRef={renderRef} />
         </blockquote>
       );
     case "code":
@@ -118,7 +123,7 @@ function BlockView({ block, sources }: { block: Block; sources: Sources | null }
         <ListTag className={`mb-4 space-y-1.5 pl-6 ${block.ordered ? "list-decimal" : "list-disc"} marker:text-muted`}>
           {block.items.map((item, i) => (
             <li key={i} style={{ marginLeft: `${item.depth * 1.25}em` }}>
-              <Inlines nodes={item.c} sources={sources} />
+              <Inlines nodes={item.c} renderRef={renderRef} />
             </li>
           ))}
         </ListTag>
@@ -133,7 +138,7 @@ function BlockView({ block, sources }: { block: Block; sources: Sources | null }
                 <tr key={r} className={r === 0 ? "bg-soft font-medium" : ""}>
                   {row.map((cell, c) => (
                     <td key={c} className="border border-line px-2.5 py-1.5 align-top">
-                      <Inlines nodes={cell} sources={sources} />
+                      <Inlines nodes={cell} renderRef={renderRef} />
                     </td>
                   ))}
                 </tr>
@@ -150,8 +155,27 @@ function BlockView({ block, sources }: { block: Block; sources: Sources | null }
 const plain = (nodes: Inline[]): string =>
   nodes.map((n) => (n.t === "text" || n.t === "code" ? n.v : plain(n.c))).join("");
 
+/** Parsed Markdown as React elements, never raw HTML (NFR-SEC-09). Citations are drawn by `renderRef`. */
+export function MarkdownView({
+  blocks,
+  renderRef,
+  className = "font-serif text-[17px] leading-[1.7] text-body",
+}: {
+  blocks: Block[];
+  renderRef: RefRenderer;
+  className?: string;
+}) {
+  return (
+    <div className={`${className} [&>*:first-child]:mt-0`}>
+      {blocks.map((b) => (
+        <BlockView key={b.id} block={b} renderRef={renderRef} />
+      ))}
+    </div>
+  );
+}
+
 /**
- * Notebook Markdown rendered as React elements (never raw HTML, NFR-SEC-09), with clickable [n] citations.
+ * Notebook Markdown with clickable [n] citations into the reader.
  * A leading `# heading` equal to `title` is not repeated (the page already shows the title).
  */
 export function NotebookMarkdown({
@@ -170,11 +194,5 @@ export function NotebookMarkdown({
     return same ? all.slice(1) : all;
   }, [content, title]);
   const byPosition = useMemo(() => (sources ? new Map(sources.map((s) => [s.position, s])) : null), [sources]);
-  return (
-    <div className="font-serif text-[17px] leading-[1.7] text-body [&>*:first-child]:mt-0">
-      {blocks.map((b) => (
-        <BlockView key={b.id} block={b} sources={byPosition} />
-      ))}
-    </div>
-  );
+  return <MarkdownView blocks={blocks} renderRef={(n) => <NotebookRef n={n} sources={byPosition} />} />;
 }

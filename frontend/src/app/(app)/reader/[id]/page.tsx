@@ -402,11 +402,12 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
     clearSelection();
   }
 
+  // FR-RDR-06 / FR-CHAT-02: ask the chat about the selected passage.
   function explainSelection() {
     if (!selection) return;
     setAiQuote(selection.text);
     setPanelOpen(true);
-    setPanelTab("ai");
+    setPanelTab("chat");
     clearSelection();
   }
 
@@ -770,6 +771,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
             onEditing={setEditingHl}
             onJump={openHighlight}
             aiQuote={aiQuote}
+            onClearQuote={() => setAiQuote(null)}
             onKeyword={findKeyword}
             canHighlight={clean || isPdf}
             lostIds={clean ? lostHl : []}

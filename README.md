@@ -1,6 +1,6 @@
 # PureMind
 
-Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh viên: đọc PDF, EPUB và bài báo, highlight, ghi chú, tìm kiếm, tóm tắt bằng AI và tạo notebook AI từ highlight.
+Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh viên: đọc PDF, EPUB và bài báo, highlight, ghi chú, tìm kiếm, tóm tắt bằng AI, trò chuyện với tài liệu và tạo notebook AI từ highlight.
 
 Đặc tả: [`docs/PureMind_PRD_v1.1.docx`](docs/PureMind_PRD_v1.1.docx), [`docs/PureMind_SRS_v1.1.docx`](docs/PureMind_SRS_v1.1.docx), ERD trong [`docs/`](docs/).
 
@@ -11,7 +11,7 @@ Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh
 | Cơ sở dữ liệu | PostgreSQL 16 (image `pgvector/pgvector:pg16`, dùng `unaccent` cho tìm kiếm tiếng Việt) |
 | Xác thực | Supabase Auth |
 | Xử lý tài liệu | PyMuPDF (PDF), BeautifulSoup (EPUB, bài báo web) |
-| AI | OpenAI API (mặc định `gpt-4.1-mini`) |
+| AI | OpenAI API (mặc định `gpt-4.1-mini`; embedding `text-embedding-3-small` cho trò chuyện) |
 
 ## Tính năng
 
@@ -21,8 +21,9 @@ Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh
 - **Highlight và ghi chú:** 5 màu, danh mục (Quan trọng, Khái niệm, Câu hỏi…), ghi chú, highlight trên PDF gốc; xuất ra Markdown.
 - **Tìm kiếm:** toàn văn trên tài liệu, highlight, ghi chú và notebook; không phân biệt dấu tiếng Việt.
 - **Tóm tắt AI:** Ý chính, Khái niệm, Kết luận, Từ khóa; chọn ngôn ngữ; tóm tắt được tài liệu dài.
+- **Trò chuyện với tài liệu:** hỏi đáp ngay trong trình đọc. Nội dung tài liệu được cắt thành đoạn và nhúng (embedding) một lần; mỗi câu hỏi chỉ được trả lời bằng những đoạn liên quan nhất, câu trả lời luôn kèm số đoạn [n] — bấm vào để mở đúng đoạn trong bài. Bôi đen một câu rồi chọn “Hỏi AI” để hỏi về chính đoạn đó. Mỗi tài liệu giữ được nhiều cuộc trò chuyện.
 - **Notebook AI:** chọn tối đa 100 highlight để AI viết notebook Markdown có trích dẫn nguồn [n]; nội dung hiện dần trong lúc AI viết; chỉnh sửa, tự lưu, lịch sử phiên bản.
-- **Giới hạn AI:** 20 lượt mỗi người dùng mỗi ngày (đặt lại lúc 00:00 giờ Việt Nam). Người dùng phải đồng ý trước khi nội dung được gửi tới OpenAI.
+- **Giới hạn AI:** 20 lượt tóm tắt/notebook và 50 câu hỏi trò chuyện mỗi người dùng mỗi ngày (đặt lại lúc 00:00 giờ Việt Nam). Người dùng phải đồng ý trước khi nội dung được gửi tới OpenAI.
 
 ## Yêu cầu
 
@@ -155,8 +156,9 @@ Railway deploy từ một nhánh GitHub, nên nhánh muốn chạy phải đư�
 Trong project Railway: **New → Database → Add PostgreSQL**.
 
 Bản migration đầu tiên cần extension `unaccent` cho tìm kiếm không dấu (FR-SRCH-01) — đây là contrib
-trusted nên Postgres của Railway tạo được. `pgvector` chỉ dành cho tìm kiếm ngữ nghĩa sau này; nếu không có
-thì migration bỏ qua chứ không fail.
+trusted nên Postgres của Railway tạo được. `pgvector` là tùy chọn: nếu có, việc xếp hạng đoạn cho tính năng
+trò chuyện chạy ngay trong database (`<=>`); nếu không có, backend tính độ tương đồng trong Python trên các
+đoạn của đúng tài liệu đó. Migration không fail khi thiếu pgvector.
 
 ### 3. Service backend
 
@@ -223,6 +225,8 @@ Phải trả về `{"status":"ok"}`. Ở `ENVIRONMENT=production`, `/api/docs` t
 | `SUPABASE_JWT_SECRET` | `backend/.env`, `.env` | không | Chỉ cần cho dự án còn ký token HS256. |
 | `OPENAI_API_KEY` | `backend/.env`, `.env` | cho tính năng AI | Chỉ để ở backend. |
 | `OPENAI_MODEL` | `backend/.env`, `.env` | không | Mặc định `gpt-4.1-mini`. |
+| `OPENAI_EMBEDDING_MODEL` | `backend/.env`, `.env` | không | Model nhúng dùng cho trò chuyện. Mặc định `text-embedding-3-small`. Đổi model thì tài liệu sẽ được nhúng lại ở câu hỏi kế tiếp. |
+| `CHAT_DAILY_QUOTA` | `backend/.env`, `.env` | không | Số câu hỏi trò chuyện mỗi người mỗi ngày. Mặc định `50`. |
 | `WEB_FETCH_CONTACT` | `backend/.env`, `.env` | không | URL hoặc email đưa vào User-Agent khi lưu link. Một số trang như Wikipedia yêu cầu có thông tin này. Để trống thì dùng giá trị đầu tiên của `CORS_ORIGINS`. Khi deploy thật, hãy đặt URL hoặc email liên hệ thật. |
 | `LOG_LEVEL` | `backend/.env`, `.env` | không | Mức log, mặc định `INFO`. Log luôn ở dạng JSON. |
 | `UPLOAD_DIR` | `backend/.env` | không | Thư mục lưu tệp tải lên. Đường dẫn tương đối được tính từ `backend/`. Mặc định `uploads`. |
@@ -277,6 +281,7 @@ Lệnh gọi OpenAI được ghi kèm model, số token và thời gian, không 
 | Backend log `password authentication failed for user "puremind"` | `DATABASE_URL` đang trỏ tới một PostgreSQL khác trên máy (thường ở cổng 5432). Đặt `POSTGRES_PORT` khác, rồi sửa cổng trong `DATABASE_URL` cho khớp. |
 | Đăng nhập được nhưng mọi request đều trả 401 | `SUPABASE_URL` ở backend và `NEXT_PUBLIC_SUPABASE_URL` ở frontend không cùng một dự án, hoặc máy không truy cập được `https://<project>.supabase.co/auth/v1/.well-known/jwks.json`. |
 | Xóa tài khoản bị lỗi | Thiếu `SUPABASE_SERVICE_ROLE_KEY` ở backend. |
+| Trò chuyện báo hết lượt | Mỗi ngày có 50 câu hỏi, làm mới lúc 00:00 giờ Việt Nam. Đổi `CHAT_DAILY_QUOTA` nếu cần. |
 | Tóm tắt AI hoặc notebook AI báo lỗi | Kiểm tra `OPENAI_API_KEY` trong `backend/.env`, rồi khởi động lại backend. Nếu đã dùng hết 20 lượt AI trong ngày thì chờ tới 00:00 giờ Việt Nam. |
 | Lưu link báo "không cho phép PureMind tải nội dung" | Trang web chặn bot. Hãy lưu trang thành PDF (Ctrl+P) rồi tải tệp lên. Với Wikipedia, đặt `WEB_FETCH_CONTACT`. |
 | Sửa `NEXT_PUBLIC_*` nhưng không thấy thay đổi | Khởi động lại `npm run dev`. Với Docker, build lại bằng `docker compose up --build`. |
@@ -285,13 +290,13 @@ Lệnh gọi OpenAI được ghi kèm model, số token và thời gian, không 
 
 ```
 backend/
-  app/api/routes/   REST API: account, documents, highlights, search, summaries, notebooks
-  app/services/     trích xuất PDF/EPUB/web, OpenAI, tóm tắt, notebook, lưu trữ tệp
+  app/api/routes/   REST API: account, documents, highlights, search, summaries, notebooks, chat
+  app/services/     trích xuất PDF/EPUB/web, OpenAI, embedding, tóm tắt, notebook, trò chuyện, lưu trữ tệp
   app/core/         cấu hình, xác thực JWT, thông báo lỗi (SRS Phụ lục B)
   alembic/          migration cơ sở dữ liệu
   tests/            pytest
 frontend/
-  src/app/          các trang: thư viện, trình đọc, highlight, notebook, tìm kiếm, cài đặt
+  src/app/          các trang: thư viện, trình đọc (đọc, highlight, hỏi đáp), notebook, tìm kiếm, cài đặt
   src/components/   thành phần giao diện
   src/lib/          gọi API, hook dữ liệu, Markdown, highlight, xuất file
 docs/               PRD, SRS, ERD

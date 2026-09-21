@@ -1,4 +1,4 @@
-"""ORM models (SRS section 5): users, documents, highlights, summaries, notebooks."""
+"""ORM models (SRS section 5): users, documents, highlights, summaries, notebooks, document chat."""
 
 import enum
 import uuid
@@ -54,6 +54,9 @@ class User(TimestampMixin, Base):
     reading_preferences: Mapped[dict] = mapped_column(JsonType, default=dict, nullable=False)
     ai_quota_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     ai_quota_date: Mapped[date | None] = mapped_column(Date)
+    # FR-CHAT-02: questions have their own daily allowance, reset at 00:00 Vietnam time like the other one.
+    chat_quota_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    chat_quota_date: Mapped[date | None] = mapped_column(Date)
 
     documents: Mapped[list["Document"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
@@ -71,6 +74,13 @@ class User(TimestampMixin, Base):
         from app.services.ai_quota import remaining
 
         return remaining(self, get_settings().ai_daily_quota)
+
+    @property
+    def chat_quota_remaining(self) -> int:
+        from app.core.config import get_settings
+        from app.services.ai_quota import chat_remaining
+
+        return chat_remaining(self, get_settings().chat_daily_quota)
 
 
 class SourceType(str, enum.Enum):
@@ -115,6 +125,9 @@ class Document(TimestampMixin, Base):
     # Free-form note for the whole document and clean-text scroll position (0..1).
     note: Mapped[str] = mapped_column(Text, default="", nullable=False)
     read_fraction: Mapped[float | None] = mapped_column(Float)
+    # FR-CHAT-01: sha256 of the text the chat index was built from; a re-extraction makes it stale.
+    chunks_hash: Mapped[str | None] = mapped_column(String(64))
+    chunks_model: Mapped[str | None] = mapped_column(String(100))
 
     user: Mapped[User] = relationship(back_populates="documents")
 
@@ -255,4 +268,87 @@ class NotebookVersion(Base):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+MAX_CHAT_QUESTION = 2000  # FR-CHAT-02: one question, MSG-36
+MAX_CHAT_MESSAGES = 200  # FR-CHAT-03: turns kept in one conversation, MSG-38
+MAX_CHAT_CONVERSATIONS = 50  # FR-CHAT-03: conversations kept per document; the oldest is dropped
+CHAT_ROLES = ("user", "assistant")
+
+
+class DocumentChunk(Base):
+    """FR-CHAT-01: one indexed passage of a document, with its embedding.
+
+    `embedding` holds the vector as a JSON array of floats. On PostgreSQL with pgvector the column casts to
+    `vector`, so the ranking runs in the database; everywhere else (SQLite in the tests, a managed Postgres
+    without the extension) the same cosine similarity is computed in Python. Passages belong to one document,
+    so there are only hundreds of them per search and no ANN index is needed either way.
+    """
+
+    __tablename__ = "document_chunks"
+    __table_args__ = (
+        UniqueConstraint("document_id", "position", name="uq_document_chunks_position"),
+        Index("ix_document_chunks_document", "document_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Where the passage sits in the original: PDF page and the heading it was written under, both optional.
+    page_number: Mapped[int | None] = mapped_column(Integer)
+    heading: Mapped[str | None] = mapped_column(String(255))
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    token_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    embedding: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class ChatConversation(TimestampMixin, Base):
+    """FR-CHAT-03: one thread of questions about one document. A document may have several."""
+
+    __tablename__ = "chat_conversations"
+    __table_args__ = (
+        Index("ix_chat_conversations_document_updated", "document_id", "updated_at"),
+        Index("ix_chat_conversations_user", "user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    # Empty until the first question, which the title is taken from.
+    title: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    language: Mapped[str] = mapped_column(String(5), default="vi", nullable=False)
+
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True, order_by="ChatMessage.created_at"
+    )
+
+
+class ChatMessage(Base):
+    """One turn. An answer keeps the passages it cited, so [n] still resolves when the page is reopened."""
+
+    __tablename__ = "chat_messages"
+    __table_args__ = (
+        Index("ix_chat_messages_conversation_created", "conversation_id", "created_at"),
+        CheckConstraint("role IN ('user', 'assistant')", name="ck_chat_messages_role"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("chat_conversations.id", ondelete="CASCADE"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(String(9), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    # [{position, page_number, heading, text}] — the numbered passages the answer was given (FR-CHAT-02).
+    citations: Mapped[list] = mapped_column(JsonType, default=list, nullable=False)
+    ai_model: Mapped[str | None] = mapped_column(String(100))
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completion_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

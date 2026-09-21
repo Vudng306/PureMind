@@ -37,6 +37,13 @@ export const MSG = {
   "MSG-34": "Bạn cần tạo highlight trước khi tạo notebook.",
   "MSG-35": "Chưa có notebook nào.",
   "MSG-36": "Không tìm thấy kết quả phù hợp. Thử từ khóa khác hoặc bỏ bộ lọc.",
+  // Chat with a document: added after SRS v1.1, so these codes are named rather than numbered.
+  "MSG-CHAT-EMPTY": "Câu hỏi không được để trống.",
+  "MSG-CHAT-LONG": "Câu hỏi tối đa 2.000 ký tự.",
+  "MSG-CHAT-QUOTA": "Bạn đã dùng hết lượt hỏi AI hôm nay. Lượt sẽ được làm mới lúc 00:00.",
+  "MSG-CHAT-FULL": "Cuộc trò chuyện này đã quá dài. Hãy bắt đầu cuộc trò chuyện mới.",
+  "MSG-CHAT-NOT-FOUND": "Không tìm thấy cuộc trò chuyện.",
+  "MSG-CHAT-NO-TEXT": "Tài liệu này chưa có văn bản để trò chuyện.",
   "MSG-99": "Đã có lỗi xảy ra. Vui lòng thử lại.",
 } as const;
 

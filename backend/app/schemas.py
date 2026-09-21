@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
-from app.models import ExtractionStatus, SourceType
+from app.models import MAX_CHAT_QUESTION, ExtractionStatus, SourceType
 
 HighlightColor = Literal["yellow", "green", "blue", "pink", "purple"]
 HighlightCategory = Literal["important", "concept", "question", "example", "review"]
@@ -47,6 +47,7 @@ class UserOut(BaseModel):
     avatar_url: str | None
     reading_preferences: dict
     ai_quota_remaining: int
+    chat_quota_remaining: int
     created_at: datetime
     updated_at: datetime
 
@@ -328,3 +329,69 @@ class NotebookOut(BaseModel):
     sources: list[NotebookSource]
     created_at: datetime
     updated_at: datetime
+
+
+class ChatAsk(BaseModel):
+    """FR-CHAT-02: one question, optionally about a passage the reader selected in the reader."""
+
+    content: str
+    quote: str | None = Field(default=None, max_length=MAX_SELECTION)
+
+    @field_validator("content")
+    @classmethod
+    def check_content(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("MSG-CHAT-EMPTY")
+        if len(v) > MAX_CHAT_QUESTION:
+            raise ValueError("MSG-CHAT-LONG")
+        return v
+
+
+class ChatCitation(BaseModel):
+    """A passage the answer was given, kept with the answer so [n] still resolves later."""
+
+    position: int
+    page_number: int | None = None
+    heading: str | None = None
+    text: str
+
+
+class ChatMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    role: Literal["user", "assistant"]
+    content: str
+    citations: list[ChatCitation]
+    ai_model: str | None
+    created_at: datetime
+
+
+class ChatConversationItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str
+    language: str
+    message_count: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ChatConversationOut(BaseModel):
+    id: uuid.UUID
+    document_id: uuid.UUID
+    title: str
+    language: str
+    messages: list[ChatMessageOut]
+    created_at: datetime
+    updated_at: datetime
+
+
+class ChatAnswerOut(BaseModel):
+    """What one question returns: both turns as they were stored, and the questions left today."""
+
+    question: ChatMessageOut
+    answer: ChatMessageOut
+    chat_quota_remaining: int

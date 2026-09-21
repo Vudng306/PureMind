@@ -18,6 +18,8 @@ export interface User {
   reading_preferences: ReadingPreferences;
   /** AI requests left today (resets at 00:00 Vietnam time). */
   ai_quota_remaining: number;
+  /** Chat questions left today, counted apart from summaries and notebooks (FR-CHAT-02). */
+  chat_quota_remaining: number;
   created_at: string;
   updated_at: string;
 }
