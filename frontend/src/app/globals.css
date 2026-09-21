@@ -171,17 +171,14 @@ body {
 .pdf-page canvas {
   display: block;
 }
-[data-theme="dark"] .pdf-page canvas {
-  filter: invert(0.88) hue-rotate(180deg);
-}
+/* FR-RDR-03: the original page is printed paper in every theme. The dark theme used to invert it, which
+   turned photographs into negatives and flattened black artwork, so it is left alone: only the reader
+   around it goes dark. */
 /* Highlights drawn over the original PDF page (colors from .hl-bg-*) */
 /* The layer blends as a whole: the marks are in their own stacking context (z-index), so blending
    each mark alone would only see the transparent layer and hide the printed text. */
 .pdf-marks {
-  mix-blend-mode: multiply; /* keeps the printed text readable on light pages */
-}
-[data-theme="dark"] .pdf-marks {
-  mix-blend-mode: normal; /* dark marks are translucent */
+  mix-blend-mode: multiply; /* keeps the printed text readable on the page */
 }
 .pdf-mark {
   position: absolute;
@@ -256,6 +253,22 @@ body {
 }
 [data-theme="dark"] .hl-bg-purple {
   background-color: rgb(165 130 225 / 0.32);
+}
+/* The original page keeps its printed colors in the dark theme, so the marks on it keep theirs too. */
+[data-theme="dark"] .pdf-marks .hl-bg-yellow {
+  background-color: #f5dc8c;
+}
+[data-theme="dark"] .pdf-marks .hl-bg-green {
+  background-color: #cfe6c2;
+}
+[data-theme="dark"] .pdf-marks .hl-bg-blue {
+  background-color: #cfe0f5;
+}
+[data-theme="dark"] .pdf-marks .hl-bg-pink {
+  background-color: #f4d0dc;
+}
+[data-theme="dark"] .pdf-marks .hl-bg-purple {
+  background-color: #e3d8f5;
 }
 ::highlight(pm-hl-active) {
   text-decoration: underline 2px rgb(var(--accent));

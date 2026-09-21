@@ -121,6 +121,18 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   const hasPages = isPdf && blocks.some((b) => b.t === "pagebreak");
   const headings = blocks.filter((b) => b.t === "heading");
 
+  // FR-RDR-03: the theme picked here is for this sitting only. It starts from the theme of the app, and the
+  // app's theme comes back when the reader is closed — so leaving and opening another document look the same
+  // as the rest of PureMind. The lasting choice is the one in the settings.
+  const [readingTheme, setReadingTheme] = useState<Theme>(theme);
+  useEffect(() => setReadingTheme(theme), [theme]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = readingTheme;
+    return () => {
+      document.documentElement.dataset.theme = theme;
+    };
+  }, [readingTheme, theme]);
+
   useEffect(() => {
     if (modeChosen.current) return;
     const params = new URLSearchParams(window.location.search);
@@ -704,15 +716,18 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
                     key={t.value}
                     type="button"
                     role="radio"
-                    aria-checked={theme === t.value}
+                    aria-checked={readingTheme === t.value}
                     aria-label={t.label}
                     title={t.label}
-                    onClick={() => setPrefs({ theme: t.value })}
+                    onClick={() => setReadingTheme(t.value)}
                     className="flex h-11 w-9 items-center justify-center sm:w-11"
                   >
                     <span
                       className="h-[26px] w-[26px] rounded-full border-2"
-                      style={{ background: t.swatch, borderColor: theme === t.value ? "rgb(var(--accent))" : "rgb(var(--line))" }}
+                      style={{
+                        background: t.swatch,
+                        borderColor: readingTheme === t.value ? "rgb(var(--accent))" : "rgb(var(--line))",
+                      }}
                     />
                   </button>
                 ))}
