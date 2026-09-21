@@ -28,6 +28,9 @@ STRIP_TAGS = [
     "select",
     "textarea",
     "aside",
+    # MathML carries the formula twice: the rendered markup and the TeX source in <annotation>.
+    "annotation",
+    "annotation-xml",
 ]
 BLOCK_TAGS = {
     "p",
@@ -116,8 +119,13 @@ def absolutize_images(root: Tag, base_url: str) -> None:
             img.decompose()
 
 
+# Tables of contents in scanned books draw the line between a title and its page number with dots:
+# a single entry can carry two hundred of them, which is noise in a reader.
+LEADERS = re.compile(r"(?:[.·•‥…_]\s?){6,}")
+
+
 def _escape(text: str) -> str:
-    return re.sub(r"([*_`\[\]|])", r"\\\1", text)
+    return re.sub(r"([*_`\[\]|])", r"\\\1", LEADERS.sub(" … ", text))
 
 
 def _inline(node, *, in_code: bool = False) -> str:

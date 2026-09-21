@@ -2,6 +2,7 @@
 
 import asyncio
 import ipaddress
+import json
 import re
 import socket
 from dataclasses import dataclass
@@ -193,7 +194,10 @@ NEGATIVE = re.compile(
     r"comment|sidebar|footer|foot|menu|nav|share|social|related|advert|\bad-|promo|cookie|popup|modal|subscribe|"
     r"newsletter|breadcrumb|widget|banner|sponsor|recommend|"
     # "read also" boxes, e.g. vnexpress.net <div class="list_link"> (titles only, links added by script)
-    r"list[_-]?(links?|news)|more[_-]?(news|stories|articles)|read[_-]?(more|also)|lien[_-]?quan|xem[_-]?them",
+    r"list[_-]?(links?|news)|more[_-]?(news|stories|articles)|read[_-]?(more|also)|lien[_-]?quan|xem[_-]?them|"
+    # Encyclopaedia and journal furniture: the citation list is longer than the article on Wikipedia,
+    # and "noprint" is what a page itself calls the parts nobody wants on paper.
+    r"\breferences?\b|\breflist|\bbibliograph|\bnoprint|\bnavbox|\bcatlinks|editsection|sistersite",
     re.I,
 )
 POSITIVE = re.compile(r"article|content|post|entry|story|main|body|text|blog", re.I)
@@ -266,8 +270,62 @@ def _meta(soup: BeautifulSoup, *names: str) -> str | None:
     return None
 
 
+MIN_WORDS = 150
+MIN_SHARE = 0.25  # of the page's own prose, below which the extraction looks like a failure
+
+
+def _ld_body(soup: BeautifulSoup) -> str:
+    """The article text a page publishes as schema.org metadata, if any.
+
+    A last resort for pages whose markup defeats the scoring: no images and no headings, but the whole
+    article instead of a fragment. Must be read before `clean_soup`, which strips every <script>.
+    """
+    best = ""
+    for tag in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        try:
+            data = json.loads(tag.string or "")
+        except (ValueError, TypeError):
+            continue
+        stack = [data]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, list):
+                stack.extend(node)
+            elif isinstance(node, dict):
+                stack.extend(v for v in node.values() if isinstance(v, dict | list))
+                body = node.get("articleBody")
+                if isinstance(body, str) and len(body) > len(best):
+                    best = body
+    paragraphs = (re.sub(r"[ \t]+", " ", line).strip() for line in best.splitlines())
+    # The text is plain, so the Markdown characters in it are literal.
+    return "\n\n".join(re.sub(r"[*_`\[\]|]", lambda m: "\\" + m.group(), para) for para in paragraphs if para)
+
+
+def _widen(tag: Tag) -> Tag:
+    """Rise from the winning block to the one that holds the whole article.
+
+    Some sites wrap every paragraph in its own div (arXiv's LaTeXML) and others cut the article into
+    sibling chunks with advertisements between them (Wired). The winner is then one piece of the article,
+    and its parent is the article: we keep rising while the parent brings real prose and no navigation.
+    """
+    best, prose = tag, _paragraph_chars(tag)
+    parent = tag.parent
+    while isinstance(parent, Tag) and parent.name not in ("body", "html"):
+        wider = _paragraph_chars(parent)
+        if _link_density(parent) > 0.5:
+            break  # navigation around the article
+        if wider >= prose * 1.25:
+            best, prose = parent, wider  # the parent brings the rest of the article
+        elif wider > prose * 1.02:
+            break  # it only adds a line or two: that is the page around the article, not the article
+        # else: a wrapper holding the same text — keep rising to look for the real container
+        parent = parent.parent
+    return best
+
+
 def _best_container(soup: BeautifulSoup) -> Tag:
     scores: dict[int, tuple[float, Tag]] = {}
+    total = _paragraph_chars(soup)
 
     def add(tag: Tag | None, points: float):
         if tag is None or not isinstance(tag, Tag):
@@ -277,7 +335,10 @@ def _best_container(soup: BeautifulSoup) -> Tag:
             hint = _hint(tag)
             if POSITIVE.search(hint):
                 base += 25
-            if NEGATIVE.search(hint):
+            # A name is a hint, the text is evidence: 24h.com.vn calls its article body
+            # "cate-24h-foot-arti-deta-info", and the block holding most of the page's prose is the
+            # article whatever it is called.
+            if NEGATIVE.search(hint) and not (total and _paragraph_chars(tag) > total * 0.4):
                 base -= 25
             scores[id(tag)] = (base, tag)
         current, t = scores[id(tag)]
@@ -302,11 +363,42 @@ def _best_container(soup: BeautifulSoup) -> Tag:
         final = score * (1 - density)
         if final > best_score:
             best, best_score = tag, final
-    return best or soup.body or soup
+    return _widen(best) if best is not None else (soup.body or soup)
+
+
+def _content(html: bytes, url: str, title: str, *, drop_hidden: bool, drop_named: bool) -> tuple[str, float]:
+    """Prune the page, pick the article out of what is left, and say how much of the page it holds."""
+    soup = BeautifulSoup(html, "html.parser")
+    clean_soup(soup)
+    total = _paragraph_chars(soup)
+    for tag in soup.find_all(True):
+        if tag.decomposed or tag.name in ("html", "body"):
+            continue
+        if drop_hidden and _is_hidden(tag):
+            tag.decompose()
+            continue
+        hint = _hint(tag)
+        if drop_named and hint and NEGATIVE.search(hint) and not POSITIVE.search(hint):
+            # Some sites wrap the whole article in e.g. "sidebar-1": keep a wrapper holding most of the text.
+            if total and _paragraph_chars(tag) > total / 2:
+                continue
+            tag.decompose()
+
+    container = _best_container(soup)
+    share = _paragraph_chars(container) / total if total else 1.0
+    _drop_link_lists(container)
+    absolutize_images(container, url)
+    content = html_to_markdown(container)
+    # The reader already shows the title: drop a leading "# Title" repeating it.
+    first, _, rest = content.partition("\n\n")
+    if re.fullmatch(r"#{1,3} (.+)", first) and _same_text(first.lstrip("# "), title):
+        content = rest
+    return content, share
 
 
 def extract_article(html: bytes, url: str) -> Article:
     soup = BeautifulSoup(html, "html.parser")
+    ld_body = _ld_body(soup)  # read before clean_soup drops the <script> tags
     title = _meta(soup, "og:title", "twitter:title")
     if not title and soup.title and soup.title.string:
         title = soup.title.string.strip()
@@ -321,29 +413,23 @@ def extract_article(html: bytes, url: str) -> Article:
         except ValueError:
             published_at = None
 
-    clean_soup(soup)
-    total = _paragraph_chars(soup)
-    for tag in soup.find_all(True):
-        if tag.decomposed or tag.name in ("html", "body"):
-            continue
-        if _is_hidden(tag):
-            tag.decompose()
-            continue
-        hint = _hint(tag)
-        if hint and NEGATIVE.search(hint) and not POSITIVE.search(hint):
-            # Some sites wrap the whole article in e.g. "sidebar-1": keep a wrapper holding most of the text.
-            if total and _paragraph_chars(tag) > total / 2:
-                continue
-            tag.decompose()
-
-    container = _best_container(soup)
-    _drop_link_lists(container)
-    absolutize_images(container, url)
-    content = html_to_markdown(container)
-    # The reader already shows the title: drop a leading "# Title" repeating it.
-    first, _, rest = content.partition("\n\n")
-    if re.fullmatch(r"#{1,3} (.+)", first) and _same_text(first.lstrip("# "), title):
-        content = rest
+    # Pruning is a guess, and on a few sites it throws the article away: LessWrong wraps the post in
+    # <div class="commentOnSelection">, React streams the body inside <div hidden id="S:1">, others
+    # animate a display:none wrapper into view. When being strict leaves us with nothing, loosen one
+    # rule at a time and let the scoring decide instead.
+    content, share = _content(html, url, title, drop_hidden=True, drop_named=True)
+    for hidden, named in ((False, True), (True, False), (False, False)):
+        # A short article is fine as long as it is most of what the page has to say; it is holding
+        # almost none of the page's prose that means the pruning took the article with it.
+        if word_count(content) >= MIN_WORDS or share >= MIN_SHARE:
+            break
+        looser, wider = _content(html, url, title, drop_hidden=hidden, drop_named=named)
+        if word_count(looser) > word_count(content):
+            content, share = looser, wider
+    # Still nothing readable in the markup: take the plain text the page publishes about itself
+    # rather than saving an empty document.
+    if word_count(content) < MIN_WORDS and word_count(ld_body) > word_count(content):
+        content = ld_body
     return Article(
         title=title[:500], content=content, word_count=word_count(content), published_at=published_at
     )

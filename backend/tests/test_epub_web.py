@@ -1,4 +1,5 @@
 import io
+import json
 import zipfile
 
 import httpx
@@ -351,6 +352,123 @@ def test_hidden_blocks_and_related_links_are_dropped():
     content = web.extract_article(html, "https://news.example.com/a").content
     assert "Đoạn 4" in content and "[nguồn này](https://example.org/src)" in content
     assert "Tin khác" not in content and "Tin ẩn" not in content and "bị ẩn" not in content
+
+
+def test_article_cut_into_pieces_is_put_back_together():
+    # arXiv's LaTeXML gives every paragraph its own <div>, and wired.com puts advertisements between
+    # sibling chunks of the story: the best-scoring block is one piece, the article is its parent.
+    pieces = "".join(
+        f'<div class="ltx_para"><p>Đoạn {i}: mô hình ngôn ngữ được huấn luyện trên dữ liệu lớn.</p></div>'
+        f'<div class="ad-slot"><a href="https://ads.example.com/{i}">Quảng cáo</a></div>'
+        for i in range(8)
+    )
+    html = f"""<html><head><title>Bài dài</title></head><body>
+    <nav><a href="/1">Mục một</a> <a href="/2">Mục hai</a> <a href="/3">Mục ba</a></nav>
+    <div class="ltx_page"><div class="ltx_article">{pieces}</div></div></body></html>""".encode()
+
+    content = web.extract_article(html, "https://arxiv.example.org/html/1").content
+    assert "Đoạn 0" in content and "Đoạn 7" in content
+    assert "Mục một" not in content
+
+
+def test_article_body_named_like_navigation_is_kept():
+    # 24h.com.vn calls its article body "cate-24h-foot-arti-deta-info": a name is a hint, the text is
+    # evidence, so a block holding most of the page's prose is the article whatever it is called.
+    story = "".join(
+        f"<p>Đoạn {i}: nội dung chính của bài viết, đủ dài để được tính là văn xuôi thật.</p>"
+        for i in range(8)
+    )
+    html = f"""<html><head><title>Bài</title></head><body>
+    <div class="cate-24h-foot-arti-deta-info">{story}</div>
+    <div class="menu-nav"><p>Chuyên mục thể thao, giải trí và kinh doanh của trang tin.</p></div>
+    </body></html>""".encode()
+
+    content = web.extract_article(html, "https://news.example.com/a").content
+    assert "Đoạn 0" in content and "Đoạn 7" in content
+    assert "Chuyên mục thể thao" not in content
+
+
+def test_formula_source_is_not_repeated_after_the_formula():
+    # MathML carries the formula twice: the rendered markup and the TeX source in <annotation>.
+    story = "".join(f"<p>Đoạn {i}: phần mở đầu của bài báo khoa học này khá dài dòng.</p>" for i in range(5))
+    html = f"""<html><head><title>Bài</title></head><body><article>{story}
+    <p>Ta có <math><mi>E</mi><mo>=</mo><mi>m</mi><msup><mi>c</mi><mn>2</mn></msup>
+    <annotation encoding="application/x-tex">E=mc^{{2}}</annotation></math> là công thức nổi tiếng.</p>
+    </article></body></html>""".encode()
+
+    content = web.extract_article(html, "https://arxiv.example.org/html/2").content
+    assert "E=mc^{2}" not in content and "x-tex" not in content
+
+
+def test_article_streamed_inside_a_hidden_block_is_found():
+    # React streams server-rendered content as <div hidden id="S:1"> and a script moves it into place;
+    # other sites animate a display:none wrapper into view. Neither is hidden from the reader.
+    story = "".join(
+        f"<p>Đoạn {i}: nội dung chính của bài viết, đủ dài để được tính là văn xuôi thật.</p>"
+        for i in range(12)
+    )
+    html = f"""<html><head><title>Bài</title></head><body>
+    <div id="root"></div>
+    <div hidden id="S:1"><article>{story}</article></div></body></html>""".encode()
+
+    content = web.extract_article(html, "https://spa.example.com/a").content
+    assert "Đoạn 0" in content and "Đoạn 11" in content
+
+
+def test_pruning_never_throws_the_whole_article_away():
+    # lesswrong.com wraps the post in <div class="commentOnSelection">, so the name-based pruning
+    # deletes the article and keeps nothing. Losing everything means the guess was wrong.
+    story = "".join(
+        f"<p>Đoạn {i}: nội dung chính của bài viết, đủ dài để được tính là văn xuôi thật.</p>"
+        for i in range(12)
+    )
+    html = f"""<html><head><title>Bài</title></head><body>
+    <div class="commentOnSelection">{story}</div></body></html>""".encode()
+
+    content = web.extract_article(html, "https://forum.example.com/posts/1").content
+    assert "Đoạn 0" in content and "Đoạn 11" in content
+
+
+def test_citation_list_and_navigation_boxes_are_dropped():
+    # On Wikipedia the reference list is longer than the article itself.
+    story = "".join(f"<p>Đoạn {i}: nội dung bách khoa toàn thư về chủ đề này.</p>" for i in range(6))
+    refs = "".join(
+        f'<li>Nguồn {i}: <a href="https://example.org/{i}">một cuốn sách rất dày về đề tài này</a>, '
+        f"nhà xuất bản, năm 2020, trang {i}.</li>"
+        for i in range(30)
+    )
+    html = f"""<html><head><title>Bài</title></head><body>
+    <div class="mw-parser-output">{story}
+    <div class="reflist"><ol class="references">{refs}</ol></div>
+    <div class="navbox"><p>Xem thêm các bài viết cùng chủ đề trong hộp điều hướng này.</p></div>
+    <div class="noprint"><p>Trang này được sửa đổi lần cuối vào ngày 1 tháng 1 năm 2026.</p></div>
+    </div></body></html>""".encode()
+
+    content = web.extract_article(html, "https://vi.wikipedia.org/wiki/A").content
+    assert "Đoạn 5" in content
+    assert "Nguồn 0" not in content and "hộp điều hướng" not in content and "sửa đổi lần cuối" not in content
+
+
+def test_table_of_contents_dots_are_collapsed():
+    from bs4 import BeautifulSoup
+
+    from app.services.html_markdown import html_to_markdown
+
+    soup = BeautifulSoup("<p>Chương một . . . . . . . . . . . . . . 12</p>", "html.parser")
+    assert html_to_markdown(soup) == "Chương một … 12"
+
+
+def test_falls_back_to_the_article_body_the_page_publishes():
+    # A page whose markup hides the story from the scoring still describes itself in schema.org data.
+    body = " ".join(f"Câu số {i} của bài viết." for i in range(80))
+    ld = json.dumps({"@graph": [{"@type": "NewsArticle", "articleBody": body}]})
+    html = f"""<html><head><title>Bài</title>
+    <script type="application/ld+json">{ld}</script></head>
+    <body><div id="root"></div></body></html>""".encode()
+
+    article = web.extract_article(html, "https://news.example.com/a")
+    assert "Câu số 0" in article.content and "Câu số 79" in article.content
+    assert article.word_count > 150
 
 
 def test_relative_upload_dir_is_anchored_to_backend(monkeypatch):
