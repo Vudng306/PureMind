@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
+import { useLang, useT } from "@/lib/i18n";
 import { COLOR_DOT, HIGHLIGHT_COLORS, colorLabel, usePreferences, type HighlightColor } from "@/lib/preferences";
 
 import { Icon } from "./icons";
@@ -28,6 +29,8 @@ export function SelectionMenu({
   onExplain: () => void;
   onDismiss: () => void;
 }) {
+  const t = useT();
+  const lang = useLang();
   const labels = usePreferences((s) => s.colorLabels);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -61,7 +64,7 @@ export function SelectionMenu({
     <div
       ref={ref}
       role="toolbar"
-      aria-label="Thao tác với đoạn đã chọn"
+      aria-label={t("selection.aria")}
       // Keep the text selection alive while clicking buttons.
       onMouseDown={(e) => e.preventDefault()}
       className="fixed z-30 flex flex-col gap-0.5 rounded-[14px] bg-menu p-1.5 font-sans text-menu-fg shadow-[0_12px_30px_rgba(0,0,0,0.28)]"
@@ -72,12 +75,12 @@ export function SelectionMenu({
           <button
             key={c}
             type="button"
-            aria-label={`Highlight: ${colorLabel(labels, c)}`}
+            aria-label={t("selection.highlightAs", { name: colorLabel(labels, c, lang) })}
             onClick={() => onColor(c)}
             className="flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2 text-[13px] font-semibold hover:bg-menu-fg/10"
           >
             <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: COLOR_DOT[c] }} />
-            {colorLabel(labels, c)}
+            {colorLabel(labels, c, lang)}
           </button>
         ))}
       </div>
@@ -85,15 +88,15 @@ export function SelectionMenu({
       <div className="flex items-center gap-0.5">
         <button type="button" onClick={onNote} className={item}>
           <Icon name="note" size={16} />
-          Ghi chú
+          {t("selection.note")}
         </button>
         <button type="button" onClick={onCopy} className={item}>
           <Icon name="copy" size={16} />
-          Chép
+          {t("selection.copyShort")}
         </button>
         <button type="button" onClick={onExplain} className={item}>
           <Icon name="spark" size={16} />
-          Giải thích
+          {t("selection.explain")}
         </button>
       </div>
     </div>

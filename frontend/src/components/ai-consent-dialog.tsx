@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { useAiConsent } from "@/lib/summary";
 
@@ -13,11 +14,12 @@ export function AiConsentDialog({
   onCancel,
 }: {
   open: boolean;
-  /** What will be sent, e.g. "nội dung văn bản của tài liệu này". */
+  /** What will be sent, e.g. the text of this document — already in the reader's language. */
   what: string;
   onAgreed: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const consent = useAiConsent();
 
   async function agree() {
@@ -32,19 +34,16 @@ export function AiConsentDialog({
   return (
     <ConfirmDialog
       open={open}
-      title="Gửi nội dung tới OpenAI?"
+      title={t("consent.titleShort")}
       tone="primary"
-      confirmLabel="Đồng ý và tạo"
-      cancelLabel="Để sau"
+      confirmLabel={t("consent.confirm")}
+      cancelLabel={t("consent.decline")}
       busy={consent.isPending}
       onConfirm={() => void agree()}
       onCancel={onCancel}
     >
-      <p>
-        Để dùng tính năng này, PureMind sẽ gửi {what} tới dịch vụ OpenAI. Nội dung chỉ được gửi khi bạn chủ động yêu cầu
-        một tính năng AI.
-      </p>
-      <p className="mt-2 text-sm text-muted">Bạn chỉ cần đồng ý một lần.</p>
+      <p>{t("consent.bodyWhat", { what })}</p>
+      <p className="mt-2 text-sm text-muted">{t("consent.onceOnly")}</p>
       {consent.isError && <p className="mt-2 text-sm text-danger">{MSG["MSG-23"]}</p>}
     </ConfirmDialog>
   );

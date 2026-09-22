@@ -3,10 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ApiError, api, apiFetch } from "./api";
+import { translate } from "./i18n";
 import { MSG } from "./messages";
 import { readEvents } from "./notebooks";
 import { accountKey } from "./queries";
-import type { User } from "./types";
+import { currentLang } from "./preferences";
+import type { Lang, User } from "./types";
 
 /** FR-CHAT-01..03: chat with the document being read. Answers cite the passages they used as [n]. */
 
@@ -167,8 +169,9 @@ export function citedSources(content: string, citations: ChatCitation[]): ChatCi
 }
 
 /** What a citation is called in the interface: its page, its heading, or just its number. */
-export function citationLabel(c: ChatCitation): string {
-  if (c.page_number && c.heading) return `Trang ${c.page_number} · ${c.heading}`;
-  if (c.page_number) return `Trang ${c.page_number}`;
-  return c.heading || `Đoạn ${c.position}`;
+export function citationLabel(c: ChatCitation, lang: Lang = currentLang()): string {
+  if (c.page_number && c.heading)
+    return translate(lang, "chat.citePageHeading", { page: c.page_number, heading: c.heading });
+  if (c.page_number) return translate(lang, "chat.citePage", { page: c.page_number });
+  return c.heading || translate(lang, "chat.citeBlock", { n: c.position });
 }

@@ -11,7 +11,7 @@ import { Alert, ConfirmDialog, Spinner, useModal } from "@/components/ui";
 import { categoryLabel } from "@/lib/annotations";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/documents";
-import { useLang } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import {
   MAX_NOTEBOOK_CHARS,
@@ -32,11 +32,13 @@ import { useUi } from "@/lib/ui-store";
 
 const AUTOSAVE_MS = 5000; // FR-NB-03
 
-const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+const timeOf = (iso: string, lang: string) =>
+  new Date(iso).toLocaleTimeString(lang === "en" ? "en-GB" : "vi-VN", { hour: "2-digit", minute: "2-digit" });
 
 function SourceItem({ source, onRemove, busy }: { source: NotebookSource; onRemove: () => void; busy: boolean }) {
-  const h = source.highlight;
+  const t = useT();
   const lang = useLang();
+  const h = source.highlight;
   return (
     <li id={`source-${source.position}`} className="flex gap-2.5 rounded-xl border border-line bg-surface p-3">
       <span className="mt-0.5 flex h-6 min-w-6 shrink-0 items-center justify-center rounded bg-accent/15 px-1 font-sans text-xs font-semibold text-accent">
@@ -49,17 +51,17 @@ function SourceItem({ source, onRemove, busy }: { source: NotebookSource; onRemo
         <span className="truncate text-xs text-muted">
           {h.category ? `${categoryLabel(h.category, lang)} · ` : ""}
           {source.document_title}
-          {h.page_number ? ` · trang ${h.page_number}` : ""}
+          {h.page_number ? ` · ${t("search.pageOf", { page: h.page_number })}` : ""}
         </span>
         <Link href={`/reader/${h.document_id}?hl=${h.id}`} className="self-start text-xs font-semibold text-accent hover:underline">
-          Mở trong tài liệu
+          {t("nb.openInDocument")}
         </Link>
       </div>
       <button
         type="button"
         className="icon-btn -mr-1.5 -mt-1.5 h-8 w-8 text-muted"
-        aria-label={`Bỏ nguồn ${source.position}`}
-        title="Bỏ nguồn này"
+        aria-label={t("nb.dropSource", { n: source.position })}
+        title={t("nb.dropSourceTitle")}
         onClick={onRemove}
         disabled={busy}
       >
@@ -82,6 +84,7 @@ function AddSourcesDialog({
   onAdd: (ids: string[]) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const ref = useModal(open);
   const [picked, setPicked] = useState<string[]>([]);
   useEffect(() => {
@@ -91,7 +94,7 @@ function AddSourcesDialog({
   return (
     <dialog
       ref={ref}
-      aria-label="Thêm nguồn"
+      aria-label={t("nb.addSources")}
       onCancel={(e) => {
         e.preventDefault();
         if (!busy) onClose();
@@ -100,8 +103,8 @@ function AddSourcesDialog({
     >
       <div className="flex max-h-[calc(100vh-32px)] flex-col">
         <div className="flex items-center gap-3 border-b border-line px-6 py-4">
-          <h2 className="flex-1 font-serif text-2xl font-medium">Thêm nguồn</h2>
-          <button type="button" className="icon-btn" aria-label="Đóng" onClick={onClose} disabled={busy}>
+          <h2 className="flex-1 font-serif text-2xl font-medium">{t("nb.addSources")}</h2>
+          <button type="button" className="icon-btn" aria-label={t("common.close")} onClick={onClose} disabled={busy}>
             <Icon name="x" />
           </button>
         </div>
@@ -110,10 +113,10 @@ function AddSourcesDialog({
         </div>
         <div className="flex justify-end gap-2.5 border-t border-line px-6 py-4">
           <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>
-            Hủy
+            {t("common.cancel")}
           </button>
           <button type="button" className="btn-primary" onClick={() => onAdd(picked)} disabled={busy || picked.length === 0}>
-            {busy ? "Đang thêm…" : `Thêm ${picked.length} nguồn`}
+            {busy ? t("nb.adding") : t("nb.addN", { n: picked.length })}
           </button>
         </div>
       </div>
@@ -121,8 +124,14 @@ function AddSourcesDialog({
   );
 }
 
-const dateTimeOf = (iso: string) =>
-  new Date(iso).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" });
+const dateTimeOf = (iso: string, lang: string) =>
+  new Date(iso).toLocaleString(lang === "en" ? "en-GB" : "vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 
 /** FR-NB-03 step 5 (F-54): the snapshots kept by "Lưu"; one can be put back into the editor. */
 function VersionsDialog({
@@ -138,6 +147,8 @@ function VersionsDialog({
   onRestore: (version: NotebookVersion) => void;
   onClose: () => void;
 }) {
+  const t = useT();
+  const lang = useLang();
   const ref = useModal(open);
   const list = useNotebookVersions(notebookId, open);
   const [picked, setPicked] = useState<string | null>(null);
@@ -152,7 +163,7 @@ function VersionsDialog({
   return (
     <dialog
       ref={ref}
-      aria-label="Lịch sử phiên bản"
+      aria-label={t("notebooks.versions")}
       onCancel={(e) => {
         e.preventDefault();
         onClose();
@@ -161,8 +172,8 @@ function VersionsDialog({
     >
       <div className="flex max-h-[calc(100vh-32px)] flex-col">
         <div className="flex items-center gap-3 border-b border-line px-6 py-4">
-          <h2 className="flex-1 font-serif text-2xl font-medium">Lịch sử phiên bản</h2>
-          <button type="button" className="icon-btn" aria-label="Đóng" onClick={onClose}>
+          <h2 className="flex-1 font-serif text-2xl font-medium">{t("notebooks.versions")}</h2>
+          <button type="button" className="icon-btn" aria-label={t("common.close")} onClick={onClose}>
             <Icon name="x" />
           </button>
         </div>
@@ -174,16 +185,16 @@ function VersionsDialog({
           <div className="flex flex-col items-start gap-3 px-6 py-6">
             <Alert>{list.error instanceof Error ? list.error.message : MSG["MSG-99"]}</Alert>
             <button type="button" className="btn-outline" onClick={() => list.refetch()}>
-              Thử lại
+              {t("common.retry")}
             </button>
           </div>
         ) : versions.length === 0 ? (
           <p className="px-6 py-10 text-center text-[15px] text-muted">
-            Chưa có phiên bản nào. Mỗi lần bạn chọn “Lưu”, PureMind giữ lại một bản để xem và khôi phục sau.
+            {t("nb.noVersions")}
           </p>
         ) : (
           <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] sm:grid-cols-[240px_minmax(0,1fr)] sm:grid-rows-1">
-            <ul className="flex max-h-[30vh] flex-col gap-1 overflow-y-auto border-b border-line p-3 sm:max-h-none sm:border-b-0 sm:border-r" aria-label="Phiên bản">
+            <ul className="flex max-h-[30vh] flex-col gap-1 overflow-y-auto border-b border-line p-3 sm:max-h-none sm:border-b-0 sm:border-r" aria-label={t("nb.versions")}>
               {versions.map((v, i) => (
                 <li key={v.id}>
                   <button
@@ -195,11 +206,11 @@ function VersionsDialog({
                     }`}
                   >
                     <span className="text-sm font-semibold text-ink">
-                      {dateTimeOf(v.created_at)}
-                      {i === 0 ? " · Mới nhất" : ""}
+                      {dateTimeOf(v.created_at, lang)}
+                      {i === 0 ? ` · ${t("nb.latest")}` : ""}
                     </span>
                     <span className="truncate text-xs text-muted">
-                      {v.title} · {v.chars.toLocaleString("vi-VN")} ký tự
+                      {v.title} · {t("nb.chars", { n: v.chars.toLocaleString(lang) })}
                     </span>
                   </button>
                 </li>
@@ -213,18 +224,18 @@ function VersionsDialog({
               ) : version.data.content.trim() ? (
                 <NotebookMarkdown content={version.data.content} sources={sources} title={version.data.title} />
               ) : (
-                <p className="text-muted">Phiên bản này trống.</p>
+                <p className="text-muted">{t("nb.emptyVersion")}</p>
               )}
             </div>
           </div>
         )}
         <div className="flex flex-wrap items-center justify-end gap-2.5 border-t border-line px-6 py-4">
-          <span className="mr-auto text-xs text-muted">Khôi phục sẽ thay nội dung trong trình soạn thảo; chọn Lưu để giữ lại.</span>
+          <span className="mr-auto text-xs text-muted">{t("nb.restoreNote")}</span>
           <button type="button" className="btn-outline" onClick={onClose}>
-            Đóng
+            {t("common.close")}
           </button>
           <button type="button" className="btn-primary" disabled={!version.data} onClick={() => version.data && onRestore(version.data)}>
-            Khôi phục phiên bản này
+            {t("nb.restoreThis")}
           </button>
         </div>
       </div>
@@ -234,6 +245,8 @@ function VersionsDialog({
 
 /** UI-08, FR-NB-03/04/05: edit the Markdown with a preview, manage sources, save or delete. */
 function Editor({ notebook }: { notebook: Notebook }) {
+  const t = useT();
+  const lang = useLang();
   const router = useRouter();
   const showToast = useUi((s) => s.showToast);
   const update = useUpdateNotebook(notebook.id);
@@ -275,7 +288,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
         setAutoFailed(false);
         if (kind === "save") {
           setSaveError(null);
-          showToast("Đã lưu notebook");
+          showToast(t("nb.saved"));
         }
       } catch (e) {
         if (kind === "save") setSaveError(e instanceof ApiError && e.status === 422 ? e.message : MSG["MSG-99"]);
@@ -284,7 +297,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
         setSaving(null);
       }
     },
-    [mutateAsync, showToast],
+    [mutateAsync, showToast, t],
   );
 
   // Autosave: 5 seconds after the first unsaved change, then again while changes keep coming (the status stays).
@@ -339,7 +352,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
     try {
       deleted.current = true;
       await remove.mutateAsync(notebook.id);
-      showToast("Đã xóa notebook");
+      showToast(t("nb.deleted"));
       router.replace("/notebooks");
     } catch {
       deleted.current = false;
@@ -349,36 +362,36 @@ function Editor({ notebook }: { notebook: Notebook }) {
   }
 
   const status = saving
-    ? "Đang lưu…"
+    ? t("nb.statusSaving")
     : autoFailed
-      ? "Chưa lưu được — sẽ thử lại"
+      ? t("nb.statusFailed")
       : dirty
-        ? "Có thay đổi chưa lưu"
-        : `Đã lưu lúc ${timeOf(savedAt)}`;
+        ? t("nb.statusDirty")
+        : t("nb.statusSavedAt", { time: timeOf(savedAt, lang) });
 
   return (
     <div className="mx-auto flex max-w-[1180px] flex-col gap-6">
       <div className="flex flex-wrap items-center gap-2.5">
         <Link href="/notebooks" className="flex items-center gap-1 text-sm text-muted hover:text-ink">
           <Icon name="back" size={16} />
-          Notebook
+          {t("notebooks.title")}
         </Link>
         <span
           className={`flex h-6 items-center rounded-full px-2 text-xs font-semibold ${
             notebook.status === "saved" ? "bg-success-soft text-success" : "bg-soft text-ink"
           }`}
         >
-          {STATUS_LABEL[notebook.status]}
+          {t(STATUS_LABEL[notebook.status])}
         </span>
         <span className={`text-xs ${autoFailed ? "text-danger" : "text-muted"}`} role="status">
           {status}
         </span>
         <span className="flex-1" />
-        <div className="flex h-10 gap-0.5 rounded-full bg-soft p-1" role="group" aria-label="Chế độ">
+        <div className="flex h-10 gap-0.5 rounded-full bg-soft p-1" role="group" aria-label={t("nb.mode")}>
           {(
             [
-              ["preview", "Xem trước"],
-              ["edit", "Chỉnh sửa"],
+              ["preview", "nb.modePreview"],
+              ["edit", "nb.modeEdit"],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -388,17 +401,29 @@ function Editor({ notebook }: { notebook: Notebook }) {
               onClick={() => setMode(value)}
               className={`rounded-full px-3.5 text-sm ${mode === value ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"}`}
             >
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
-        <button type="button" className="icon-btn h-10 w-10" aria-label="Lịch sử phiên bản" title="Lịch sử phiên bản" onClick={() => setHistory(true)}>
+        <button
+          type="button"
+          className="icon-btn h-10 w-10"
+          aria-label={t("notebooks.versions")}
+          title={t("notebooks.versions")}
+          onClick={() => setHistory(true)}
+        >
           <Icon name="history" />
         </button>
         <button type="button" className="btn-primary h-10" onClick={() => void send("save")} disabled={!valid || saving !== null}>
-          {saving === "save" ? "Đang lưu…" : "Lưu"}
+          {t(saving === "save" ? "common.saving" : "common.save")}
         </button>
-        <button type="button" className="icon-btn h-10 w-10" aria-label="Xóa notebook" title="Xóa notebook" onClick={() => setConfirmDelete(true)}>
+        <button
+          type="button"
+          className="icon-btn h-10 w-10"
+          aria-label={t("nb.deleteNotebook")}
+          title={t("nb.deleteNotebook")}
+          onClick={() => setConfirmDelete(true)}
+        >
           <Icon name="trash" />
         </button>
       </div>
@@ -408,20 +433,20 @@ function Editor({ notebook }: { notebook: Notebook }) {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-w-0 flex-col gap-4">
           <label className="flex flex-col gap-1">
-            <span className="sr-only">Tiêu đề</span>
+            <span className="sr-only">{t("nb.titleLabel")}</span>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={MAX_NOTEBOOK_TITLE}
               className="w-full rounded-lg border border-transparent bg-transparent px-1 py-1 font-serif text-3xl font-medium leading-tight text-ink outline-none hover:border-line focus:border-accent sm:text-4xl"
             />
-            {!titleOk && <span className="text-sm text-danger">Tiêu đề không được để trống.</span>}
+            {!titleOk && <span className="text-sm text-danger">{t("nb.titleRequired")}</span>}
           </label>
 
           {mode === "edit" ? (
             <div className="flex flex-col gap-1.5">
               <label htmlFor="notebook-content" className="sr-only">
-                Nội dung Markdown
+                {t("nb.markdownContent")}
               </label>
               <textarea
                 id="notebook-content"
@@ -432,10 +457,13 @@ function Editor({ notebook }: { notebook: Notebook }) {
               />
               <span className={`flex flex-wrap gap-x-3 text-xs ${tooLong ? "text-danger" : "text-muted"}`}>
                 <span>
-                  {content.length.toLocaleString("vi-VN")}/{MAX_NOTEBOOK_CHARS.toLocaleString("vi-VN")} ký tự
+                  {t("nb.charCount", {
+                    n: content.length.toLocaleString(lang),
+                    max: MAX_NOTEBOOK_CHARS.toLocaleString(lang),
+                  })}
                   {tooLong ? ` — ${MSG["MSG-29"]}` : ""}
                 </span>
-                <span>Markdown: # tiêu đề, **đậm**, - danh sách, | bảng |, [n] dẫn nguồn.</span>
+                <span>{t("nb.markdownHint")}</span>
               </span>
             </div>
           ) : (
@@ -443,26 +471,26 @@ function Editor({ notebook }: { notebook: Notebook }) {
               {content.trim() ? (
                 <NotebookMarkdown content={content} sources={sources} title={title} />
               ) : (
-                <p className="text-muted">Notebook đang trống. Chọn “Chỉnh sửa” để viết.</p>
+                <p className="text-muted">{t("nb.emptyNotebook")}</p>
               )}
             </article>
           )}
           <span className="text-xs text-muted">
-            Tạo ngày {formatDate(notebook.created_at)}
-            {notebook.ai_model ? ` · AI: ${notebook.ai_model}` : ""} · AI có thể sai, hãy đối chiếu với nguồn.
+            {t("nb.madeOn", { date: formatDate(notebook.created_at) })}
+            {notebook.ai_model ? ` · AI: ${notebook.ai_model}` : ""} · {t("nb.aiCaveat")}
           </span>
         </div>
 
-        <aside className="flex flex-col gap-3 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-120px)] lg:self-start lg:overflow-y-auto" aria-label="Nguồn">
+        <aside className="flex flex-col gap-3 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-120px)] lg:self-start lg:overflow-y-auto" aria-label={t("nb.sourcesAria")}>
           <div className="flex items-center gap-2">
-            <h2 className="eyebrow flex-1">NGUỒN ({sources.length})</h2>
+            <h2 className="eyebrow flex-1">{t("nb.sourcesCount", { n: sources.length })}</h2>
             <button type="button" className="btn-ghost h-9 px-3 text-sm" onClick={() => setAdding(true)} disabled={update.isPending}>
               <Icon name="plus" size={16} />
-              Thêm nguồn
+              {t("nb.addSources")}
             </button>
           </div>
           {sources.length === 0 && missing.length === 0 && (
-            <p className="text-sm text-muted">Notebook chưa có nguồn nào.</p>
+            <p className="text-sm text-muted">{t("nb.noSources")}</p>
           )}
           <ul className="flex flex-col gap-2">
             {sources.map((s) => (
@@ -478,7 +506,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
                 <span className="flex h-6 min-w-6 items-center justify-center rounded bg-soft px-1 text-xs font-semibold line-through">
                   {n}
                 </span>
-                Nguồn đã bị xóa
+                {t("nb.removedSource")}
               </li>
             ))}
           </ul>
@@ -503,24 +531,25 @@ function Editor({ notebook }: { notebook: Notebook }) {
           setContent(v.content);
           setMode("preview");
           setHistory(false);
-          showToast("Đã khôi phục phiên bản — chọn Lưu để giữ lại");
+          showToast(t("nb.restored"));
         }}
       />
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Xóa notebook?"
+        title={t("notebooks.deleteTitle")}
         busy={remove.isPending}
         onConfirm={() => void doDelete()}
         onCancel={() => setConfirmDelete(false)}
       >
-        “{notebook.title}” sẽ bị xóa vĩnh viễn. Các highlight nguồn vẫn được giữ nguyên.
+        {t("nb.deleteBody", { title: notebook.title })}
       </ConfirmDialog>
     </div>
   );
 }
 
 export default function NotebookPage() {
+  const t = useT();
   const { id } = useParams<{ id: string }>();
   const query = useNotebook(id);
 
@@ -529,14 +558,16 @@ export default function NotebookPage() {
     const notFound = query.error instanceof ApiError && query.error.status === 404;
     return (
       <div className="mx-auto flex max-w-[880px] flex-col items-start gap-3">
-        <Alert>{notFound ? "Không tìm thấy notebook." : query.error instanceof Error ? query.error.message : MSG["MSG-99"]}</Alert>
+        <Alert>
+          {notFound ? t("nb.notFound") : query.error instanceof Error ? query.error.message : MSG["MSG-99"]}
+        </Alert>
         {notFound ? (
           <Link href="/notebooks" className="btn-outline">
-            Về danh sách notebook
+            {t("nb.backToList")}
           </Link>
         ) : (
           <button type="button" className="btn-outline" onClick={() => query.refetch()}>
-            Thử lại
+            {t("common.retry")}
           </button>
         )}
       </div>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { useSaveUrl, useUploadDocument } from "@/lib/documents";
+import { useT } from "@/lib/i18n";
 import { MAX_UPLOAD_BYTES, MSG, messageFor } from "@/lib/messages";
 import { useUi } from "@/lib/ui-store";
 
@@ -17,6 +18,7 @@ const formatSize = (bytes: number) =>
 
 /** UI-03 upload / save-link dialog (FR-DOC-01, FR-DOC-03). */
 export function AddDocumentDialog() {
+  const t = useT();
   const router = useRouter();
   const { addOpen: open, setAddOpen, showToast } = useUi();
   const ref = useModal(open);
@@ -72,7 +74,7 @@ export function AddDocumentDialog() {
       }
       if (doc.extraction_status === "pending" || doc.extraction_status === "processing") {
         onClose();
-        showToast("Đã tải lên. Văn bản sạch đang được trích xuất…");
+        showToast(t("add.extracting"));
         return;
       }
       done(doc.id, doc.extraction_status, doc.extraction_error);
@@ -110,29 +112,29 @@ export function AddDocumentDialog() {
       <div className="flex flex-col gap-5 p-5 sm:p-7">
         <div className="flex items-center justify-between">
           <h2 id="add-doc-title" className="font-serif text-[28px] font-medium">
-            Thêm tài liệu
+            {t("add.title")}
           </h2>
-          <button type="button" className="icon-btn text-muted" onClick={onClose} disabled={busy} aria-label="Đóng">
+          <button type="button" className="icon-btn text-muted" onClick={onClose} disabled={busy} aria-label={t("common.close")}>
             <Icon name="x" size={20} />
           </button>
         </div>
 
         <div className="flex gap-2" role="tablist">
-          {(["file", "link"] as const).map((t) => (
+          {(["file", "link"] as const).map((value) => (
             <button
-              key={t}
+              key={value}
               type="button"
               role="tab"
-              aria-selected={tab === t}
+              aria-selected={tab === value}
               disabled={busy}
               onClick={() => {
-                setTab(t);
+                setTab(value);
                 setError(null);
               }}
               className="chip h-[42px]"
             >
-              <Icon name={t === "file" ? "upload" : "link"} size={16} />
-              {t === "file" ? "Tải tệp lên" : "Dán link"}
+              <Icon name={value === "file" ? "upload" : "link"} size={16} />
+              {t(value === "file" ? "add.tabFile" : "add.tabLink")}
             </button>
           ))}
         </div>
@@ -148,7 +150,7 @@ export function AddDocumentDialog() {
                 <span className="text-[13px] text-muted">{formatSize(file.size)}</span>
               </span>
               <button type="button" className="btn-ghost px-3.5 text-sm text-accent" onClick={() => fileInput.current?.click()} disabled={busy}>
-                Đổi tệp
+                {t("add.changeFile")}
               </button>
             </div>
           ) : (
@@ -161,14 +163,14 @@ export function AddDocumentDialog() {
               <span className="text-accent">
                 <Icon name="upload" size={30} />
               </span>
-              <span className="text-base font-medium text-ink">Bấm để chọn tệp từ máy</span>
-              <span className="text-[13px]">PDF hoặc EPUB · tối đa 50 MB</span>
+              <span className="text-base font-medium text-ink">{t("add.pickFile")}</span>
+              <span className="text-[13px]">{t("add.fileHint")}</span>
             </button>
           )
         ) : (
           <form onSubmit={submitLink} className="flex flex-col gap-3.5" id="add-link-form">
             <label className="field-label">
-              Link bài viết hoặc tệp PDF
+              {t("add.linkLabel")}
               <input
                 className="input h-[50px] bg-page"
                 type="url"
@@ -181,7 +183,7 @@ export function AddDocumentDialog() {
               />
             </label>
             <span className="text-[13px] leading-normal text-muted">
-              PureMind tải trang về, bỏ quảng cáo và menu, giữ phần nội dung chính. Địa chỉ nội bộ bị chặn.
+              {t("add.linkNote")}
             </span>
           </form>
         )}
@@ -191,15 +193,15 @@ export function AddDocumentDialog() {
 
         <div className="flex justify-end gap-2.5">
           <button type="button" className="btn-outline h-12 px-5" onClick={onClose} disabled={busy}>
-            Hủy
+            {t("common.cancel")}
           </button>
           {tab === "file" ? (
             <button type="button" className="btn-primary h-12 px-[22px]" onClick={submitFile} disabled={busy}>
-              {upload.isPending ? "Đang tải lên…" : file ? "Tải lên" : "Chọn tệp"}
+              {t(upload.isPending ? "add.uploading" : file ? "add.doUpload" : "add.chooseFile")}
             </button>
           ) : (
             <button type="submit" form="add-link-form" className="btn-primary h-12 px-[22px]" disabled={busy || !url.trim()}>
-              {saveUrl.isPending ? "Đang lấy nội dung…" : "Lưu link"}
+              {t(saveUrl.isPending ? "add.fetching" : "add.saveLink")}
             </button>
           )}
         </div>

@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { highlightsKey } from "./annotations";
 import { api } from "./api";
-import type { DocumentDetail, DocumentListItem } from "./types";
+import { currentLang } from "./preferences";
+import type { DocumentDetail, DocumentListItem, Lang } from "./types";
 
 export type LibrarySort = "created_desc" | "created_asc" | "title";
 
@@ -90,6 +91,10 @@ export function useUpdateDocument() {
   });
 }
 
-export function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+export function formatDate(iso: string, lang: Lang = currentLang()) {
+  return new Date(iso).toLocaleDateString(lang === "en" ? "en-GB" : "vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }

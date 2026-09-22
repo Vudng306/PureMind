@@ -2,13 +2,16 @@
 
 import { useEffect, useRef } from "react";
 
+import { useT } from "@/lib/i18n";
 import { useUi } from "@/lib/ui-store";
 
-export function Spinner({ label = "Đang tải…" }: { label?: string }) {
+export function Spinner({ label }: { label?: string }) {
+  const t = useT();
+  const text = label ?? t("common.loading");
   return (
     <div role="status" className="flex items-center gap-3 text-sm text-muted">
       <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" aria-hidden />
-      {label}
+      {text}
     </div>
   );
 }
@@ -44,8 +47,8 @@ export function ConfirmDialog({
   open,
   title,
   children,
-  confirmLabel = "Xóa vĩnh viễn",
-  cancelLabel = "Giữ lại",
+  confirmLabel,
+  cancelLabel,
   busy = false,
   confirmDisabled = false,
   tone = "danger",
@@ -64,6 +67,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const ref = useModal(open);
 
   return (
@@ -85,10 +89,10 @@ export function ConfirmDialog({
         <div className="text-[15px] leading-relaxed text-body">{children}</div>
         <div className="mt-1.5 flex justify-end gap-2.5">
           <button type="button" className="btn-outline" onClick={onCancel} disabled={busy}>
-            {cancelLabel}
+            {cancelLabel ?? t("common.keep")}
           </button>
           <button type="button" className={tone === "danger" ? "btn-danger" : "btn-primary"} onClick={onConfirm} disabled={busy || confirmDisabled}>
-            {busy ? "Đang xử lý…" : confirmLabel}
+            {busy ? t("common.working") : (confirmLabel ?? t("common.deleteForever"))}
           </button>
         </div>
       </div>

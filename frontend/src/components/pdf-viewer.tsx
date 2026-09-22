@@ -8,6 +8,7 @@ import "pdfjs-dist/web/pdf_viewer.css";
 import type { Highlight } from "@/lib/annotations";
 import { API_URL, authHeader } from "@/lib/api";
 import { clearHighlights, findLoose, findMatches, findRanges, paintHighlights, scrollRangeIntoView } from "@/lib/find";
+import { useT } from "@/lib/i18n";
 import { hitRects, rangeRects, type PdfRect } from "@/lib/pdf-rects";
 import type { HighlightColor } from "@/lib/preferences";
 
@@ -174,6 +175,7 @@ export function PdfViewer({
   onSelect,
   onHighlightClick,
 }: Props) {
+  const t = useT();
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [sizes, setSizes] = useState<Size[]>([]);
@@ -579,7 +581,7 @@ export function PdfViewer({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center justify-center gap-1.5 border-b border-line px-3 py-1.5 text-sm">
-        <button type="button" className="icon-btn h-10 w-10" onClick={() => goTo(current - 1)} disabled={current <= 1} aria-label="Trang trước">
+        <button type="button" className="icon-btn h-10 w-10" onClick={() => goTo(current - 1)} disabled={current <= 1} aria-label={t("pdf.previousPage")}>
           <Icon name="back" />
         </button>
         <form
@@ -592,7 +594,7 @@ export function PdfViewer({
           className="flex items-center gap-1"
         >
           <label className="sr-only" htmlFor="page-input">
-            Số trang
+            {t("pdf.pageNumber")}
           </label>
           <input
             id="page-input"
@@ -606,26 +608,26 @@ export function PdfViewer({
             / {total || "…"}
           </span>
         </form>
-        <button type="button" className="icon-btn h-10 w-10" onClick={() => goTo(current + 1)} disabled={!total || current >= total} aria-label="Trang sau">
+        <button type="button" className="icon-btn h-10 w-10" onClick={() => goTo(current + 1)} disabled={!total || current >= total} aria-label={t("pdf.nextPage")}>
           <Icon name="next" />
         </button>
 
         <span className="mx-2 hidden h-5 w-px bg-line sm:block" />
 
-        <button type="button" className="icon-btn h-10 w-10" onClick={() => zoomBy(-STEP)} disabled={scale <= MIN_ZOOM} aria-label="Thu nhỏ">
+        <button type="button" className="icon-btn h-10 w-10" onClick={() => zoomBy(-STEP)} disabled={scale <= MIN_ZOOM} aria-label={t("pdf.zoomOut")}>
           <Icon name="minus" />
         </button>
         <select
           className="input h-9 w-auto px-2 text-sm"
-          aria-label="Mức thu phóng"
+          aria-label={t("pdf.zoomLevel")}
           value={zoomValue}
           onChange={(e) => {
             const v = e.target.value;
             setZoom(v === "fit-width" || v === "fit-page" ? v : Number(v));
           }}
         >
-          <option value="fit-width">Vừa chiều rộng</option>
-          <option value="fit-page">Vừa trang</option>
+          <option value="fit-width">{t("pdf.fitWidth")}</option>
+          <option value="fit-page">{t("pdf.fitPage")}</option>
           {typeof zoom === "number" && !ZOOM_LEVELS.includes(zoom) && <option value={zoomValue}>{Math.round(zoom * 100)}%</option>}
           {ZOOM_LEVELS.map((z) => (
             <option key={z} value={String(z)}>
@@ -633,7 +635,7 @@ export function PdfViewer({
             </option>
           ))}
         </select>
-        <button type="button" className="icon-btn h-10 w-10" onClick={() => zoomBy(STEP)} disabled={scale >= MAX_ZOOM} aria-label="Phóng to">
+        <button type="button" className="icon-btn h-10 w-10" onClick={() => zoomBy(STEP)} disabled={scale >= MAX_ZOOM} aria-label={t("pdf.zoomIn")}>
           <Icon name="plus" />
         </button>
       </div>
@@ -648,7 +650,7 @@ export function PdfViewer({
       >
         {!pdf ? (
           <div className="p-6 text-sm text-muted" role="status">
-            Đang tải tài liệu…
+            {t("pdf.loading")}
           </div>
         ) : (
           <div className="relative" style={{ height: tops[tops.length - 1] + bottomInset }}>

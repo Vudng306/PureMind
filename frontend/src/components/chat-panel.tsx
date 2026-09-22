@@ -18,6 +18,7 @@ import {
   type ChatMessage,
 } from "@/lib/chat";
 import { useDocument } from "@/lib/documents";
+import { useLang, useT } from "@/lib/i18n";
 import { parseMarkdown } from "@/lib/markdown";
 import { MSG, messageFor } from "@/lib/messages";
 import { useAccount } from "@/lib/queries";
@@ -36,6 +37,8 @@ function snippet(text: string): string {
 
 /** A [n] citation: opens the passage in the document. */
 function Cite({ n, sources, onOpen }: { n: number; sources: Map<number, ChatCitation>; onOpen: (c: ChatCitation) => void }) {
+  const t = useT();
+  const lang = useLang();
   const cls = "mx-px rounded px-1 py-px align-[0.1em] font-sans text-[0.72em] font-semibold";
   const source = sources.get(n);
   if (!source) return <span className={`${cls} bg-soft text-muted`}>{n}</span>;
@@ -44,8 +47,8 @@ function Cite({ n, sources, onOpen }: { n: number; sources: Map<number, ChatCita
       type="button"
       onClick={() => onOpen(source)}
       className={`${cls} bg-accent/15 text-accent hover:bg-accent/25`}
-      title={`${citationLabel(source)}: “${source.text.slice(0, 120)}”`}
-      aria-label={`Nguồn ${n}: ${citationLabel(source)}`}
+      title={`${citationLabel(source, lang)}: “${source.text.slice(0, 120)}”`}
+      aria-label={t("chat.sourceN", { n, where: citationLabel(source, lang) })}
     >
       {n}
     </button>
@@ -61,6 +64,7 @@ function Answer({
   citations: ChatCitation[];
   onOpen: (c: ChatCitation) => void;
 }) {
+  const lang = useLang();
   const blocks = useMemo(() => parseMarkdown(content), [content]);
   const byPosition = useMemo(() => new Map(citations.map((c) => [c.position, c])), [citations]);
   const used = useMemo(() => citedSources(content, citations), [content, citations]);
@@ -82,7 +86,7 @@ function Answer({
               title={c.text.slice(0, 200)}
             >
               <Icon name="file" size={13} className="text-muted" />
-              {citationLabel(c)}
+              {citationLabel(c, lang)}
             </button>
           ))}
         </div>
@@ -119,6 +123,7 @@ export function ChatPanel({
   /** Open a passage in the document: the reader searches for it (FR-RDR-04). */
   onFind: (text: string) => void;
 }) {
+  const t = useT();
   const qc = useQueryClient();
   const { data: doc } = useDocument(docId);
   const { data: user } = useAccount();
@@ -199,7 +204,7 @@ export function ChatPanel({
       <p className="rounded-lg bg-soft px-3 py-2.5 text-sm leading-normal text-muted">
         {noText
           ? messageFor(doc?.extraction_error ?? "MSG-CHAT-NO-TEXT")
-          : "Tài liệu đang được xử lý. Bạn có thể hỏi khi xử lý xong."}
+          : t("chat.extracting")}
       </p>
     );
   }
@@ -209,7 +214,7 @@ export function ChatPanel({
       {(list?.length ?? 0) > 0 && (
         <div className="flex items-center gap-1.5">
           <label className="sr-only" htmlFor="chat-conversation">
-            Cuộc trò chuyện
+            {t("chat.conversation")}
           </label>
           <select
             id="chat-conversation"
@@ -220,16 +225,16 @@ export function ChatPanel({
           >
             {list?.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.title || "Cuộc trò chuyện mới"}
+                {c.title || t("chat.newConversation")}
               </option>
             ))}
           </select>
-          <button type="button" aria-label="Cuộc trò chuyện mới" onClick={() => void startNew()} disabled={busy} className="icon-btn text-muted">
+          <button type="button" aria-label={t("chat.newConversation")} onClick={() => void startNew()} disabled={busy} className="icon-btn text-muted">
             <Icon name="plus" size={16} />
           </button>
           <button
             type="button"
-            aria-label="Xóa cuộc trò chuyện"
+            aria-label={t("chat.deleteConversation")}
             onClick={() => setAsk("delete")}
             disabled={busy || !conversationId}
             className="icon-btn text-muted"
@@ -242,10 +247,9 @@ export function ChatPanel({
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
         {messages.length === 0 && !busy && (
           <div className="flex flex-col gap-2 rounded-xl border border-line p-4">
-            <p className="font-serif text-[17px] text-ink">Hỏi AI về tài liệu này</p>
+            <p className="font-serif text-[17px] text-ink">{t("chat.emptyTitle")}</p>
             <p className="text-sm leading-relaxed text-muted">
-              Câu trả lời chỉ dựa trên nội dung tài liệu và luôn kèm số đoạn đã dùng — bấm vào số đó để mở đúng
-              đoạn trong bài.
+              {t("chat.emptyBody")}
             </p>
           </div>
         )}
@@ -264,7 +268,7 @@ export function ChatPanel({
             ) : (
               <div role="status" className="flex items-center gap-2.5 text-sm text-muted">
                 <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-line border-t-accent" aria-hidden />
-                Đang đọc tài liệu để trả lời…
+                {t("chat.reading")}
               </div>
             )}
           </>
@@ -277,9 +281,9 @@ export function ChatPanel({
       {quote && (
         <div className="flex items-start gap-2 rounded-xl border border-line px-3 py-2.5">
           <span className="min-w-0 flex-1 font-serif text-[14px] leading-normal text-muted">
-            Hỏi về: “{quote.length > 140 ? `${quote.slice(0, 140)}…` : quote}”
+            {t("chat.askingAbout", { quote: quote.length > 140 ? `${quote.slice(0, 140)}…` : quote })}
           </span>
-          <button type="button" aria-label="Bỏ đoạn đang hỏi" onClick={onClearQuote} className="icon-btn h-7 w-7 text-muted">
+          <button type="button" aria-label={t("chat.dropQuote")} onClick={onClearQuote} className="icon-btn h-7 w-7 text-muted">
             <Icon name="x" size={14} />
           </button>
         </div>
@@ -287,7 +291,7 @@ export function ChatPanel({
 
       <div className="flex flex-col gap-1.5">
         <label className="sr-only" htmlFor="chat-question">
-          Câu hỏi về tài liệu
+          {t("chat.questionLabel")}
         </label>
         <div className="flex items-end gap-2 rounded-[14px] border border-field bg-bg px-3 py-2 focus-within:border-accent">
           <textarea
@@ -295,7 +299,7 @@ export function ChatPanel({
             value={draft}
             maxLength={MAX_CHAT_QUESTION}
             rows={2}
-            placeholder="Hỏi về nội dung tài liệu…"
+            placeholder={t("chat.questionPlaceholder")}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -308,7 +312,7 @@ export function ChatPanel({
           />
           <button
             type="button"
-            aria-label="Gửi câu hỏi"
+            aria-label={t("chat.sendQuestion")}
             onClick={() => void send()}
             disabled={busy || !draft.trim() || quota === 0}
             className="btn-primary mb-0.5 h-9 w-9 shrink-0 justify-center px-0"
@@ -320,14 +324,14 @@ export function ChatPanel({
           {quota === 0
             ? MSG["MSG-CHAT-QUOTA"]
             : quota === undefined
-              ? "Enter để gửi, Shift+Enter để xuống dòng."
-              : `Còn ${quota} câu hỏi hôm nay · Enter để gửi.`}
+              ? t("chat.enterHint")
+              : t("chat.quotaHint", { n: quota })}
         </span>
       </div>
 
       <AiConsentDialog
         open={ask === "consent"}
-        what="nội dung văn bản của tài liệu này"
+        what={t("summary.consentWhat")}
         onAgreed={() => {
           setAsk(null);
           void send();
@@ -337,9 +341,9 @@ export function ChatPanel({
 
       <ConfirmDialog
         open={ask === "delete"}
-        title="Xóa cuộc trò chuyện?"
-        confirmLabel="Xóa"
-        cancelLabel="Hủy"
+        title={t("chat.deleteQ")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
         onConfirm={() => {
           setAsk(null);
           const id = conversationId;
@@ -348,8 +352,7 @@ export function ChatPanel({
         }}
         onCancel={() => setAsk(null)}
       >
-        Toàn bộ câu hỏi và câu trả lời trong cuộc trò chuyện này sẽ bị xóa. Tài liệu và highlight không bị ảnh
-        hưởng.
+        {t("chat.deleteBody")}
       </ConfirmDialog>
     </div>
   );

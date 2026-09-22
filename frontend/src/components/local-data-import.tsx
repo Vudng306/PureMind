@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { CATEGORY_FOR_COLOR, MAX_HIGHLIGHT_NOTE, MAX_SELECTION, highlightsKey, toDto, type Highlight } from "@/lib/annotations";
 import { api } from "@/lib/api";
 import { documentsKey } from "@/lib/documents";
+import { currentLang, translate } from "@/lib/i18n";
 import { HIGHLIGHT_COLORS } from "@/lib/preferences";
 import { useAccount } from "@/lib/queries";
 import { useUi } from "@/lib/ui-store";
@@ -132,7 +133,7 @@ export function LocalDataImport() {
         void qc.invalidateQueries({ queryKey: highlightsKey });
         void qc.invalidateQueries({ queryKey: documentsKey });
         if (res.highlights) {
-          useUi.getState().showToast(`Đã chuyển ${res.highlights} highlight từ trình duyệt này lên tài khoản`);
+          useUi.getState().showToast(translate(currentLang(), "import.moved", { n: res.highlights }));
         }
       })
       .catch(() => {

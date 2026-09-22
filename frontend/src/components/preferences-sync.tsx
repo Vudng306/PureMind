@@ -59,11 +59,6 @@ export function PreferencesSync() {
 
   const payload = localShape({ theme, fontSize, lineHeight, width, defaultMode, language, colorLabels });
 
-  // The <html lang> tells the browser how to hyphenate and how a screen reader should pronounce it.
-  useEffect(() => {
-    document.documentElement.lang = language;
-  }, [language]);
-
   useEffect(() => {
     if (!adopted.current || payload === lastSent.current) return;
     const t = setTimeout(() => {

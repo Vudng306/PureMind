@@ -11,10 +11,12 @@ import { Icon } from "@/components/icons";
 import { Alert } from "@/components/ui";
 import { api } from "@/lib/api";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { useT } from "@/lib/i18n";
 import { EMAIL_RE, MSG } from "@/lib/messages";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export default function RegisterPage() {
+  const t = useT();
   const router = useRouter();
   const { session, loading } = useAuth();
   const [form, setForm] = useState({ displayName: "", email: "", password: "", confirm: "" });
@@ -38,7 +40,7 @@ export default function RegisterPage() {
     if (displayName.length > 255) return setError(MSG["MSG-07"]);
     if (!EMAIL_RE.test(email) || email.length > 255) return setError(MSG["MSG-01"]);
     if (form.password.length < 8 || form.password.length > 72) return setError(MSG["MSG-02"]);
-    if (form.password !== form.confirm) return setError("Mật khẩu xác nhận không khớp.");
+    if (form.password !== form.confirm) return setError(t("auth.confirmMismatch"));
 
     setBusy(true);
     const { data, error: authError } = await supabase().auth.signUp({
@@ -65,13 +67,10 @@ export default function RegisterPage() {
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-soft text-accent">
           <Icon name="mail" size={26} />
         </span>
-        <h2 className="font-serif text-4xl font-medium">Kiểm tra hộp thư</h2>
-        <p className="text-base leading-relaxed text-body">
-          Chúng tôi đã gửi liên kết xác nhận tới <strong>{sentTo}</strong>. Bấm vào liên kết trong thư để kích hoạt tài
-          khoản, sau đó đăng nhập.
-        </p>
+        <h2 className="font-serif text-4xl font-medium">{t("auth.checkInbox")}</h2>
+        <p className="text-base leading-relaxed text-body">{t("auth.confirmSent", { email: sentTo })}</p>
         <Link href="/login" className="btn-primary h-[50px] text-base">
-          Đến trang đăng nhập
+          {t("auth.toSignIn")}
         </Link>
       </div>
     );
@@ -79,45 +78,45 @@ export default function RegisterPage() {
 
   return (
     <>
-      <h2 className="font-serif text-[40px] font-medium leading-tight">Tạo tài khoản</h2>
+      <h2 className="font-serif text-[40px] font-medium leading-tight">{t("auth.createAccount")}</h2>
       <AuthTabs active="register" />
       {!isSupabaseConfigured && <SupabaseConfigNotice />}
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <label className="field-label">
-          Họ tên
+          {t("auth.name")}
           <input className="input" autoComplete="name" value={form.displayName} onChange={update("displayName")} />
         </label>
         <label className="field-label">
-          Email
+          {t("auth.email")}
           <input
             className="input"
             type="email"
             autoComplete="email"
-            placeholder="ban@vidu.com"
+            placeholder={t("auth.emailPlaceholder")}
             value={form.email}
             onChange={update("email")}
           />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="field-label">
-            Mật khẩu
+            {t("auth.password")}
             <input
               className="input"
               type="password"
               autoComplete="new-password"
-              placeholder="8–72 ký tự"
+              placeholder={t("account.passwordHint")}
               value={form.password}
               onChange={update("password")}
             />
           </label>
           <label className="field-label">
-            Nhập lại mật khẩu
+            {t("auth.repeatPassword")}
             <input className="input" type="password" autoComplete="new-password" value={form.confirm} onChange={update("confirm")} />
           </label>
         </div>
         {error && <Alert>{error}</Alert>}
         <button className="btn-primary h-[50px] text-base" disabled={busy || !isSupabaseConfigured}>
-          {busy ? "Đang tạo tài khoản…" : "Đăng ký"}
+          {t(busy ? "auth.signingUp" : "auth.signUp")}
         </button>
       </form>
       <GoogleSignIn onError={setError} />

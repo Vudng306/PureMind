@@ -9,10 +9,12 @@ import { SupabaseConfigNotice } from "@/components/config-notice";
 import { Alert } from "@/components/ui";
 import { api } from "@/lib/api";
 import { authErrorMessage } from "@/lib/auth-errors";
+import { useT } from "@/lib/i18n";
 import { EMAIL_RE, MSG } from "@/lib/messages";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 function LoginForm() {
+  const t = useT();
   const router = useRouter();
   const params = useSearchParams();
   const { session, loading } = useAuth();
@@ -50,39 +52,39 @@ function LoginForm() {
     setError(null);
     setInfo(null);
     const value = email.trim().toLowerCase();
-    if (!EMAIL_RE.test(value)) return setError("Nhập email của bạn ở trên để nhận liên kết đặt lại mật khẩu.");
+    if (!EMAIL_RE.test(value)) return setError(t("auth.enterEmailFirst"));
     const { error: authError } = await supabase().auth.resetPasswordForEmail(value, {
       redirectTo: `${window.location.origin}/settings`,
     });
     if (authError) return setError(authErrorMessage(authError));
-    setInfo(`Đã gửi liên kết đặt lại mật khẩu tới ${value}.`);
+    setInfo(t("auth.resetSent", { email: value }));
   }
 
   return (
     <>
-      <h2 className="font-serif text-[40px] font-medium leading-tight">Chào mừng trở lại</h2>
+      <h2 className="font-serif text-[40px] font-medium leading-tight">{t("auth.welcomeBack")}</h2>
       <AuthTabs active="login" />
       {!isSupabaseConfigured && <SupabaseConfigNotice />}
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <label className="field-label">
-          Email
+          {t("auth.email")}
           <input
             className="input"
             type="email"
             autoComplete="email"
-            placeholder="ban@vidu.com"
+            placeholder={t("auth.emailPlaceholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </label>
         <label className="field-label">
-          Mật khẩu
+          {t("auth.password")}
           <input
             className="input"
             type="password"
             autoComplete="current-password"
-            placeholder="Tối thiểu 8 ký tự"
+            placeholder={t("auth.passwordMin")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -91,7 +93,7 @@ function LoginForm() {
         {error && <Alert>{error}</Alert>}
         {info && <Alert tone="success">{info}</Alert>}
         <button className="btn-primary h-[50px] text-base" disabled={busy || !isSupabaseConfigured}>
-          {busy ? "Đang đăng nhập…" : "Đăng nhập"}
+          {t(busy ? "auth.signingIn" : "auth.signIn")}
         </button>
       </form>
       <GoogleSignIn onError={setError} />
@@ -101,7 +103,7 @@ function LoginForm() {
         disabled={!isSupabaseConfigured}
         className="self-start py-2 text-sm font-medium text-accent hover:underline disabled:opacity-50"
       >
-        Quên mật khẩu?
+        {t("auth.forgot")}
       </button>
     </>
   );

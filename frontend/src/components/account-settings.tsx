@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useHighlights } from "@/lib/annotations";
 import { useDocuments, formatDate } from "@/lib/documents";
+import { useLang, useT } from "@/lib/i18n";
 import { MAX_AVATAR_BYTES, MSG } from "@/lib/messages";
 import { api } from "@/lib/api";
 import { authErrorMessage } from "@/lib/auth-errors";
@@ -20,6 +21,8 @@ import { Alert, ConfirmDialog, Spinner } from "./ui";
 
 /** UI-11: FR-ACC-01..03, FR-ACC-05 — profile, avatar, password, sign-out and account deletion. */
 export function AccountSettings() {
+  const t = useT();
+  const lang = useLang();
   const router = useRouter();
   const qc = useQueryClient();
   const showToast = useUi((s) => s.showToast);
@@ -48,7 +51,7 @@ export function AccountSettings() {
   const saveName = useMutation({
     mutationFn: (display_name: string) =>
       api<User>("/account", { method: "PATCH", body: JSON.stringify({ display_name }) }),
-    onSuccess: (u) => onSaved(u, "Đã lưu hồ sơ"),
+    onSuccess: (u) => onSaved(u, t("account.savedProfile")),
     onError: onFailed, // form keeps its value (FR-ACC-02)
   });
 
@@ -59,7 +62,7 @@ export function AccountSettings() {
       body.append("file", file);
       return api<User>("/account/avatar", { method: "PUT", body });
     },
-    onSuccess: (u) => onSaved(u, "Đã cập nhật ảnh đại diện"),
+    onSuccess: (u) => onSaved(u, t("account.savedAvatar")),
     onError: onFailed,
   });
 
@@ -71,7 +74,7 @@ export function AccountSettings() {
     onSuccess: () => {
       setPassword("");
       setNotice(null);
-      showToast("Đã đổi mật khẩu");
+      showToast(t("account.savedPassword"));
     },
     onError: onFailed,
   });
@@ -102,7 +105,7 @@ export function AccountSettings() {
       <div className="flex flex-col items-start gap-3">
         <Alert>{MSG["MSG-99"]}</Alert>
         <button type="button" className="btn-outline" onClick={() => refetch()}>
-          Thử lại
+          {t("common.retry")}
         </button>
       </div>
     );
@@ -151,7 +154,7 @@ export function AccountSettings() {
               onClick={() => avatarInput.current?.click()}
               disabled={avatar.isPending}
             >
-              {avatar.isPending ? "Đang tải lên…" : "Đổi ảnh"}
+              {t(avatar.isPending ? "account.uploading" : "settings.changeAvatar")}
             </button>
             {user.avatar_url && (
               <button
@@ -160,7 +163,7 @@ export function AccountSettings() {
                 onClick={() => avatar.mutate(null)}
                 disabled={avatar.isPending}
               >
-                Xóa ảnh
+                {t("settings.removeAvatar")}
               </button>
             )}
           </div>
@@ -168,15 +171,15 @@ export function AccountSettings() {
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <h2 className="font-serif text-[26px] font-medium">Hồ sơ</h2>
+          <h2 className="font-serif text-[26px] font-medium">{t("account.profile")}</h2>
           <form onSubmit={submitName} className="flex flex-col gap-4" id="profile-form">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="field-label">
-                Họ tên
+                {t("account.fullName")}
                 <input className="input h-[46px] bg-page" value={name} onChange={(e) => setName(e.target.value)} maxLength={300} />
               </label>
               <label className="field-label">
-                Email
+                {t("settings.email")}
                 <input className="input h-[46px] border-line bg-soft text-body" value={user.email} readOnly aria-readonly />
               </label>
             </div>
@@ -184,31 +187,36 @@ export function AccountSettings() {
           {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
           <div className="flex flex-wrap items-center gap-3">
             <button className="btn-dark h-[46px] px-[22px]" form="profile-form" disabled={saveName.isPending}>
-              {saveName.isPending ? "Đang lưu…" : "Lưu hồ sơ"}
+              {t(saveName.isPending ? "common.saving" : "account.saveProfile")}
             </button>
             <span className="flex-1 text-sm text-muted">
-              {(docs ?? []).length} tài liệu · {hlCount} highlight · {doneCount} đã đọc xong · tham gia {formatDate(user.created_at)}
+              {t("account.stats", {
+                docs: (docs ?? []).length,
+                highlights: hlCount,
+                done: doneCount,
+                date: formatDate(user.created_at, lang),
+              })}
             </span>
             <button type="button" onClick={signOut} className="btn-outline h-[46px] text-danger">
               <Icon name="logout" />
-              Đăng xuất
+              {t("settings.signOut")}
             </button>
           </div>
 
           <form onSubmit={submitPassword} className="flex flex-col gap-2 border-t border-line pt-5 sm:flex-row sm:items-end sm:gap-3">
             <label className="field-label flex-1">
-              Mật khẩu mới
+              {t("account.newPassword")}
               <input
                 className="input h-[46px] bg-page"
                 type="password"
                 autoComplete="new-password"
-                placeholder="8–72 ký tự"
+                placeholder={t("account.passwordHint")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </label>
             <button className="btn-outline h-[46px]" disabled={!password || changePassword.isPending}>
-              {changePassword.isPending ? "Đang đổi…" : "Đổi mật khẩu"}
+              {t(changePassword.isPending ? "account.changingPassword" : "account.changePassword")}
             </button>
           </form>
         </div>
@@ -216,8 +224,8 @@ export function AccountSettings() {
 
       <section className="flex flex-col gap-3 rounded-[14px] border border-danger/30 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
         <div className="flex flex-col gap-1">
-          <h2 className="font-medium text-danger">Xóa tài khoản</h2>
-          <p className="text-sm text-muted">Toàn bộ tài liệu, tệp và dữ liệu của bạn sẽ bị xóa vĩnh viễn và không thể khôi phục.</p>
+          <h2 className="font-medium text-danger">{t("settings.dangerZone")}</h2>
+          <p className="text-sm text-muted">{t("account.deleteHint")}</p>
         </div>
         <button
           type="button"
@@ -227,14 +235,14 @@ export function AccountSettings() {
             setDeleteOpen(true);
           }}
         >
-          Xóa tài khoản
+          {t("settings.dangerZone")}
         </button>
       </section>
 
       <ConfirmDialog
         open={deleteOpen}
-        title="Xóa tài khoản vĩnh viễn?"
-        confirmLabel="Xóa tài khoản"
+        title={t("account.deleteQ")}
+        confirmLabel={t("settings.dangerZone")}
         busy={deleteAccount.isPending}
         confirmDisabled={confirmEmail.trim().toLowerCase() !== user.email}
         onCancel={() => setDeleteOpen(false)}
@@ -242,7 +250,9 @@ export function AccountSettings() {
       >
         <label className="flex flex-col gap-2">
           <span>
-            Nhập <strong className="text-ink">{user.email}</strong> để xác nhận.
+            {t("account.typeEmailPre")}
+            <strong className="text-ink">{user.email}</strong>
+            {t("account.typeEmailPost")}
           </span>
           <input className="input" value={confirmEmail} onChange={(e) => setConfirmEmail(e.target.value)} autoComplete="off" />
         </label>

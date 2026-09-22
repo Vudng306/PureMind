@@ -14,7 +14,7 @@ import {
 } from "@/lib/annotations";
 import { api } from "@/lib/api";
 import { useDocuments } from "@/lib/documents";
-import { useLang } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { MAX_NOTEBOOK_SOURCES } from "@/lib/notebooks";
 import { COLOR_DOT } from "@/lib/preferences";
@@ -47,6 +47,7 @@ export function HighlightPicker({
   initialDocId?: string;
   fixed?: Set<string>;
 }) {
+  const t = useT();
   const lang = useLang();
   const { data: docs } = useDocuments("created_desc");
   const [docId, setDocId] = useState(initialDocId);
@@ -76,7 +77,7 @@ export function HighlightPicker({
     onChange([...selected, id]);
   }
 
-  /** "Chọn tất cả theo bộ lọc": every matching highlight, up to the limit. */
+  /** Select all that match: every matching highlight, up to the limit. */
   async function selectAll() {
     setLimitHit(false);
     setSelectingAll(true);
@@ -108,11 +109,9 @@ export function HighlightPicker({
     return (
       <div className="flex flex-col items-center gap-3.5 rounded-[14px] border border-dashed border-field px-6 py-14 text-center">
         <span className="font-serif text-[24px]">{MSG["MSG-34"]}</span>
-        <span className="max-w-md text-[15px] text-muted">
-          Bôi đen một đoạn khi đọc để tạo highlight, rồi quay lại đây để AI soạn notebook từ chúng.
-        </span>
+        <span className="max-w-md text-[15px] text-muted">{t("picker.emptyHint")}</span>
         <Link href="/library" className="btn-primary">
-          Mở thư viện
+          {t("highlights.openLibrary")}
         </Link>
       </div>
     );
@@ -122,9 +121,9 @@ export function HighlightPicker({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2.5">
         <label className="min-w-0">
-          <span className="sr-only">Tài liệu</span>
+          <span className="sr-only">{t("highlights.document")}</span>
           <select value={docId} onChange={(e) => setDocId(e.target.value)} className={`${selectCls} w-[260px]`}>
-            <option value="">Mọi tài liệu</option>
+            <option value="">{t("highlights.allDocuments")}</option>
             {(docs ?? []).map((d) => (
               <option key={d.id} value={d.id}>
                 {d.title}
@@ -133,9 +132,9 @@ export function HighlightPicker({
           </select>
         </label>
         <label>
-          <span className="sr-only">Danh mục</span>
+          <span className="sr-only">{t("highlights.category")}</span>
           <select value={category} onChange={(e) => setCategory(e.target.value as HighlightCategory | "")} className={selectCls}>
-            <option value="">Mọi danh mục</option>
+            <option value="">{t("highlights.allCategories")}</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
                 {categoryLabel(c, lang)}
@@ -147,7 +146,7 @@ export function HighlightPicker({
 
       <div className="sticky top-[72px] z-10 -mx-1 flex flex-wrap items-center gap-2.5 bg-bg px-1 py-2">
         <span className="text-sm font-semibold text-ink" aria-live="polite">
-          Đã chọn {selected.length + taken}/{MAX_NOTEBOOK_SOURCES}
+          {t("picker.chosen", { n: selected.length + taken, max: MAX_NOTEBOOK_SOURCES })}
         </span>
         <span className="flex-1" />
         <button
@@ -156,7 +155,7 @@ export function HighlightPicker({
           onClick={() => void selectAll()}
           disabled={selectingAll || total === 0}
         >
-          {selectingAll ? "Đang chọn…" : "Chọn tất cả theo bộ lọc"}
+          {t(selectingAll ? "picker.selecting" : "picker.selectAll")}
         </button>
         <button
           type="button"
@@ -167,7 +166,7 @@ export function HighlightPicker({
           }}
           disabled={selected.length === 0}
         >
-          Bỏ chọn
+          {t("picker.clear")}
         </button>
       </div>
       {limitHit && <Alert>{MSG["MSG-28"]}</Alert>}
@@ -178,11 +177,11 @@ export function HighlightPicker({
         <div className="flex flex-col items-start gap-3">
           <Alert>{query.error instanceof Error ? query.error.message : MSG["MSG-99"]}</Alert>
           <button type="button" className="btn-outline" onClick={() => query.refetch()}>
-            Thử lại
+            {t("common.retry")}
           </button>
         </div>
       ) : items.length === 0 ? (
-        <p className="py-8 text-center text-[15px] text-muted">Không có highlight nào khớp bộ lọc.</p>
+        <p className="py-8 text-center text-[15px] text-muted">{t("picker.noMatch")}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((h) => {
@@ -207,15 +206,15 @@ export function HighlightPicker({
                     <span className="line-clamp-3 font-serif text-[16px] leading-relaxed text-ink">
                       <span className={`box-decoration-clone hl-bg-${h.color}`}>{h.text}</span>
                     </span>
-                    {h.note && <span className="line-clamp-2 text-sm text-body">Ghi chú: {h.note}</span>}
+                    {h.note && <span className="line-clamp-2 text-sm text-body">{t("picker.notePrefix", { note: h.note })}</span>}
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_DOT[h.color] }} aria-hidden />
                       {h.category && <span className="font-semibold text-ink">{categoryLabel(h.category, lang)}</span>}
                       <span className="min-w-0 truncate">
-                        {doc?.title ?? "Tài liệu"}
-                        {h.page ? ` · trang ${h.page}` : ""}
+                        {doc?.title ?? t("highlights.document")}
+                        {h.page ? ` · ${t("search.pageOf", { page: h.page })}` : ""}
                       </span>
-                      {inNotebook && <span>· đã có trong notebook</span>}
+                      {inNotebook && <span>{t("picker.inNotebook")}</span>}
                     </span>
                   </span>
                 </label>
@@ -232,7 +231,7 @@ export function HighlightPicker({
           onClick={() => query.fetchNextPage()}
           disabled={query.isFetchingNextPage}
         >
-          {query.isFetchingNextPage ? "Đang tải…" : `Xem thêm (${total - items.length} còn lại)`}
+          {query.isFetchingNextPage ? t("common.loading") : t("common.loadMore", { n: total - items.length })}
         </button>
       )}
     </div>

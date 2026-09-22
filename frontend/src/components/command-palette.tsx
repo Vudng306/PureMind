@@ -7,6 +7,7 @@ import { useHighlights } from "@/lib/annotations";
 import { KIND_CLASS, KIND_LABEL, isProcessing, origin, progressLabel, progressOf } from "@/lib/doc-view";
 import { useDocuments } from "@/lib/documents";
 import { normalize } from "@/lib/find";
+import { useLang, useT, type Key } from "@/lib/i18n";
 import { COLOR_DOT, colorLabel, usePreferences } from "@/lib/preferences";
 import type { Theme } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
@@ -19,10 +20,16 @@ type Item =
   | { kind: "hl"; key: string; run: () => void; node: React.ReactNode }
   | { kind: "action"; key: string; run: () => void; node: React.ReactNode };
 
-const THEME_NAME: Record<Theme, string> = { light: "sáng", sepia: "giấy cũ", dark: "tối" };
+const THEME_NAME: Record<Theme, Key> = {
+  light: "palette.themeLight",
+  sepia: "palette.themeSepia",
+  dark: "palette.themeDark",
+};
 
 /** Ctrl+K quick search over documents, highlights and common actions. */
 export function CommandPalette() {
+  const t = useT();
+  const lang = useLang();
   const router = useRouter();
   const pathname = usePathname();
   const { paletteOpen, setPaletteOpen, setAddOpen, showToast } = useUi();
@@ -51,7 +58,9 @@ export function CommandPalette() {
     const out: Item[] = [];
     const titleOf = new Map((docs ?? []).map((d) => [d.id, d.title]));
 
-    const docHits = (docs ?? []).filter((d) => !q || normalize(`${d.title} ${origin(d)}`).includes(q)).slice(0, q ? 8 : 5);
+    const docHits = (docs ?? [])
+      .filter((d) => !q || normalize(`${d.title} ${origin(d, lang)}`).includes(q))
+      .slice(0, q ? 8 : 5);
     for (const d of docHits) {
       const pct = progressOf(d);
       out.push({
@@ -66,10 +75,10 @@ export function CommandPalette() {
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
               <span className="truncate text-[15px] font-medium">{d.title}</span>
               <span className="truncate text-xs text-muted">
-                {origin(d)} · {progressLabel(d, pct)}
+                {origin(d, lang)} · {progressLabel(d, pct, lang)}
               </span>
             </span>
-            {isProcessing(d) && <span className="text-xs text-muted">Đang xử lý…</span>}
+            {isProcessing(d) && <span className="text-xs text-muted">{t("palette.processing")}</span>}
           </>
         ),
       });
@@ -90,8 +99,8 @@ export function CommandPalette() {
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="truncate font-serif text-[15px]">“{h.text}”</span>
                 <span className="truncate text-xs text-muted">
-                  {colorLabel(colorLabels, h.color)} · {titleOf.get(h.docId)}
-                  {h.page ? ` · trang ${h.page}` : ""}
+                  {colorLabel(colorLabels, h.color, lang)} · {titleOf.get(h.docId)}
+                  {h.page ? ` · ${t("search.pageOf", { page: h.page })}` : ""}
                 </span>
               </span>
             </>
@@ -107,23 +116,28 @@ export function CommandPalette() {
             {
               key: "search-all",
               icon: "search" as IconName,
-              label: `Tìm “${typed}” trong toàn bộ tài liệu, highlight và ghi chú`,
+              label: t("palette.searchAll", { q: typed }),
               run: () => router.push(`/search?q=${encodeURIComponent(typed)}`),
             },
           ]
         : []),
-      { key: "add", icon: "plus", label: "Thêm tài liệu (tệp hoặc link)", run: () => setAddOpen(true) },
-      { key: "highlights", icon: "highlighter", label: "Xem tất cả highlight", run: () => router.push("/highlights") },
-      { key: "notebooks", icon: "note", label: "Xem notebook", run: () => router.push("/notebooks") },
-      { key: "notebook-new", icon: "spark", label: "Tạo notebook AI từ highlight", run: () => router.push("/notebooks/new") },
-      { key: "settings", icon: "gear", label: "Cài đặt đọc", run: () => router.push("/settings") },
-      ...(["light", "sepia", "dark"] as Theme[]).map((t) => ({
-        key: `theme-${t}`,
+      { key: "add", icon: "plus", label: t("palette.addDocument"), run: () => setAddOpen(true) },
+      { key: "highlights", icon: "highlighter", label: t("palette.allHighlights"), run: () => router.push("/highlights") },
+      { key: "notebooks", icon: "note", label: t("palette.notebooks"), run: () => router.push("/notebooks") },
+      {
+        key: "notebook-new",
+        icon: "spark",
+        label: t("palette.notebookFromHighlights"),
+        run: () => router.push("/notebooks/new"),
+      },
+      { key: "settings", icon: "gear", label: t("palette.readingSettings"), run: () => router.push("/settings") },
+      ...(["light", "sepia", "dark"] as Theme[]).map((theme) => ({
+        key: `theme-${theme}`,
         icon: "spark" as IconName,
-        label: `Đổi sang nền ${THEME_NAME[t]}`,
+        label: t("palette.switchTheme", { name: t(THEME_NAME[theme]) }),
         run: () => {
-          setPrefs({ theme: t });
-          showToast(`Đã đổi sang nền ${THEME_NAME[t]}`);
+          setPrefs({ theme });
+          showToast(t("palette.switchedTheme", { name: t(THEME_NAME[theme]) }));
         },
       })),
     ];
@@ -144,7 +158,7 @@ export function CommandPalette() {
       });
     }
     return out;
-  }, [docs, highlights, q, query, colorLabels, router, setAddOpen, setPrefs, showToast]);
+  }, [docs, highlights, q, query, colorLabels, router, setAddOpen, setPrefs, showToast, t, lang]);
 
   const active = Math.min(cursor, Math.max(0, items.length - 1));
 
@@ -165,7 +179,7 @@ export function CommandPalette() {
   return (
     <dialog
       ref={ref}
-      aria-label="Tìm nhanh"
+      aria-label={t("nav.quickSearch")}
       onCancel={(e) => {
         e.preventDefault();
         close();
@@ -177,8 +191,8 @@ export function CommandPalette() {
         <Icon name="search" size={20} />
         <input
           ref={inputRef}
-          aria-label="Tìm tài liệu, highlight hoặc thao tác"
-          placeholder="Tìm tài liệu, highlight hoặc thao tác…"
+          aria-label={t("palette.inputLabel")}
+          placeholder={t("palette.inputPlaceholder")}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -199,20 +213,20 @@ export function CommandPalette() {
           className="min-w-0 flex-1 bg-transparent text-lg text-ink outline-none"
         />
         <button type="button" onClick={close} className="btn-ghost h-11 px-3 text-[13px] text-muted">
-          Đóng
+          {t("common.close")}
         </button>
       </div>
-      <div ref={listRef} className="flex max-h-[min(470px,60vh)] flex-col gap-0.5 overflow-y-auto p-2" role="listbox" aria-label="Kết quả">
+      <div ref={listRef} className="flex max-h-[min(470px,60vh)] flex-col gap-0.5 overflow-y-auto p-2" role="listbox" aria-label={t("palette.results")}>
         {items.map((item, i) => (
           <div key={item.key} className="contents">
-            {i === 0 && hasDocs && heading("TÀI LIỆU")}
-            {item.kind === "hl" && items[i - 1]?.kind !== "hl" && heading("TRONG HIGHLIGHT")}
+            {i === 0 && hasDocs && heading(t("palette.headingDocuments"))}
+            {item.kind === "hl" && items[i - 1]?.kind !== "hl" && heading(t("palette.headingHighlights"))}
             {item.kind === "action" && items[i - 1]?.kind !== "action" && (
               <>
                 {q && !hasDocs && !hasHls && (
-                  <p className="px-3 py-5 text-sm text-muted">Không tìm thấy “{query.trim()}” trong tài liệu hay highlight.</p>
+                  <p className="px-3 py-5 text-sm text-muted">{t("palette.noneInDocs", { q: query.trim() })}</p>
                 )}
-                {heading("THAO TÁC")}
+                {heading(t("palette.headingActions"))}
               </>
             )}
             <button
@@ -228,7 +242,7 @@ export function CommandPalette() {
             </button>
           </div>
         ))}
-        {items.length === 0 && <p className="px-3 py-5 text-sm text-muted">Không tìm thấy “{query.trim()}”.</p>}
+        {items.length === 0 && <p className="px-3 py-5 text-sm text-muted">{t("palette.nothing", { q: query.trim() })}</p>}
       </div>
     </dialog>
   );

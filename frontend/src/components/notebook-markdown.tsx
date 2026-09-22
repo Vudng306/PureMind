@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, useMemo } from "react";
 
+import { useT } from "@/lib/i18n";
 import { parseMarkdown, type Block, type Inline } from "@/lib/markdown";
 import type { NotebookSource } from "@/lib/notebooks";
 
@@ -13,12 +14,13 @@ export type RefRenderer = (n: number) => React.ReactNode;
 
 /** A [n] citation: opens the source highlight in the reader, or says the source is gone (FR-NB-05). */
 function NotebookRef({ n, sources }: { n: number; sources: Sources | null }) {
+  const t = useT();
   const cls = "mx-px rounded px-1 py-px align-[0.1em] font-sans text-[0.72em] font-semibold";
   if (!sources) return <span className={`${cls} bg-soft text-muted`}>{n}</span>; // still being written
   const s = sources.get(n);
   if (!s) {
     return (
-      <span className={`${cls} bg-soft text-muted line-through`} title="Nguồn đã bị xóa" aria-label={`Nguồn ${n} đã bị xóa`}>
+      <span className={`${cls} bg-soft text-muted line-through`} title={t("nb.sourceRemovedTitle")} aria-label={t("nb.sourceRemovedAria", { n })}>
         {n}
       </span>
     );
@@ -27,8 +29,10 @@ function NotebookRef({ n, sources }: { n: number; sources: Sources | null }) {
     <Link
       href={`/reader/${s.highlight.document_id}?hl=${s.highlight.id}`}
       className={`${cls} bg-accent/15 text-accent hover:bg-accent/25`}
-      title={`${s.document_title}${s.highlight.page_number ? ` · trang ${s.highlight.page_number}` : ""}: “${s.highlight.selected_text.slice(0, 120)}”`}
-      aria-label={`Nguồn ${n}: ${s.document_title}`}
+      title={`${s.document_title}${
+        s.highlight.page_number ? ` · ${t("search.pageOf", { page: s.highlight.page_number })}` : ""
+      }: “${s.highlight.selected_text.slice(0, 120)}”`}
+      aria-label={t("nb.sourceAria", { n, title: s.document_title })}
     >
       {n}
     </Link>

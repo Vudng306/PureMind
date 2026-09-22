@@ -15,6 +15,7 @@ import {
   type Highlight,
 } from "@/lib/annotations";
 import { clearHighlights, findRanges, paintHighlights, scrollRangeIntoView } from "@/lib/find";
+import { useLang, useT } from "@/lib/i18n";
 import type { Block, Inline } from "@/lib/markdown";
 
 export interface SearchState {
@@ -221,6 +222,8 @@ export function CleanReader({
   onScrollProgress: (fraction: number, page: number | null) => void;
   bottomPadding: number;
 }) {
+  const t = useT();
+  const lang = useLang();
   const scrollerRef = useRef<HTMLDivElement>(null);
   const articleRef = useRef<HTMLElement>(null);
   const { query, index, onResult } = search;
@@ -389,13 +392,13 @@ export function CleanReader({
         onKeyUp={onKeyUp}
         className="mx-auto px-6 pt-10 font-serif text-body sm:pt-14"
         style={{ fontSize, lineHeight, maxWidth: width + 48, paddingBottom: bottomPadding }}
-        lang="vi"
+        lang={lang}
       >
         {header}
         {blocks.map((b) => (
           <BlockView key={b.id} block={b} />
         ))}
-        <p className="mt-11 select-none font-sans text-[13px] text-muted">Mẹo: bôi đen một câu để highlight, ghi chú hoặc sao chép.</p>
+        <p className="mt-11 select-none font-sans text-[13px] text-muted">{t("reader.tip")}</p>
       </article>
     </div>
   );

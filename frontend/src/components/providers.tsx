@@ -16,6 +16,15 @@ function ThemeApplier() {
   return null;
 }
 
+/** The <html lang> tells the browser how to hyphenate and a screen reader how to pronounce the page. */
+function LangApplier() {
+  const language = usePreferences((s) => s.language);
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+  return null;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -27,6 +36,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeApplier />
+        <LangApplier />
         {children}
         <Toast />
       </AuthProvider>

@@ -12,6 +12,7 @@ import {
   type Highlight,
 } from "@/lib/annotations";
 import { useDocument } from "@/lib/documents";
+import { useLang, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { notebooksUsing } from "@/lib/notebooks";
 import { COLOR_DOT, HIGHLIGHT_COLORS, colorLabel, usePreferences, type HighlightColor } from "@/lib/preferences";
@@ -41,6 +42,8 @@ function HighlightCard({
   onEdit: () => void;
   onDone: () => void;
 }) {
+  const t = useT();
+  const lang = useLang();
   const labels = usePreferences((s) => s.colorLabels);
   const showToast = useUi((s) => s.showToast);
   const { updateHighlight, removeHighlight } = useHighlightActions();
@@ -74,7 +77,7 @@ function HighlightCard({
     }
     if (draft !== opened.current) {
       updateHighlight(h.id, { note: draft }, { now: true });
-      showToast("Đã lưu ghi chú");
+      showToast(t("panel.savedNote"));
     }
     onDone();
   }
@@ -90,7 +93,7 @@ function HighlightCard({
     setUsedIn(used);
     if (h.note.trim() || used) return setConfirm("highlight");
     removeHighlight(h.id);
-    showToast("Đã xóa highlight");
+    showToast(t("highlights.deleted"));
   }
 
   return (
@@ -101,16 +104,16 @@ function HighlightCard({
       <div className="flex items-center gap-2 text-xs text-muted">
         <span className="flex h-6 items-center gap-1.5 rounded-full bg-soft pl-1.5 pr-2 text-xs font-semibold text-ink">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_DOT[h.color] }} />
-          {colorLabel(labels, h.color)}
+          {colorLabel(labels, h.color, lang)}
         </span>
-        {h.page ? `Trang ${h.page}` : null}
+        {h.page ? t("panel.pageN", { page: h.page }) : null}
         <span className="flex-1" />
         {HIGHLIGHT_COLORS.map((c) => (
           <button
             key={c}
             type="button"
-            aria-label={`Đổi thành ${colorLabel(labels, c)}`}
-            title={colorLabel(labels, c)}
+            aria-label={t("panel.changeTo", { name: colorLabel(labels, c, lang) })}
+            title={colorLabel(labels, c, lang)}
             aria-pressed={c === h.color}
             // The color is the category: picking one says what the passage is (FR-HL-04).
             onClick={() => updateHighlight(h.id, { color: c, category: CATEGORY_FOR_COLOR[c] })}
@@ -127,7 +130,7 @@ function HighlightCard({
         ))}
         <button
           type="button"
-          aria-label="Xóa highlight"
+          aria-label={t("panel.deleteHighlight")}
           onClick={() => void remove()}
           className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-soft hover:text-danger"
         >
@@ -140,22 +143,22 @@ function HighlightCard({
       {lost &&
         (h.rects ? (
           <p className="rounded-lg bg-soft px-3 py-2 text-xs leading-normal text-muted">
-            Highlight tạo trên Bản gốc — chưa tìm thấy đoạn này trong Văn bản sạch. Bấm vào đoạn trích để xem trên bản gốc.
+            {t("panel.lostOriginal")}
           </p>
         ) : (
           <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs leading-normal text-danger">
-            Không định vị được đoạn này — nội dung tài liệu đã thay đổi. Highlight và ghi chú vẫn được giữ.
+            {t("panel.lostText")}
           </p>
         ))}
       {editing ? (
         <div className="flex flex-col gap-2">
           <textarea
-            aria-label="Ghi chú cho highlight"
+            aria-label={t("panel.noteAria")}
             autoFocus
             rows={3}
             value={draft}
             maxLength={MAX_HIGHLIGHT_NOTE}
-            placeholder="Vì sao đoạn này quan trọng?"
+            placeholder={t("panel.notePlaceholder")}
             onChange={(e) => onDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) finish();
@@ -167,17 +170,17 @@ function HighlightCard({
               {draft.length >= MAX_HIGHLIGHT_NOTE
                 ? MSG["MSG-24"]
                 : draft.length > MAX_HIGHLIGHT_NOTE - 1000
-                  ? `${draft.length.toLocaleString("vi-VN")}/${MAX_HIGHLIGHT_NOTE.toLocaleString("vi-VN")}`
-                  : "Ctrl+Enter để lưu"}
+                  ? `${draft.length.toLocaleString(lang)}/${MAX_HIGHLIGHT_NOTE.toLocaleString(lang)}`
+                  : t("panel.ctrlEnter")}
             </span>
             <span className="flex-1" />
             {h.note.trim() && (
               <button type="button" onClick={() => setConfirm("note")} className="h-[38px] px-2 text-sm text-muted hover:text-danger">
-                Xóa ghi chú
+                {t("panel.deleteNote")}
               </button>
             )}
             <button type="button" onClick={finish} className="btn-primary h-[38px] rounded-lg px-4 text-sm">
-              Xong
+              {t("panel.done")}
             </button>
           </div>
         </div>
@@ -187,13 +190,13 @@ function HighlightCard({
         </button>
       ) : (
         <button type="button" onClick={onEdit} className="h-9 self-start text-sm font-medium text-accent hover:underline">
-          + Thêm ghi chú
+          {t("panel.addNote")}
         </button>
       )}
       <ConfirmDialog
         open={confirm !== null}
-        title={confirm === "note" ? "Xóa ghi chú?" : "Xóa highlight?"}
-        confirmLabel="Xóa"
+        title={confirm === "note" ? t("panel.deleteNoteQ") : t("panel.deleteHighlightQ")}
+        confirmLabel={t("common.delete")}
         onCancel={() => {
           if (confirm === "note") setDraft(h.note);
           setConfirm(null);
@@ -202,26 +205,21 @@ function HighlightCard({
           if (confirm === "note") {
             updateHighlight(h.id, { note: "" }, { now: true });
             setDraft("");
-            showToast("Đã xóa ghi chú");
+            showToast(t("panel.noteDeleted"));
             onDone();
           } else {
             removeHighlight(h.id);
-            showToast(h.note.trim() ? "Đã xóa highlight và ghi chú" : "Đã xóa highlight");
+            showToast(t(h.note.trim() ? "panel.bothDeleted" : "highlights.deleted"));
           }
           setConfirm(null);
         }}
       >
         {confirm === "note" ? (
-          "Ghi chú của highlight này sẽ bị xóa. Đoạn highlight vẫn được giữ."
+          t("panel.deleteNoteBody")
         ) : (
           <>
-            {h.note.trim() && <p>Highlight này có ghi chú. Xóa highlight sẽ xóa luôn ghi chú đi kèm.</p>}
-            {usedIn > 0 && (
-              <p className={h.note.trim() ? "mt-2" : ""}>
-                Highlight đang là nguồn của {usedIn} notebook. Notebook vẫn được giữ, nhưng trích dẫn tới đoạn này sẽ
-                hiện “Nguồn đã bị xóa”.
-              </p>
-            )}
+            {h.note.trim() && <p>{t("panel.deleteHasNote")}</p>}
+            {usedIn > 0 && <p className={h.note.trim() ? "mt-2" : ""}>{t("panel.deleteUsedIn", { n: usedIn })}</p>}
           </>
         )}
       </ConfirmDialog>
@@ -264,6 +262,8 @@ export function ReaderPanel({
   /** Highlights that could not be placed in the current text (FR-HL-02). */
   lostIds: string[];
 }) {
+  const t = useT();
+  const lang = useLang();
   const labels = usePreferences((s) => s.colorLabels);
   const qc = useQueryClient();
   const { data: doc } = useDocument(docId);
@@ -308,15 +308,15 @@ export function ReaderPanel({
   const lost = new Set(lostIds);
   const lostText = highlights.filter((h) => lost.has(h.id) && !h.rects).length;
   const tabs: [PanelTab, string][] = [
-    ["highlights", `Highlight · ${highlights.length}`],
-    ["notes", "Ghi chú"],
-    ["ai", "Tóm tắt AI"],
-    ["chat", "Hỏi đáp"],
+    ["highlights", t("panel.tabHighlights", { n: highlights.length })],
+    ["notes", t("panel.tabNotes")],
+    ["ai", t("panel.tabAi")],
+    ["chat", t("panel.tabChat")],
   ];
 
   return (
     <aside
-      aria-label="Highlight và ghi chú"
+      aria-label={t("panel.aria")}
       className="fixed inset-y-0 right-0 z-20 flex w-full min-h-0 flex-col border-l border-line bg-surface shadow-pop sm:w-[380px] lg:static lg:z-auto lg:shadow-none"
     >
       <div className="flex h-[60px] shrink-0 items-center gap-1 border-b border-line pl-3 pr-2" role="tablist">
@@ -333,7 +333,7 @@ export function ReaderPanel({
           </button>
         ))}
         <span className="flex-1" />
-        <button type="button" aria-label="Đóng bảng" onClick={onClose} className="icon-btn text-muted">
+        <button type="button" aria-label={t("panel.closePanel")} onClick={onClose} className="icon-btn text-muted">
           <Icon name="x" />
         </button>
       </div>
@@ -347,14 +347,14 @@ export function ReaderPanel({
                 className="flex items-center gap-2 rounded-lg border border-line px-3 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-soft"
               >
                 <Icon name="spark" size={16} className="text-accent" />
-                <span className="flex-1">Tạo notebook AI từ các highlight này</span>
+                <span className="flex-1">{t("panel.makeNotebook")}</span>
                 <Icon name="next" size={16} className="text-muted" />
               </Link>
             )}
             {highlights.length > 0 && (
-              <div aria-label="Lọc theo ý nghĩa màu" className="flex flex-wrap gap-1.5">
+              <div aria-label={t("panel.filterAria")} className="flex flex-wrap gap-1.5">
                 <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")} className="chip h-[34px] px-2.5 text-[13px]">
-                  Tất cả · {highlights.length}
+                  {t("panel.allCount", { n: highlights.length })}
                 </button>
                 {HIGHLIGHT_COLORS.map((c) => {
                   const count = highlights.filter((h) => h.color === c).length;
@@ -367,7 +367,7 @@ export function ReaderPanel({
                       className="chip h-[34px] gap-1.5 px-2.5 text-[13px]"
                     >
                       <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_DOT[c] }} />
-                      {colorLabel(labels, c)} · {count}
+                      {colorLabel(labels, c, lang)} · {count}
                     </button>
                   );
                 })}
@@ -375,21 +375,21 @@ export function ReaderPanel({
             )}
             {lostText > 0 && (
               <p className="rounded-lg bg-soft px-3 py-2.5 text-[13px] leading-normal text-muted">
-                {lostText} highlight không định vị được trong nội dung hiện tại.
+                {t("panel.lostCount", { n: lostText })}
               </p>
             )}
             {!canHighlight && (
               <p className="rounded-lg bg-soft px-3 py-2.5 text-[13px] leading-normal text-muted">
-                Highlight hoạt động ở chế độ Văn bản sạch.
+                {t("panel.cleanOnly")}
               </p>
             )}
             {highlights.length === 0 ? (
               <p className="px-3 py-7 text-center text-sm leading-normal text-muted">
-                Chưa có highlight. Bôi đen một câu trong bài để bắt đầu.
+                {t("panel.empty")}
               </p>
             ) : shown.length === 0 ? (
               <p className="px-3 py-5 text-center text-sm leading-normal text-muted">
-                Không có highlight nào khớp bộ lọc trong tài liệu này.
+                {t("panel.noMatch")}
               </p>
             ) : (
               shown.map((h) => (
@@ -411,7 +411,7 @@ export function ReaderPanel({
         {tab === "notes" && (
           <div className="flex flex-1 flex-col gap-2">
             <label className="flex flex-1 flex-col gap-2 text-sm font-medium text-ink">
-              Ghi chú cho tài liệu này
+              {t("panel.docNote")}
               <textarea
                 value={draft}
                 maxLength={20000}
@@ -420,18 +420,20 @@ export function ReaderPanel({
                   setStatus("dirty");
                 }}
                 onBlur={() => void saveNote(draft)}
-                placeholder="Viết suy nghĩ, câu hỏi, việc cần ôn…"
+                placeholder={t("panel.docNotePlaceholder")}
                 className="min-h-[320px] flex-1 resize-none rounded-[10px] border border-line bg-bg px-3.5 py-3 font-serif text-base font-normal leading-relaxed text-ink outline-none focus:border-accent"
               />
             </label>
             <span className={`text-xs ${status === "error" ? "text-danger" : "text-muted"}`} aria-live="polite">
-              {draft.length} ký tự ·{" "}
-              {status === "saved" ? "Đã lưu" : status === "error" ? (
+              {t("nb.chars", { n: draft.length })} ·{" "}
+              {status === "saved" ? (
+                t("common.saved")
+              ) : status === "error" ? (
                 <button type="button" className="underline" onClick={() => void saveNote(draft)}>
-                  Chưa lưu được — thử lại
+                  {t("panel.notSaved")}
                 </button>
               ) : (
-                "Đang lưu…"
+                t("common.saving")
               )}
             </span>
           </div>

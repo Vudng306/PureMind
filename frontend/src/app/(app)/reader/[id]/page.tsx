@@ -22,6 +22,7 @@ import {
 } from "@/lib/annotations";
 import { KIND_LABEL, origin } from "@/lib/doc-view";
 import { documentsKey, updateDocument, useDocument } from "@/lib/documents";
+import { currentLang, translate, useLang, useT, type Key } from "@/lib/i18n";
 import { parseMarkdown, type Inline } from "@/lib/markdown";
 import { MSG, messageFor } from "@/lib/messages";
 import { colorLabel, usePreferences, type HighlightColor } from "@/lib/preferences";
@@ -30,18 +31,19 @@ import { useUi } from "@/lib/ui-store";
 
 const PdfViewer = dynamic(() => import("@/components/pdf-viewer").then((m) => m.PdfViewer), {
   ssr: false,
+  // Outside React, so it reads the language at the moment the chunk starts loading.
   loading: () => (
     <div className="p-6">
-      <Spinner label="Đang mở tài liệu…" />
+      <Spinner label={translate(currentLang(), "reader.opening")} />
     </div>
   ),
 });
 
 type Mode = "original" | "clean";
-const THEMES: { value: Theme; label: string; swatch: string }[] = [
-  { value: "light", label: "Nền sáng", swatch: "#F4EFE4" },
-  { value: "sepia", label: "Nền giấy cũ", swatch: "#EBDDC3" },
-  { value: "dark", label: "Nền tối", swatch: "#1B1A17" },
+const THEMES: { value: Theme; label: Key; swatch: string }[] = [
+  { value: "light", label: "reader.themeLightLabel", swatch: "#F4EFE4" },
+  { value: "sepia", label: "reader.themeSepiaLabel", swatch: "#EBDDC3" },
+  { value: "dark", label: "reader.themeDarkLabel", swatch: "#1B1A17" },
 ];
 const TOOLBAR_SPACE = 120;
 const inlineText = (nodes: Inline[]): string => nodes.map((n) => ("v" in n ? n.v : inlineText(n.c))).join("");
@@ -57,6 +59,8 @@ function readStoredMode(id: string): Mode | null {
 }
 
 export default function ReaderPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useT();
+  const lang = useLang();
   const { id } = use(params);
   const { data: doc, isLoading, isError, error } = useDocument(id);
   const { theme, fontSize, lineHeight, width, defaultMode, colorLabels, set: setPrefs } = usePreferences();
@@ -386,7 +390,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
       setPanelTab("highlights");
       setEditingHl(h.id);
     } else {
-      showToast(`Đã highlight · ${colorLabel(colorLabels, color)}`);
+      showToast(t("reader.highlighted", { name: colorLabel(colorLabels, color, lang) }));
     }
     return h;
   }
@@ -395,9 +399,9 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
     if (!selection) return;
     try {
       await navigator.clipboard.writeText(selection.text);
-      showToast("Đã chép đoạn trích");
+      showToast(t("reader.quoteCopied"));
     } catch {
-      showToast("Không chép được. Hãy dùng Ctrl+C.");
+      showToast(t("reader.copyFailed"));
     }
     clearSelection();
   }
@@ -427,7 +431,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   if (isLoading || mode === null) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Spinner label="Đang mở tài liệu…" />
+        <Spinner label={t("reader.opening")} />
       </div>
     );
   }
@@ -446,11 +450,11 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
                 setReloadKey((k) => k + 1);
               }}
             >
-              Thử lại
+              {t("common.retry")}
             </button>
           )}
           <Link href="/library" className="btn-outline">
-            Quay lại thư viện
+            {t("reader.backToLibrary")}
           </Link>
         </div>
       </div>
@@ -461,19 +465,22 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   const pageLabel =
     effectiveMode === "original" || hasPages
       ? page
-        ? `Trang ${page.current}/${page.total}`
+        ? t("reader.pageOfTotal", { current: page.current, total: page.total })
         : doc.page_count
-          ? `${doc.page_count} trang`
+          ? t("reader.pagesCount", { n: doc.page_count })
           : ""
       : doc.reading_minutes
-        ? `${Math.round(fraction * 100)}% · còn ~${Math.max(1, Math.round(doc.reading_minutes * (1 - fraction)))} phút`
+        ? t("reader.pctRemaining", {
+            pct: Math.round(fraction * 100),
+            n: Math.max(1, Math.round(doc.reading_minutes * (1 - fraction))),
+          })
         : `${Math.round(fraction * 100)}%`;
 
   const header = (
     <>
       <div className="font-sans text-[13px] tracking-[0.06em] text-muted">
-        {KIND_LABEL[doc.file_type]} · {origin(doc)}
-        {doc.reading_minutes ? ` · ${doc.reading_minutes} phút đọc` : ""}
+        {KIND_LABEL[doc.file_type]} · {origin(doc, lang)}
+        {doc.reading_minutes ? ` · ${t("common.minutesRead", { n: doc.reading_minutes })}` : ""}
       </div>
       <h1 className="mb-7 mt-2.5 text-[1.9em] font-medium leading-[1.1] text-ink">{doc.title}</h1>
     </>
@@ -490,9 +497,9 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
 
       {!focus && (
         <header className="flex h-16 shrink-0 items-center gap-2 border-b border-line px-2 sm:gap-3.5 sm:px-5">
-          <Link href="/library" className="flex h-11 items-center gap-1 rounded-[10px] pl-1.5 pr-3 text-[15px] hover:bg-soft" aria-label="Quay lại thư viện">
+          <Link href="/library" className="flex h-11 items-center gap-1 rounded-[10px] pl-1.5 pr-3 text-[15px] hover:bg-soft" aria-label={t("reader.backToLibrary")}>
             <Icon name="back" size={20} />
-            <span className="hidden sm:inline">Thư viện</span>
+            <span className="hidden sm:inline">{t("nav.library")}</span>
           </Link>
           <span className="hidden h-6 w-px bg-line sm:block" />
           <div className="flex min-w-0 flex-1 flex-col gap-0.5 lg:max-w-[360px]">
@@ -504,7 +511,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
           </div>
           <span className="hidden flex-1 lg:block" />
           {isPdf && (
-            <div className="hidden h-11 gap-0.5 rounded-xl bg-soft p-1 md:flex" role="group" aria-label="Chế độ đọc">
+            <div className="hidden h-11 gap-0.5 rounded-xl bg-soft p-1 md:flex" role="group" aria-label={t("reader.modeAria")}>
               {(["clean", "original"] as const).map((m) => (
                 <button
                   key={m}
@@ -517,7 +524,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
                     effectiveMode === m ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"
                   }`}
                 >
-                  {m === "original" ? "Bản gốc" : "Văn bản sạch"}
+                  {t(m === "original" ? "reader.original" : "reader.clean")}
                 </button>
               ))}
             </div>
@@ -535,7 +542,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
               className={`flex h-11 items-center gap-2 rounded-[10px] border border-line px-3.5 text-sm font-medium ${panelOpen && panelTab === "ai" ? "bg-soft" : "hover:bg-soft"}`}
             >
               <Icon name="spark" />
-              <span className="hidden sm:inline">Tóm tắt AI</span>
+              <span className="hidden sm:inline">{t("panel.tabAi")}</span>
             </button>
             <button
               type="button"
@@ -548,7 +555,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
               className={`flex h-11 items-center gap-2 rounded-[10px] border border-line px-3.5 text-sm font-medium ${panelOpen && panelTab !== "ai" ? "bg-soft" : "hover:bg-soft"}`}
             >
               <Icon name="highlighter" />
-              <span className="hidden sm:inline">Highlight ·</span> {highlights.length}
+              <span className="hidden sm:inline">{t("reader.highlightsShort")}</span> {highlights.length}
             </button>
           </div>
         </header>
@@ -566,7 +573,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
               {isPdf && (
                 <div className="flex justify-center border-b border-line py-2 md:hidden">
                   <button type="button" className="chip h-9" onClick={() => chooseMode("clean")} disabled={!hasClean}>
-                    Chuyển sang văn bản sạch
+                    {t("reader.switchClean")}
                   </button>
                 </div>
               )}
@@ -591,7 +598,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
               {isPdf && (
                 <div className="flex justify-center border-b border-line py-2 md:hidden">
                   <button type="button" className="chip h-9" onClick={() => chooseMode("original")}>
-                    Xem bản gốc
+                    {t("reader.viewOriginal")}
                   </button>
                 </div>
               )}
@@ -619,12 +626,12 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
             <div className="mx-auto flex max-w-md flex-1 flex-col justify-center gap-4 px-4">
               <Alert>{messageFor(doc.extraction_error)}</Alert>
               <Link href="/library" className="btn-outline self-start">
-                Quay lại thư viện
+                {t("reader.backToLibrary")}
               </Link>
             </div>
           ) : (
             <div className="flex flex-1 items-center justify-center">
-              <Spinner label="Đang trích xuất nội dung…" />
+              <Spinner label={t("reader.extracting")} />
             </div>
           )}
 
@@ -642,12 +649,12 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
           {tocOpen && !focus && (
             <div
               role="dialog"
-              aria-label="Mục lục"
+              aria-label={t("reader.outline")}
               className="absolute bottom-[96px] left-1/2 z-20 flex max-h-[60vh] w-[min(360px,calc(100%-24px))] -translate-x-1/2 flex-col gap-0.5 overflow-y-auto rounded-[14px] border border-line bg-surface p-2.5 shadow-float"
             >
-              <span className="px-2.5 py-2 text-xs font-semibold tracking-[0.08em] text-muted">MỤC LỤC</span>
+              <span className="px-2.5 py-2 text-xs font-semibold tracking-[0.08em] text-muted">{t("reader.outlineHeading")}</span>
               {headings.length === 0 ? (
-                <p className="px-2.5 pb-2 text-sm text-muted">Tài liệu này không có tiêu đề mục.</p>
+                <p className="px-2.5 pb-2 text-sm text-muted">{t("reader.noHeadings")}</p>
               ) : (
                 headings.map((hd) => (
                   <button
@@ -672,14 +679,14 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
 
           {!focus ? (
             <nav
-              aria-label="Công cụ đọc"
+              aria-label={t("reader.tools")}
               className="absolute bottom-3 left-1/2 z-10 flex h-[60px] w-[min(640px,calc(100%-16px))] -translate-x-1/2 items-center justify-between gap-0.5 rounded-[18px] border border-line bg-surface px-2 shadow-float sm:bottom-6"
             >
               <button type="button" className={toolBtn} onClick={() => setTocOpen((o) => !o)} disabled={!clean} aria-expanded={tocOpen}>
                 <Icon name="toc" />
-                <span className="hidden sm:inline">Mục lục</span>
+                <span className="hidden sm:inline">{t("reader.outline")}</span>
               </button>
-              <button type="button" className="icon-btn" aria-label="Tìm trong tài liệu (Ctrl+F)" onClick={() => setFindOpen((o) => !o)} aria-expanded={findOpen}>
+              <button type="button" className="icon-btn" aria-label={t("reader.findCtrlF")} onClick={() => setFindOpen((o) => !o)} aria-expanded={findOpen}>
                 <Icon name="search" />
               </button>
               {divider}
@@ -688,7 +695,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
                   <div className="flex items-center">
                     <button
                       type="button"
-                      aria-label="Giảm cỡ chữ"
+                      aria-label={t("reader.textSmaller")}
                       className="icon-btn font-serif text-[15px]"
                       disabled={fontSize <= 14}
                       onClick={() => setPrefs({ fontSize: fontSize - 1 })}
@@ -700,7 +707,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
                     </span>
                     <button
                       type="button"
-                      aria-label="Tăng cỡ chữ"
+                      aria-label={t("reader.textBigger")}
                       className="icon-btn font-serif text-[21px]"
                       disabled={fontSize >= 28}
                       onClick={() => setPrefs({ fontSize: fontSize + 1 })}
@@ -711,23 +718,23 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
                   {divider}
                 </>
               )}
-              <div className="flex items-center" role="radiogroup" aria-label="Giao diện">
-                {THEMES.map((t) => (
+              <div className="flex items-center" role="radiogroup" aria-label={t("reader.themeAria")}>
+                {THEMES.map((th) => (
                   <button
-                    key={t.value}
+                    key={th.value}
                     type="button"
                     role="radio"
-                    aria-checked={readingTheme === t.value}
-                    aria-label={t.label}
-                    title={t.label}
-                    onClick={() => setReadingTheme(t.value)}
+                    aria-checked={readingTheme === th.value}
+                    aria-label={t(th.label)}
+                    title={t(th.label)}
+                    onClick={() => setReadingTheme(th.value)}
                     className="flex h-11 w-9 items-center justify-center sm:w-11"
                   >
                     <span
                       className="h-[26px] w-[26px] rounded-full border-2"
                       style={{
-                        background: t.swatch,
-                        borderColor: readingTheme === t.value ? "rgb(var(--accent))" : "rgb(var(--line))",
+                        background: th.swatch,
+                        borderColor: readingTheme === th.value ? "rgb(var(--accent))" : "rgb(var(--line))",
                       }}
                     />
                   </button>
@@ -744,7 +751,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
                 }}
               >
                 <Icon name="focus" />
-                <span className="hidden sm:inline">Tập trung</span>
+                <span className="hidden sm:inline">{t("reader.focus")}</span>
               </button>
             </nav>
           ) : (
@@ -754,7 +761,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
               className="absolute right-4 top-4 z-10 flex h-11 items-center gap-2 rounded-full border border-line bg-surface px-4 text-sm text-muted opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100"
             >
               <Icon name="x" size={16} />
-              Thoát tập trung
+              {t("reader.exitFocus")}
             </button>
           )}
         </div>

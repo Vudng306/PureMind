@@ -1,6 +1,8 @@
 import type { AuthError } from "@supabase/supabase-js";
 
+import { translate } from "./i18n";
 import { MSG } from "./messages";
+import { currentLang } from "./preferences";
 
 /** Maps Supabase Auth errors to Appendix B messages. */
 export function authErrorMessage(error: AuthError | Error | null | undefined): string {
@@ -21,10 +23,10 @@ export function authErrorMessage(error: AuthError | Error | null | undefined): s
     case "email_address_invalid":
       return MSG["MSG-01"];
     case "email_not_confirmed":
-      return "Email chưa được xác nhận. Hãy kiểm tra hộp thư của bạn.";
+      return translate(currentLang(), "auth.emailNotConfirmed");
   }
   if (status === 0 || error.message?.toLowerCase().includes("fetch")) {
-    return "Không kết nối được dịch vụ đăng nhập. Kiểm tra kết nối và thử lại.";
+    return translate(currentLang(), "auth.serviceUnreachable");
   }
   return MSG["MSG-99"];
 }

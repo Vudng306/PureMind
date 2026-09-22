@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { authErrorMessage } from "@/lib/auth-errors";
+import { useT } from "@/lib/i18n";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export function AuthTabs({ active }: { active: "login" | "register" }) {
+  const t = useT();
   return (
-    <nav className="flex gap-2" aria-label="Đăng nhập hoặc đăng ký">
+    <nav className="flex gap-2" aria-label={t("auth.tabsAria")}>
       <Link href="/login" className="chip" aria-current={active === "login" ? "page" : undefined} aria-pressed={active === "login"}>
-        Đăng nhập
+        {t("auth.signIn")}
       </Link>
       <Link
         href="/register"
@@ -18,14 +20,15 @@ export function AuthTabs({ active }: { active: "login" | "register" }) {
         aria-current={active === "register" ? "page" : undefined}
         aria-pressed={active === "register"}
       >
-        Đăng ký
+        {t("auth.signUp")}
       </Link>
     </nav>
   );
 }
 
-/** "hoặc" divider + Google sign-in (Supabase OAuth; the provider must be enabled in the Supabase project). */
+/** An "or" divider + Google sign-in (Supabase OAuth; the provider must be enabled in the Supabase project). */
 export function GoogleSignIn({ onError }: { onError: (message: string) => void }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
 
   async function signIn() {
@@ -44,7 +47,7 @@ export function GoogleSignIn({ onError }: { onError: (message: string) => void }
     <>
       <div className="flex items-center gap-3 text-[13px] text-muted">
         <span className="h-px flex-1 bg-line" />
-        hoặc
+        {t("auth.or")}
         <span className="h-px flex-1 bg-line" />
       </div>
       <button
@@ -54,7 +57,7 @@ export function GoogleSignIn({ onError }: { onError: (message: string) => void }
         className="btn h-[50px] border border-field bg-surface text-base hover:bg-soft"
       >
         <span className="font-bold text-accent">G</span>
-        {busy ? "Đang chuyển tới Google…" : "Tiếp tục với Google"}
+        {t(busy ? "auth.googleRedirect" : "auth.google")}
       </button>
     </>
   );
