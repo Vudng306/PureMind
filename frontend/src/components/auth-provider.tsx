@@ -20,12 +20,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     const auth = supabase().auth;
-    auth.getSession().then(({ data }) => setState({ session: data.session, loading: false }));
+    let active = true;
+    auth
+      .getSession()
+      .then(({ data }) => {
+        if (active) setState({ session: data.session, loading: false });
+      })
+      // A browser extension, a blocked storage API, or a transient network problem must not
+      // leave the application on a permanent loading screen.
+      .catch(() => {
+        if (active) setState({ session: null, loading: false });
+      });
     const { data } = auth.onAuthStateChange((event, session) => {
       setState({ session, loading: false });
       if (event === "SIGNED_OUT") queryClient.clear(); // FR-AUTH-04 step 2
     });
-    return () => data.subscription.unsubscribe();
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
   }, [queryClient]);
 
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;

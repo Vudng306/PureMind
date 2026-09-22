@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useHighlights } from "@/lib/annotations";
 import { useDocuments, formatDate } from "@/lib/documents";
 import { useLang, useT } from "@/lib/i18n";
-import { MAX_AVATAR_BYTES, MSG } from "@/lib/messages";
+import { MAX_AVATAR_BYTES, MSG, PASSWORD_RE } from "@/lib/messages";
 import { api } from "@/lib/api";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { accountKey, useAccount } from "@/lib/queries";
@@ -122,7 +122,7 @@ export function AccountSettings() {
   function submitPassword(e: React.FormEvent) {
     e.preventDefault();
     setNotice(null);
-    if (password.length < 8 || password.length > 72) return setNotice({ tone: "danger", text: MSG["MSG-02"] });
+    if (!PASSWORD_RE.test(password)) return setNotice({ tone: "danger", text: MSG["MSG-02"] });
     changePassword.mutate(password);
   }
 
@@ -213,6 +213,8 @@ export function AccountSettings() {
                 placeholder={t("account.passwordHint")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                minLength={8}
+                maxLength={72}
               />
             </label>
             <button className="btn-outline h-[46px]" disabled={!password || changePassword.isPending}>

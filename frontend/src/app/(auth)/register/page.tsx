@@ -12,7 +12,7 @@ import { Alert } from "@/components/ui";
 import { api } from "@/lib/api";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { useT } from "@/lib/i18n";
-import { EMAIL_RE, MSG } from "@/lib/messages";
+import { EMAIL_RE, MSG, PASSWORD_RE } from "@/lib/messages";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 export default function RegisterPage() {
@@ -37,28 +37,36 @@ export default function RegisterPage() {
     const email = form.email.trim().toLowerCase();
     const displayName = form.displayName.trim();
     // FR-AUTH-01 step 1: validate before calling Supabase
-    if (displayName.length > 255) return setError(MSG["MSG-07"]);
+    if (!displayName || displayName.length > 255) return setError(MSG["MSG-07"]);
     if (!EMAIL_RE.test(email) || email.length > 255) return setError(MSG["MSG-01"]);
-    if (form.password.length < 8 || form.password.length > 72) return setError(MSG["MSG-02"]);
+    if (!PASSWORD_RE.test(form.password)) return setError(MSG["MSG-02"]);
     if (form.password !== form.confirm) return setError(t("auth.confirmMismatch"));
 
     setBusy(true);
-    const { data, error: authError } = await supabase().auth.signUp({
-      email,
-      password: form.password,
-      options: { data: displayName ? { display_name: displayName } : {} },
-    });
-    if (authError) {
+    try {
+      const { data, error: authError } = await supabase().auth.signUp({
+        email,
+        password: form.password,
+        options: {
+          data: { display_name: displayName },
+          // This also makes confirmation work outside localhost when Supabase email
+          // confirmation is enabled.
+          emailRedirectTo: `${window.location.origin}/library`,
+        },
+      });
+      if (authError) return setError(authErrorMessage(authError));
+      if (!data.session) {
+        // Supabase returns no session when "Confirm email" is enabled, or silently for an existing email.
+        setSentTo(email);
+        return;
+      }
+      await api("/account").catch(() => undefined); // FR-AUTH-01 step 4: provision profile
+      router.replace("/library");
+    } catch (err) {
+      setError(authErrorMessage(err instanceof Error ? err : new Error()));
+    } finally {
       setBusy(false);
-      return setError(authErrorMessage(authError));
     }
-    if (!data.session) {
-      // Supabase returns no session when "Confirm email" is enabled, or silently for an existing email.
-      setBusy(false);
-      return setSentTo(email);
-    }
-    await api("/account").catch(() => undefined); // FR-AUTH-01 step 4: provision profile
-    router.replace("/library");
   }
 
   if (sentTo) {
@@ -84,7 +92,14 @@ export default function RegisterPage() {
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <label className="field-label">
           {t("auth.name")}
-          <input className="input" autoComplete="name" value={form.displayName} onChange={update("displayName")} />
+          <input
+            className="input"
+            autoComplete="name"
+            value={form.displayName}
+            onChange={update("displayName")}
+            maxLength={255}
+            required
+          />
         </label>
         <label className="field-label">
           {t("auth.email")}
@@ -104,9 +119,11 @@ export default function RegisterPage() {
               className="input"
               type="password"
               autoComplete="new-password"
-              placeholder={t("account.passwordHint")}
+              placeholder={t("auth.passwordMin")}
               value={form.password}
               onChange={update("password")}
+              minLength={8}
+              maxLength={72}
             />
           </label>
           <label className="field-label">

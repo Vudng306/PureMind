@@ -36,16 +36,19 @@ function LoginForm() {
     if (!password) return setError(MSG["MSG-04"]);
 
     setBusy(true);
-    const { error: authError } = await supabase().auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
-    if (authError) {
+    try {
+      const { error: authError } = await supabase().auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (authError) return setError(authErrorMessage(authError));
+      await api("/account").catch(() => undefined); // FR-AUTH-02 step 3: load / provision profile
+      router.replace("/library");
+    } catch (err) {
+      setError(authErrorMessage(err instanceof Error ? err : new Error()));
+    } finally {
       setBusy(false);
-      return setError(authErrorMessage(authError));
     }
-    await api("/account").catch(() => undefined); // FR-AUTH-02 step 3: load / provision profile
-    router.replace("/library");
   }
 
   async function forgot() {
@@ -53,11 +56,15 @@ function LoginForm() {
     setInfo(null);
     const value = email.trim().toLowerCase();
     if (!EMAIL_RE.test(value)) return setError(t("auth.enterEmailFirst"));
-    const { error: authError } = await supabase().auth.resetPasswordForEmail(value, {
-      redirectTo: `${window.location.origin}/settings`,
-    });
-    if (authError) return setError(authErrorMessage(authError));
-    setInfo(t("auth.resetSent", { email: value }));
+    try {
+      const { error: authError } = await supabase().auth.resetPasswordForEmail(value, {
+        redirectTo: `${window.location.origin}/settings`,
+      });
+      if (authError) return setError(authErrorMessage(authError));
+      setInfo(t("auth.resetSent", { email: value }));
+    } catch (err) {
+      setError(authErrorMessage(err instanceof Error ? err : new Error()));
+    }
   }
 
   return (

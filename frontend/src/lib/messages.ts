@@ -11,7 +11,7 @@ import { usePreferences } from "./preferences";
 
 export const MSG_VI = {
   "MSG-01": "Email không hợp lệ.",
-  "MSG-02": "Mật khẩu phải có từ 8 đến 72 ký tự.",
+  "MSG-02": "Mật khẩu phải có 8–72 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.",
   "MSG-03": "Email này đã được đăng ký. Hãy đăng nhập hoặc dùng email khác.",
   "MSG-04": "Email hoặc mật khẩu không đúng.",
   "MSG-05": "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau ít phút.",
@@ -63,7 +63,7 @@ export type MsgCode = keyof typeof MSG_VI;
 
 export const MSG_EN: Record<MsgCode, string> = {
   "MSG-01": "That email address is not valid.",
-  "MSG-02": "A password must be between 8 and 72 characters.",
+  "MSG-02": "A password must be 8–72 characters and include uppercase, lowercase, a number and a special character.",
   "MSG-03": "This email is already registered. Sign in, or use another address.",
   "MSG-04": "That email or password is wrong.",
   "MSG-05": "Too many attempts. Please try again in a few minutes.",
@@ -132,5 +132,7 @@ export function messageFor(code: string | null | undefined): string {
 }
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Password policy for registration and password changes. Spaces are not accepted as special characters. */
+export const PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s])\S{8,72}$/;
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
