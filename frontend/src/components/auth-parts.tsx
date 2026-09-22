@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { authErrorMessage } from "@/lib/auth-errors";
 import { useT } from "@/lib/i18n";
@@ -30,6 +30,21 @@ export function AuthTabs({ active }: { active: "login" | "register" }) {
 export function GoogleSignIn({ onError }: { onError: (message: string) => void }) {
   const t = useT();
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    // OAuth takes the browser away from this page. If the user cancels it or presses Back,
+    // a preserved page can retain its old React state, so make the button usable again.
+    const reset = () => setBusy(false);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") reset();
+    };
+    window.addEventListener("pageshow", reset);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pageshow", reset);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
 
   async function signIn() {
     setBusy(true);
