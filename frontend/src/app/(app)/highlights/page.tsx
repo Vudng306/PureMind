@@ -8,7 +8,7 @@ import { Icon } from "@/components/icons";
 import { Alert, Spinner } from "@/components/ui";
 import {
   CATEGORIES,
-  CATEGORY_LABEL,
+  categoryLabel,
   fromDto,
   highlightsKey,
   type HighlightCategory,
@@ -18,6 +18,7 @@ import { api } from "@/lib/api";
 import { KIND_LABEL, relativeTime } from "@/lib/doc-view";
 import { useDocuments } from "@/lib/documents";
 import { downloadText, exportFileName, fetchAllHighlights, highlightsMarkdown } from "@/lib/export";
+import { useLang, useMsg, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { COLOR_DOT, HIGHLIGHT_COLORS, colorLabel, usePreferences, type HighlightColor } from "@/lib/preferences";
 
@@ -30,6 +31,9 @@ const selectCls =
 
 /** FR-HL-05: every highlight across the library, filtered and sorted, 50 at a time. */
 export default function HighlightsPage() {
+  const t = useT();
+  const msg = useMsg();
+  const lang = useLang();
   const labels = usePreferences((s) => s.colorLabels);
   const { data: docs } = useDocuments("created_desc");
   const [docId, setDocId] = useState("");
@@ -67,7 +71,8 @@ export default function HighlightsPage() {
       const filter = { documentId: docId || undefined, category: category || undefined, color: color || undefined };
       const all = await fetchAllHighlights(filter);
       const now = new Date();
-      downloadText(highlightsMarkdown(all, docById, labels, filter, now), exportFileName(docById.get(docId)?.title ?? null, now));
+      const md = highlightsMarkdown(all, docById, labels, filter, now, lang);
+      downloadText(md, exportFileName(docById.get(docId)?.title ?? null, now));
     } catch (e) {
       setExportError(e instanceof Error ? e.message : MSG["MSG-99"]);
     } finally {
@@ -85,20 +90,22 @@ export default function HighlightsPage() {
     <div className="mx-auto flex max-w-[880px] flex-col gap-7">
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">Highlight</h1>
+          <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">{t("highlights.title")}</h1>
           <p className="text-base text-muted">
-            {query.isSuccess ? `${total} highlight${filtered ? " khớp bộ lọc" : ""}` : "Những đoạn bạn đã đánh dấu khi đọc."}
+            {query.isSuccess
+              ? t(filtered ? "highlights.countFiltered" : "highlights.count", { n: total })
+              : t("highlights.lede")}
           </p>
         </div>
         {total > 0 && (
           <div className="flex flex-wrap gap-2.5">
             <button type="button" className="btn-outline" onClick={() => void exportMarkdown()} disabled={exporting}>
               <Icon name="download" size={16} />
-              {exporting ? "Đang xuất…" : "Xuất Markdown"}
+              {t(exporting ? "highlights.exporting" : "highlights.export")}
             </button>
             <Link href={docId ? `/notebooks/new?document=${docId}` : "/notebooks/new"} className="btn-outline">
               <Icon name="spark" size={16} />
-              Tạo notebook AI
+              {t("highlights.makeNotebook")}
             </Link>
           </div>
         )}
@@ -109,9 +116,9 @@ export default function HighlightsPage() {
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2.5">
           <label className="min-w-0">
-            <span className="sr-only">Tài liệu</span>
+            <span className="sr-only">{t("highlights.document")}</span>
             <select value={docId} onChange={(e) => setDocId(e.target.value)} className={`${selectCls} w-[260px]`}>
-              <option value="">Mọi tài liệu</option>
+              <option value="">{t("highlights.allDocuments")}</option>
               {(docs ?? []).map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.title}
@@ -120,26 +127,26 @@ export default function HighlightsPage() {
             </select>
           </label>
           <label>
-            <span className="sr-only">Danh mục</span>
+            <span className="sr-only">{t("highlights.category")}</span>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as HighlightCategory | "")}
               className={selectCls}
             >
-              <option value="">Mọi danh mục</option>
+              <option value="">{t("highlights.allCategories")}</option>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {CATEGORY_LABEL[c]}
+                  {categoryLabel(c, lang)}
                 </option>
               ))}
             </select>
           </label>
           <span className="hidden flex-1 sm:block" />
-          <div className="flex h-10 gap-0.5 rounded-full bg-soft p-1" role="group" aria-label="Sắp xếp">
+          <div className="flex h-10 gap-0.5 rounded-full bg-soft p-1" role="group" aria-label={t("highlights.sort")}>
             {(
               [
-                ["newest", "Mới nhất"],
-                ["document", "Theo tài liệu"],
+                ["newest", "highlights.sortNewest"],
+                ["document", "highlights.sortDocument"],
               ] as const
             ).map(([value, label]) => (
               <button
@@ -149,14 +156,14 @@ export default function HighlightsPage() {
                 onClick={() => setSort(value)}
                 className={`rounded-full px-3.5 text-sm ${sort === value ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"}`}
               >
-                {label}
+                {t(label)}
               </button>
             ))}
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5" aria-label="Lọc theo màu">
+        <div className="flex flex-wrap gap-1.5" aria-label={t("highlights.filterColor")}>
           <button type="button" className="chip h-9 px-3 text-[13px]" aria-pressed={!color} onClick={() => setColor("")}>
-            Mọi màu
+            {t("highlights.allColors")}
           </button>
           {HIGHLIGHT_COLORS.map((c) => (
             <button
@@ -167,7 +174,7 @@ export default function HighlightsPage() {
               onClick={() => setColor(color === c ? "" : c)}
             >
               <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_DOT[c] }} />
-              {colorLabel(labels, c)}
+              {colorLabel(labels, c, lang)}
             </button>
           ))}
         </div>
@@ -179,24 +186,22 @@ export default function HighlightsPage() {
         <div className="flex flex-col items-start gap-3">
           <Alert>{query.error instanceof Error ? query.error.message : MSG["MSG-99"]}</Alert>
           <button type="button" className="btn-outline" onClick={() => query.refetch()}>
-            Thử lại
+            {t("common.retry")}
           </button>
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center gap-3.5 rounded-[14px] border border-dashed border-field px-6 py-16 text-center">
-          <span className="font-serif text-[28px]">{filtered ? "Không có highlight nào khớp" : MSG["MSG-32"]}</span>
+          <span className="font-serif text-[28px]">{filtered ? t("highlights.noMatch") : msg("MSG-32")}</span>
           <span className="max-w-md text-[15px] text-muted">
-            {filtered
-              ? "Thử bỏ bớt bộ lọc."
-              : "Bôi đen một câu khi đọc ở chế độ Văn bản sạch để lưu lại ý chính, câu hỏi hay ví dụ."}
+            {t(filtered ? "highlights.noMatchHint" : "highlights.emptyHint")}
           </span>
           {filtered ? (
             <button type="button" className="btn-outline" onClick={reset}>
-              Xóa bộ lọc
+              {t("library.clearFilters")}
             </button>
           ) : (
             <Link href="/library" className="btn-primary">
-              Mở thư viện
+              {t("highlights.openLibrary")}
             </Link>
           )}
         </div>
@@ -214,15 +219,15 @@ export default function HighlightsPage() {
                   <span className="flex flex-wrap items-center gap-2 text-xs text-muted">
                     <span className="flex h-6 items-center gap-1.5 rounded-full bg-soft pl-1.5 pr-2 font-semibold text-ink">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_DOT[h.color] }} />
-                      {colorLabel(labels, h.color)}
+                      {colorLabel(labels, h.color, lang)}
                     </span>
                     {h.category && (
                       <span className="flex h-6 items-center rounded-full border border-ink px-2 font-semibold text-ink">
-                        {CATEGORY_LABEL[h.category]}
+                        {categoryLabel(h.category, lang)}
                       </span>
                     )}
                     <span className="flex-1" />
-                    {relativeTime(h.createdAt)}
+                    {relativeTime(h.createdAt, lang)}
                   </span>
                   <span className="line-clamp-6 font-serif text-[17px] leading-relaxed text-ink">
                     <span className={`box-decoration-clone hl-bg-${h.color}`}>{h.text}</span>
@@ -231,8 +236,8 @@ export default function HighlightsPage() {
                     <span className="whitespace-pre-wrap rounded-lg bg-soft px-3 py-2.5 text-sm leading-normal text-body">{note}</span>
                   )}
                   <span className="truncate text-[13px] text-muted">
-                    {doc ? `${KIND_LABEL[doc.file_type]} · ${doc.title}` : "Tài liệu"}
-                    {h.page ? ` · trang ${h.page}` : ""}
+                    {doc ? `${KIND_LABEL[doc.file_type]} · ${doc.title}` : t("highlights.document")}
+                    {h.page ? ` · ${t("highlights.page", { page: h.page })}` : ""}
                   </span>
                 </Link>
               </li>
@@ -248,7 +253,7 @@ export default function HighlightsPage() {
           onClick={() => query.fetchNextPage()}
           disabled={query.isFetchingNextPage}
         >
-          {query.isFetchingNextPage ? "Đang tải…" : `Xem thêm (${total - items.length} còn lại)`}
+          {query.isFetchingNextPage ? t("common.loading") : t("common.loadMore", { n: total - items.length })}
         </button>
       )}
     </div>

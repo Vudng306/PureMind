@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 
 import {
   CATEGORIES,
-  CATEGORY_LABEL,
+  categoryLabel,
   fromDto,
   highlightsKey,
   type HighlightCategory,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/annotations";
 import { api } from "@/lib/api";
 import { useDocuments } from "@/lib/documents";
+import { useLang } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { MAX_NOTEBOOK_SOURCES } from "@/lib/notebooks";
 import { COLOR_DOT } from "@/lib/preferences";
@@ -46,6 +47,7 @@ export function HighlightPicker({
   initialDocId?: string;
   fixed?: Set<string>;
 }) {
+  const lang = useLang();
   const { data: docs } = useDocuments("created_desc");
   const [docId, setDocId] = useState(initialDocId);
   const [category, setCategory] = useState<HighlightCategory | "">("");
@@ -136,7 +138,7 @@ export function HighlightPicker({
             <option value="">Mọi danh mục</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
-                {CATEGORY_LABEL[c]}
+                {categoryLabel(c, lang)}
               </option>
             ))}
           </select>
@@ -208,7 +210,7 @@ export function HighlightPicker({
                     {h.note && <span className="line-clamp-2 text-sm text-body">Ghi chú: {h.note}</span>}
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_DOT[h.color] }} aria-hidden />
-                      {h.category && <span className="font-semibold text-ink">{CATEGORY_LABEL[h.category]}</span>}
+                      {h.category && <span className="font-semibold text-ink">{categoryLabel(h.category, lang)}</span>}
                       <span className="min-w-0 truncate">
                         {doc?.title ?? "Tài liệu"}
                         {h.page ? ` · trang ${h.page}` : ""}

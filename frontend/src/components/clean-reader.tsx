@@ -93,7 +93,8 @@ const BlockView = memo(function BlockView({ block }: { block: Block }) {
     }
     case "paragraph":
       return (
-        <p {...common} className="mb-[18px]">
+        // Căn đều hai bên như sách in; ngắt từ để hai lề thẳng mà không để lại khoảng trắng loang lổ.
+        <p {...common} className="mb-[18px] hyphens-auto text-justify">
           <Inlines nodes={block.c} />
         </p>
       );

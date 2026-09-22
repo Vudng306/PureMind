@@ -1,5 +1,8 @@
 export type Theme = "light" | "dark" | "sepia";
 
+/** The language of the interface (FR-ACC-04), kept with the account so it follows the reader. */
+export type Lang = "vi" | "en";
+
 export interface ReadingPreferences {
   theme?: Theme;
   font_size?: number;
@@ -8,6 +11,7 @@ export interface ReadingPreferences {
   default_mode?: "clean" | "original";
   color_labels?: { yellow: string; green: string; blue: string; pink: string; purple?: string };
   ai_consent?: boolean;
+  language?: Lang;
 }
 
 export interface User {

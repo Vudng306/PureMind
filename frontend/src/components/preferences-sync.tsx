@@ -17,6 +17,7 @@ const serverShape = (p: ReadingPreferences) =>
     line_height: p.line_height,
     column_width: p.column_width,
     default_mode: p.default_mode,
+    language: p.language,
     color_labels: p.color_labels && {
       yellow: p.color_labels.yellow,
       green: p.color_labels.green,
@@ -26,13 +27,16 @@ const serverShape = (p: ReadingPreferences) =>
     },
   });
 
-const localShape = (p: Pick<Local, "theme" | "fontSize" | "lineHeight" | "width" | "defaultMode" | "colorLabels">) =>
+const localShape = (
+  p: Pick<Local, "theme" | "fontSize" | "lineHeight" | "width" | "defaultMode" | "language" | "colorLabels">,
+) =>
   serverShape({
     theme: p.theme,
     font_size: p.fontSize,
     line_height: p.lineHeight,
     column_width: p.width,
     default_mode: p.defaultMode,
+    language: p.language,
     color_labels: p.colorLabels,
   });
 
@@ -42,7 +46,7 @@ const localShape = (p: Pick<Local, "theme" | "fontSize" | "lineHeight" | "width"
  */
 export function PreferencesSync() {
   const { data: user } = useAccount();
-  const { theme, fontSize, lineHeight, width, defaultMode, colorLabels, applyServer } = usePreferences();
+  const { theme, fontSize, lineHeight, width, defaultMode, language, colorLabels, applyServer } = usePreferences();
   const adopted = useRef(false);
   const lastSent = useRef<string>("");
 
@@ -53,7 +57,12 @@ export function PreferencesSync() {
     lastSent.current = serverShape(user.reading_preferences);
   }, [user, applyServer]);
 
-  const payload = localShape({ theme, fontSize, lineHeight, width, defaultMode, colorLabels });
+  const payload = localShape({ theme, fontSize, lineHeight, width, defaultMode, language, colorLabels });
+
+  // The <html lang> tells the browser how to hyphenate and how a screen reader should pronounce it.
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   useEffect(() => {
     if (!adopted.current || payload === lastSent.current) return;

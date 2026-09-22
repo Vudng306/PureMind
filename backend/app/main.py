@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import account, chat, documents, highlights, notebooks, search, summaries
 from app.core import logging as applog
+from app.core import messages
 from app.core.config import get_settings
 from app.core.messages import MSG
 
@@ -29,9 +30,16 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
-    allow_headers=["Authorization", "Content-Type", "Range"],
+    allow_headers=["Authorization", "Content-Type", "Range", "Accept-Language"],
     expose_headers=["Content-Range", "Accept-Ranges", "Content-Length"],
 )
+
+
+@app.middleware("http")
+async def language(request: Request, call_next):
+    """Answer in the language the app asked for; everything below reads it from `MSG`."""
+    messages.set_language(messages.parse_language(request.headers.get("accept-language")))
+    return await call_next(request)
 
 
 @app.middleware("http")
@@ -92,7 +100,7 @@ async def access_log(request: Request, call_next):
 @app.exception_handler(RequestValidationError)
 async def validation_handler(request: Request, exc: RequestValidationError):
     """Errors are returned as {"detail": "<message>"} (SRS 3.4)."""
-    message = "Dữ liệu không hợp lệ."
+    message = MSG["MSG-INVALID"]
     for err in exc.errors():
         text = str(err.get("msg", ""))
         code = next((c for c in MSG if c in text), None)

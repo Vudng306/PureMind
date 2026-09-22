@@ -7,9 +7,10 @@ import { Suspense, useEffect, useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { Alert, Spinner } from "@/components/ui";
-import { CATEGORIES, CATEGORY_LABEL, type HighlightCategory } from "@/lib/annotations";
+import { CATEGORIES, categoryLabel, type HighlightCategory } from "@/lib/annotations";
 import { api } from "@/lib/api";
 import { KIND_CLASS, KIND_LABEL } from "@/lib/doc-view";
+import { useLang, useMsg, useT, type Key, type T } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { COLOR_DOT, colorLabel, usePreferences } from "@/lib/preferences";
 import {
@@ -25,12 +26,12 @@ import {
   type SearchType,
 } from "@/lib/search";
 
-const TYPE_LABEL: Record<SearchType, string> = {
-  document: "Tài liệu",
-  highlight: "Highlight",
-  note: "Ghi chú",
-  summary: "Tóm tắt AI",
-  notebook: "Notebook",
+const TYPE_LABEL: Record<SearchType, Key> = {
+  document: "search.typeDocument",
+  highlight: "search.typeHighlight",
+  note: "search.typeNote",
+  summary: "search.typeSummary",
+  notebook: "search.typeNotebook",
 };
 const isType = (v: string | null): v is SearchType => SEARCH_TYPES.includes(v as SearchType);
 const isCategory = (v: string | null): v is HighlightCategory => CATEGORIES.includes(v as HighlightCategory);
@@ -52,8 +53,11 @@ function Snippet({ text }: { text: string }) {
 }
 
 function HitRow({ hit, q }: { hit: SearchHit; q: string }) {
+  const t = useT();
+  const lang = useLang();
   const labels = usePreferences((s) => s.colorLabels);
-  const source = `${hit.document_title}${hit.page_number ? ` · trang ${hit.page_number}` : ""}`;
+  const page = hit.page_number ? ` · ${t("search.pageOf", { page: hit.page_number })}` : "";
+  const source = `${hit.document_title}${page}`;
   return (
     <li>
       <Link
@@ -79,13 +83,13 @@ function HitRow({ hit, q }: { hit: SearchHit; q: string }) {
             <Snippet text={hit.snippet} />
           </span>
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-            {hit.kind === "highlight" && hit.color && <span>{colorLabel(labels, hit.color)}</span>}
-            {hit.kind === "note" && <span>Ghi chú của highlight</span>}
-            {hit.kind === "document_note" && <span>Ghi chú tài liệu</span>}
-            {hit.kind === "summary" && <span>Tóm tắt AI</span>}
+            {hit.kind === "highlight" && hit.color && <span>{colorLabel(labels, hit.color, lang)}</span>}
+            {hit.kind === "note" && <span>{t("search.highlightNote")}</span>}
+            {hit.kind === "document_note" && <span>{t("search.documentNote")}</span>}
+            {hit.kind === "summary" && <span>{t("search.typeSummary")}</span>}
             {hit.kind === "notebook" && <span>Notebook</span>}
             {hit.category && (
-              <span className="rounded-full border border-line px-2 py-0.5 font-medium text-ink">{CATEGORY_LABEL[hit.category]}</span>
+              <span className="rounded-full border border-line px-2 py-0.5 font-medium text-ink">{categoryLabel(hit.category, lang)}</span>
             )}
             {hit.kind !== "document" && hit.kind !== "notebook" && <span className="min-w-0 truncate">{source}</span>}
           </span>
@@ -107,6 +111,7 @@ function Group({
   q: string;
   category: HighlightCategory | null;
 }) {
+  const t = useT();
   const [extra, setExtra] = useState<SearchHit[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -129,9 +134,9 @@ function Group({
 
   if (!group.total) return null;
   return (
-    <section className="flex flex-col gap-3" aria-label={TYPE_LABEL[type]}>
+    <section className="flex flex-col gap-3" aria-label={t(TYPE_LABEL[type])}>
       <h2 className="eyebrow">
-        {TYPE_LABEL[type].toUpperCase()} · {group.total}
+        {t(TYPE_LABEL[type]).toUpperCase()} · {group.total}
       </h2>
       <ul className="flex flex-col gap-2.5">
         {items.map((hit) => (
@@ -141,7 +146,9 @@ function Group({
       {error && <Alert>{error}</Alert>}
       {items.length < group.total && (
         <button type="button" className="btn-outline self-start" onClick={more} disabled={loading}>
-          {loading ? "Đang tải…" : `Xem thêm ${TYPE_LABEL[type].toLowerCase()} (${group.total - items.length})`}
+          {loading
+            ? t("common.loading")
+            : t("search.loadMoreOf", { type: t(TYPE_LABEL[type]).toLowerCase(), n: group.total - items.length })}
         </button>
       )}
     </section>
@@ -149,6 +156,9 @@ function Group({
 }
 
 function SearchView() {
+  const t: T = useT();
+  const msg = useMsg();
+  const lang = useLang();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -173,8 +183,8 @@ function SearchView() {
   // Typing searches shortly after the last key.
   useEffect(() => {
     if (input.replace(/\s+/g, " ").trim() === q) return;
-    const t = setTimeout(() => go({ q: input }), 350);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => go({ q: input }), 350);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input]);
 
@@ -189,17 +199,17 @@ function SearchView() {
   });
 
   const data = results.data;
-  const count = (t: SearchType) => data?.[GROUP_OF[t]].total ?? 0;
-  const total = types.reduce((n, t) => n + count(t), 0);
-  const shown = (type ? [type] : types).filter((t) => types.includes(t));
+  const count = (kind: SearchType) => data?.[GROUP_OF[kind]].total ?? 0;
+  const total = types.reduce((n, kind) => n + count(kind), 0);
+  const shown = (type ? [type] : types).filter((kind) => types.includes(kind));
 
   return (
     <div className="mx-auto flex max-w-[880px] flex-col gap-6">
-      <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">Tìm kiếm</h1>
+      <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">{t("search.title")}</h1>
 
       <label className="flex h-14 items-center gap-3 rounded-xl border border-field bg-surface px-4 text-muted focus-within:border-accent">
         <Icon name="search" size={20} />
-        <span className="sr-only">Từ khóa</span>
+        <span className="sr-only">{t("search.keyword")}</span>
         <input
           autoFocus
           value={input}
@@ -208,40 +218,48 @@ function SearchView() {
           onKeyDown={(e) => {
             if (e.key === "Enter") go({ q: input });
           }}
-          placeholder="Tìm trong tài liệu, highlight và ghi chú…"
+          placeholder={t("search.inputPlaceholder")}
           className="min-w-0 flex-1 bg-transparent text-lg text-ink outline-none"
         />
         {input && (
           <button type="button" className="btn-ghost h-10 px-3 text-[13px] text-muted" onClick={() => setInput("")}>
-            Xóa
+            {t("search.clear")}
           </button>
         )}
       </label>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Loại kết quả">
+        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label={t("search.resultTypes")}>
           <button type="button" role="tab" aria-selected={!type} className="chip h-9 px-3.5 text-[13px]" onClick={() => go({ type: null })}>
-            Tất cả{data ? ` · ${total}` : ""}
+            {t("common.all")}
+            {data ? ` · ${total}` : ""}
           </button>
-          {types.map((t) => (
-            <button key={t} type="button" role="tab" aria-selected={type === t} className="chip h-9 px-3.5 text-[13px]" onClick={() => go({ type: t })}>
-              {TYPE_LABEL[t]}
-              {data ? ` · ${count(t)}` : ""}
+          {types.map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              role="tab"
+              aria-selected={type === kind}
+              className="chip h-9 px-3.5 text-[13px]"
+              onClick={() => go({ type: kind })}
+            >
+              {t(TYPE_LABEL[kind])}
+              {data ? ` · ${count(kind)}` : ""}
             </button>
           ))}
         </div>
         <span className="flex-1" />
         <label>
-          <span className="sr-only">Danh mục highlight</span>
+          <span className="sr-only">{t("search.highlightCategory")}</span>
           <select
             value={category ?? ""}
             onChange={(e) => go({ category: isCategory(e.target.value) ? e.target.value : null, type: null })}
             className="h-9 rounded-full border border-field bg-surface pl-3 pr-8 text-[13px] text-ink outline-none focus:border-accent"
           >
-            <option value="">Mọi danh mục</option>
+            <option value="">{t("highlights.allCategories")}</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
-                {CATEGORY_LABEL[c]}
+                {categoryLabel(c, lang)}
               </option>
             ))}
           </select>
@@ -250,29 +268,29 @@ function SearchView() {
 
       {!ready ? (
         <p className="rounded-xl bg-soft px-4 py-3.5 text-sm text-muted">
-          Nhập ít nhất 2 ký tự để tìm. Không cần gõ dấu: “tong quat” cũng tìm thấy “tổng quát”.
+          {t("search.hint")}
         </p>
       ) : results.isPending ? (
-        <Spinner label="Đang tìm…" />
+        <Spinner label={t("search.searching")} />
       ) : results.isError ? (
         <div className="flex flex-col items-start gap-3">
           <Alert>{results.error instanceof Error ? results.error.message : MSG["MSG-99"]}</Alert>
           <button type="button" className="btn-outline" onClick={() => results.refetch()}>
-            Thử lại
+            {t("common.retry")}
           </button>
         </div>
-      ) : shown.every((t) => !count(t)) ? (
+      ) : shown.every((kind) => !count(kind)) ? (
         <div className="flex flex-col items-center gap-3.5 rounded-[14px] border border-dashed border-field px-6 py-14 text-center">
-          <span className="max-w-md text-[15px] text-muted">{MSG["MSG-36"]}</span>
+          <span className="max-w-md text-[15px] text-muted">{msg("MSG-36")}</span>
           {(category || type) && (
             <button type="button" className="btn-outline" onClick={() => go({ type: null, category: null })}>
-              Bỏ bộ lọc
+              {t("search.dropFilters")}
             </button>
           )}
         </div>
       ) : (
-        shown.map((t) => (
-          <Group key={`${t}-${q}-${category}`} type={t} group={data![GROUP_OF[t]]} q={q} category={category} />
+        shown.map((kind) => (
+          <Group key={`${kind}-${q}-${category}`} type={kind} group={data![GROUP_OF[kind]]} q={q} category={category} />
         ))
       )}
     </div>

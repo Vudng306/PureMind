@@ -12,6 +12,7 @@ import { NotebookMarkdown } from "@/components/notebook-markdown";
 import { Alert, Spinner } from "@/components/ui";
 import type { HighlightPage } from "@/lib/annotations";
 import { ApiError, api } from "@/lib/api";
+import { useT, type Key } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import {
   MAX_NOTEBOOK_SOURCES,
@@ -23,14 +24,16 @@ import {
 import { accountKey, useAccount } from "@/lib/queries";
 import { useUi } from "@/lib/ui-store";
 
-const LANGUAGES: [NotebookLanguage, string][] = [
-  ["auto", "Theo highlight"],
-  ["vi", "Tiếng Việt"],
-  ["en", "English"],
+const LANGUAGES: [NotebookLanguage, Key | null][] = [
+  ["auto", "notebooks.langAuto"],
+  ["vi", null], // a language's own name is the same in both interfaces
+  ["en", null],
 ];
+const LANGUAGE_NAME: Record<NotebookLanguage, string> = { auto: "", vi: "Tiếng Việt", en: "English" };
 
 /** UI-07, FR-NB-01/02: step 1 pick highlights, step 2 the AI writes a draft (streamed), then it opens in the editor. */
 function NewNotebook() {
+  const t = useT();
   const router = useRouter();
   const params = useSearchParams();
   const qc = useQueryClient();
@@ -87,7 +90,7 @@ function NewNotebook() {
         controller.signal,
       );
       afterGenerate(qc, nb);
-      showToast("Đã tạo bản nháp notebook");
+      showToast(t("notebooks.draftCreated"));
       router.replace(`/notebooks/${nb.id}`);
     } catch (e) {
       setWriting(false);
@@ -107,10 +110,10 @@ function NewNotebook() {
             className="flex flex-1 items-center gap-2.5 rounded-lg bg-soft px-3.5 py-2.5 text-sm text-muted"
           >
             <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-line border-t-accent" aria-hidden />
-            {text ? "AI đang viết notebook…" : `Đang gửi ${selected.length} highlight tới AI…`}
+            {text ? t("notebooks.writingNotebook") : t("notebooks.sending", { n: selected.length })}
           </div>
           <button type="button" className="btn-outline" onClick={() => abortRef.current?.abort()}>
-            Dừng
+            {t("notebooks.stop")}
           </button>
         </div>
         <article className="rounded-2xl border border-line bg-surface px-5 py-6 sm:px-9 sm:py-8" aria-busy="true">
@@ -133,12 +136,11 @@ function NewNotebook() {
       <div className="flex flex-col gap-2">
         <Link href="/notebooks" className="flex items-center gap-1 text-sm text-muted hover:text-ink">
           <Icon name="back" size={16} />
-          Notebook
+          {t("notebooks.title")}
         </Link>
-        <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">Tạo notebook</h1>
+        <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">{t("notebooks.generate")}</h1>
         <p className="text-base text-muted">
-          Chọn tối đa {MAX_NOTEBOOK_SOURCES} highlight. AI sẽ gom theo chủ đề, lập bảng thuật ngữ từ các đoạn “Khái niệm”
-          và câu hỏi ôn tập từ các đoạn “Câu hỏi”, “Cần ôn tập” — chỉ dựa trên những gì bạn đã chọn.
+          {t("notebooks.newLede", { max: MAX_NOTEBOOK_SOURCES })}
         </p>
       </div>
 
@@ -148,17 +150,17 @@ function NewNotebook() {
         {error && <Alert>{error}</Alert>}
         <div className="flex flex-wrap items-center gap-2.5">
           <label className="min-w-0 flex-1 basis-[240px]">
-            <span className="sr-only">Tiêu đề (không bắt buộc)</span>
+            <span className="sr-only">{t("notebooks.titleOptional")}</span>
             <input
               className="input h-11"
-              placeholder="Tiêu đề (để trống: AI tự đặt)"
+              placeholder={t("notebooks.titlePlaceholder")}
               value={title}
               maxLength={MAX_NOTEBOOK_TITLE}
               onChange={(e) => setTitle(e.target.value)}
             />
           </label>
           <label>
-            <span className="sr-only">Ngôn ngữ notebook</span>
+            <span className="sr-only">{t("notebooks.language")}</span>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value as NotebookLanguage)}
@@ -166,26 +168,26 @@ function NewNotebook() {
             >
               {LANGUAGES.map(([value, label]) => (
                 <option key={value} value={value}>
-                  {label}
+                  {label ? t(label) : LANGUAGE_NAME[value]}
                 </option>
               ))}
             </select>
           </label>
           <button type="button" className="btn-primary" onClick={start} disabled={selected.length === 0 || quota === 0}>
             <Icon name="spark" size={16} />
-            Tạo notebook ({selected.length})
+            {t("notebooks.generateN", { n: selected.length })}
           </button>
         </div>
         {quota !== undefined && (
           <span className={`text-xs ${quota === 0 ? "text-danger" : "text-muted"}`}>
-            {quota === 0 ? MSG["MSG-25"] : `Dùng 1 lượt AI · còn ${quota} lượt hôm nay.`}
+            {quota === 0 ? MSG["MSG-25"] : t("notebooks.quota", { n: quota })}
           </span>
         )}
       </div>
 
       <AiConsentDialog
         open={askConsent}
-        what="nội dung các highlight và ghi chú bạn chọn"
+        what={t("notebooks.consentWhat")}
         onAgreed={() => {
           setAskConsent(false);
           void write();

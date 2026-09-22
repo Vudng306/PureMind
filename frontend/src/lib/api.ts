@@ -1,4 +1,5 @@
 import { MSG } from "./messages";
+import { usePreferences } from "./preferences";
 import { supabase } from "./supabase";
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
@@ -47,6 +48,8 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   const send = (token: string | null) => {
     const headers = new Headers(init.headers);
     if (token) headers.set("Authorization", `Bearer ${token}`);
+    // So the server's own messages come back in the language the reader chose, not the browser's.
+    headers.set("Accept-Language", usePreferences.getState().language);
     return fetch(`${API_URL}/api${path}`, { ...init, headers });
   };
 
@@ -57,7 +60,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   try {
     res = await send(token);
   } catch {
-    throw new ApiError(0, "Không kết nối được máy chủ. Kiểm tra kết nối và thử lại.");
+    throw new ApiError(0, MSG["MSG-NET"]);
   }
   if (res.status === 401) {
     token = await refreshToken();

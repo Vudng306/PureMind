@@ -36,6 +36,8 @@ class ReadingPreferences(BaseModel):
     default_mode: Literal["clean", "original"] | None = None
     color_labels: ColorLabels | None = None
     ai_consent: bool | None = None
+    # FR-ACC-04: the language of the interface, so it follows the account to another device.
+    language: Literal["vi", "en"] | None = None
 
 
 class UserOut(BaseModel):

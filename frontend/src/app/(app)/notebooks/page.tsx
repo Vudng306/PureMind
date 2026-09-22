@@ -5,11 +5,15 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { Alert, Spinner } from "@/components/ui";
 import { relativeTime } from "@/lib/doc-view";
+import { useLang, useMsg, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { STATUS_LABEL, useNotebooks } from "@/lib/notebooks";
 
 /** UI-06, FR-NB-05: the user's notebooks, most recently updated first. */
 export default function NotebooksPage() {
+  const t = useT();
+  const msg = useMsg();
+  const lang = useLang();
   const query = useNotebooks();
   const items = query.data ?? [];
 
@@ -17,16 +21,16 @@ export default function NotebooksPage() {
     <div className="mx-auto flex max-w-[880px] flex-col gap-7">
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">Notebook</h1>
+          <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">{t("notebooks.title")}</h1>
           <p className="text-base text-muted">
             {query.isSuccess && items.length
-              ? `${items.length} notebook`
-              : "AI soạn ghi chú học tập từ các highlight bạn chọn."}
+              ? t("notebooks.count", { n: items.length })
+              : t("notebooks.lede")}
           </p>
         </div>
         <Link href="/notebooks/new" className="btn-primary">
           <Icon name="spark" size={16} />
-          Tạo notebook
+          {t("notebooks.generate")}
         </Link>
       </div>
 
@@ -36,18 +40,17 @@ export default function NotebooksPage() {
         <div className="flex flex-col items-start gap-3">
           <Alert>{query.error instanceof Error ? query.error.message : MSG["MSG-99"]}</Alert>
           <button type="button" className="btn-outline" onClick={() => query.refetch()}>
-            Thử lại
+            {t("common.retry")}
           </button>
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center gap-3.5 rounded-[14px] border border-dashed border-field px-6 py-16 text-center">
-          <span className="font-serif text-[28px]">{MSG["MSG-35"]}</span>
+          <span className="font-serif text-[28px]">{msg("MSG-35")}</span>
           <span className="max-w-md text-[15px] text-muted">
-            Chọn các highlight quan trọng, AI sẽ gom chúng thành một bản ghi chú có mục lục, bảng thuật ngữ và câu hỏi ôn
-            tập — mỗi ý đều dẫn về đoạn gốc.
+            {t("notebooks.emptyLong")}
           </span>
           <Link href="/notebooks/new" className="btn-primary">
-            Tạo notebook đầu tiên
+            {t("notebooks.first")}
           </Link>
         </div>
       ) : (
@@ -66,9 +69,9 @@ export default function NotebooksPage() {
                         nb.status === "saved" ? "bg-success-soft text-success" : "bg-soft text-ink"
                       }`}
                     >
-                      {STATUS_LABEL[nb.status]}
+                      {t(STATUS_LABEL[nb.status])}
                     </span>
-                    {nb.source_count} nguồn · cập nhật {relativeTime(nb.updated_at)}
+                    {t("notebooks.sourcesUpdated", { n: nb.source_count, when: relativeTime(nb.updated_at, lang) })}
                   </span>
                 </span>
                 <Icon name="next" className="shrink-0 text-muted" />
@@ -78,7 +81,7 @@ export default function NotebooksPage() {
         </ul>
       )}
       {items.some((nb) => nb.status === "draft") && (
-        <p className="text-xs text-muted">Bản nháp không được mở hoặc sửa trong 30 ngày sẽ tự động bị xóa.</p>
+        <p className="text-xs text-muted">{t("notebooks.draftNotice")}</p>
       )}
     </div>
   );

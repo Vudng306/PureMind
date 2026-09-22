@@ -8,9 +8,10 @@ import { HighlightPicker } from "@/components/highlight-picker";
 import { Icon } from "@/components/icons";
 import { NotebookMarkdown } from "@/components/notebook-markdown";
 import { Alert, ConfirmDialog, Spinner, useModal } from "@/components/ui";
-import { CATEGORY_LABEL } from "@/lib/annotations";
+import { categoryLabel } from "@/lib/annotations";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/documents";
+import { useLang } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import {
   MAX_NOTEBOOK_CHARS,
@@ -35,6 +36,7 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("vi-VN", { hour
 
 function SourceItem({ source, onRemove, busy }: { source: NotebookSource; onRemove: () => void; busy: boolean }) {
   const h = source.highlight;
+  const lang = useLang();
   return (
     <li id={`source-${source.position}`} className="flex gap-2.5 rounded-xl border border-line bg-surface p-3">
       <span className="mt-0.5 flex h-6 min-w-6 shrink-0 items-center justify-center rounded bg-accent/15 px-1 font-sans text-xs font-semibold text-accent">
@@ -45,7 +47,7 @@ function SourceItem({ source, onRemove, busy }: { source: NotebookSource; onRemo
           <span className={`box-decoration-clone hl-bg-${h.color}`}>{h.selected_text}</span>
         </span>
         <span className="truncate text-xs text-muted">
-          {h.category ? `${CATEGORY_LABEL[h.category]} · ` : ""}
+          {h.category ? `${categoryLabel(h.category, lang)} · ` : ""}
           {source.document_title}
           {h.page_number ? ` · trang ${h.page_number}` : ""}
         </span>

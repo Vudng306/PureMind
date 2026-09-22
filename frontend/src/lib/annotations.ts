@@ -10,8 +10,8 @@ import { documentsKey } from "./documents";
 import { findLoose, supportsHighlights } from "./find";
 import type { PdfRect } from "./pdf-rects";
 import { MSG } from "./messages";
-import { HIGHLIGHT_COLORS, type HighlightColor } from "./preferences";
-import type { DocumentDetail } from "./types";
+import { HIGHLIGHT_COLORS, currentLang, type HighlightColor } from "./preferences";
+import type { DocumentDetail, Lang } from "./types";
 import { useUi } from "./ui-store";
 
 /** Highlights are stored on the server; edits show at once and are sent in the background. */
@@ -37,13 +37,27 @@ export interface Highlight {
 /** FR-HL-04: what kind of passage it is, independent of its color. */
 export type HighlightCategory = "important" | "concept" | "question" | "example" | "review";
 export const CATEGORIES: HighlightCategory[] = ["important", "concept", "question", "example", "review"];
-export const CATEGORY_LABEL: Record<HighlightCategory, string> = {
-  important: "Quan trọng",
-  concept: "Khái niệm",
-  question: "Câu hỏi",
-  example: "Ví dụ",
-  review: "Cần ôn tập",
+export const CATEGORY_LABEL: Record<Lang, Record<HighlightCategory, string>> = {
+  vi: {
+    important: "Quan trọng",
+    concept: "Khái niệm",
+    question: "Câu hỏi",
+    example: "Ví dụ",
+    review: "Cần ôn tập",
+  },
+  en: {
+    important: "Important",
+    concept: "Concept",
+    question: "Question",
+    example: "Example",
+    review: "To review",
+  },
 };
+
+/** The name of a category in the language chosen right now. */
+export function categoryLabel(category: HighlightCategory, lang: Lang = currentLang()): string {
+  return CATEGORY_LABEL[lang][category];
+}
 
 /**
  * The color a reader picks already says what they meant by the passage, so it also sets the category.

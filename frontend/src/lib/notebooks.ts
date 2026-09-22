@@ -15,7 +15,8 @@ export const MAX_NOTEBOOK_CHARS = 200_000;
 export const MAX_NOTEBOOK_TITLE = 255;
 
 export type NotebookStatus = "draft" | "saved";
-export const STATUS_LABEL: Record<NotebookStatus, string> = { draft: "Nháp", saved: "Đã lưu" };
+/** Dịch ở chỗ hiển thị: `t(STATUS_LABEL[status])`. */
+export const STATUS_LABEL = { draft: "notebooks.draft", saved: "notebooks.savedStatus" } as const;
 
 export interface NotebookSource {
   /** The [n] number used in the content. */

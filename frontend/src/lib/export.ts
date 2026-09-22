@@ -1,7 +1,8 @@
-import { CATEGORY_LABEL, fromDto, type Highlight, type HighlightCategory, type HighlightPage } from "./annotations";
+import { categoryLabel, fromDto, type Highlight, type HighlightCategory, type HighlightPage } from "./annotations";
 import { api } from "./api";
 import { KIND_LABEL } from "./doc-view";
-import { colorLabel, type HighlightColor } from "./preferences";
+import { colorLabel, currentLang, type HighlightColor } from "./preferences";
+import type { Lang } from "./types";
 
 /** F-35: highlights and their notes as a Markdown file. */
 
@@ -47,7 +48,9 @@ export function highlightsMarkdown(
   labels: Record<HighlightColor, string>,
   filter: ExportFilter = {},
   now: Date = new Date(),
+  lang: Lang = currentLang(),
 ): string {
+  const en = lang === "en";
   const groups = new Map<string, Highlight[]>();
   for (const h of highlights) {
     const list = groups.get(h.docId);
@@ -55,28 +58,38 @@ export function highlightsMarkdown(
     else groups.set(h.docId, [h]);
   }
 
-  const date = now.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const date = en
+    ? now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    : now.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
   const filters = [
-    filter.category && CATEGORY_LABEL[filter.category],
-    filter.color && `màu ${colorLabel(labels, filter.color)}`,
+    filter.category && categoryLabel(filter.category, lang),
+    filter.color &&
+      (en ? `${colorLabel(labels, filter.color, lang)}` : `màu ${colorLabel(labels, filter.color, lang)}`),
   ].filter(Boolean);
+  const count = en
+    ? `${highlights.length} highlight${highlights.length === 1 ? "" : "s"}`
+    : `${highlights.length} highlight`;
   const lines = [
-    "# Highlight",
+    en ? "# Highlights" : "# Highlight",
     "",
-    `Xuất từ PureMind ngày ${date} · ${highlights.length} highlight${filters.length ? ` · Bộ lọc: ${filters.join(", ")}` : ""}`,
+    en
+      ? `Exported from PureMind on ${date} · ${count}${filters.length ? ` · Filters: ${filters.join(", ")}` : ""}`
+      : `Xuất từ PureMind ngày ${date} · ${count}${filters.length ? ` · Bộ lọc: ${filters.join(", ")}` : ""}`,
   ];
 
   for (const [docId, items] of groups) {
     const doc = docs.get(docId);
-    lines.push("", `## ${oneLine(doc?.title ?? "Tài liệu")}`, "");
+    lines.push("", `## ${oneLine(doc?.title ?? (en ? "Document" : "Tài liệu"))}`, "");
     if (doc) lines.push(`${KIND_LABEL[doc.file_type]}${doc.url ? ` · <${doc.url}>` : ""}`, "");
     items.forEach((h, i) => {
       if (i > 0) lines.push("", "---", "");
       lines.push(quote(h.text), "");
-      const meta = [h.page ? `Trang ${h.page}` : null, colorLabel(labels, h.color), h.category && CATEGORY_LABEL[h.category]];
+      const pageLabel = h.page ? (en ? `Page ${h.page}` : `Trang ${h.page}`) : null;
+      const meta = [pageLabel, colorLabel(labels, h.color, lang), h.category && categoryLabel(h.category, lang)];
       lines.push(`*${meta.filter(Boolean).join(" · ")}*`);
       // Line breaks in the note are kept as Markdown hard breaks.
-      if (h.note.trim()) lines.push("", `**Ghi chú:** ${h.note.trim().replace(/\r?\n/g, "  \n")}`);
+      if (h.note.trim())
+        lines.push("", `**${en ? "Note" : "Ghi chú"}:** ${h.note.trim().replace(/\r?\n/g, "  \n")}`);
     });
   }
   return `${lines.join("\n")}\n`;

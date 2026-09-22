@@ -1,14 +1,15 @@
 import { sourceDomain } from "./documents";
-import type { DocumentListItem } from "./types";
+import { currentLang } from "./preferences";
+import type { DocumentListItem, Lang } from "./types";
 
 export const KIND_LABEL = { pdf: "PDF", epub: "EPUB", web: "WEB" } as const;
 
 /** Cover / badge color class per kind (defined in globals.css, with dark-theme variants). */
 export const KIND_CLASS = { pdf: "kind-pdf", epub: "kind-epub", web: "kind-web" } as const;
 
-export function origin(doc: DocumentListItem): string {
+export function origin(doc: DocumentListItem, lang: Lang = currentLang()): string {
   if (doc.source_type === "manual") return sourceDomain(doc.url) ?? "Link";
-  return doc.original_filename ?? "Tệp tải lên";
+  return doc.original_filename ?? (lang === "en" ? "Uploaded file" : "Tệp tải lên");
 }
 
 export const isProcessing = (doc: DocumentListItem) =>
@@ -34,7 +35,17 @@ export function readStateOf(doc: DocumentListItem): ReadState {
   return pct >= 100 ? "read" : pct > 0 ? "reading" : "unread";
 }
 
-export function progressLabel(doc: DocumentListItem, pct: number): string {
+export function progressLabel(doc: DocumentListItem, pct: number, lang: Lang = currentLang()): string {
+  if (lang === "en") {
+    if (doc.is_read || pct >= 100) return "Finished";
+    if (pct <= 0) {
+      if (doc.page_count) return `Unread · ${doc.page_count} pages`;
+      if (doc.reading_minutes) return `Unread · ~${doc.reading_minutes} min`;
+      return "Unread";
+    }
+    if (doc.page_count && doc.last_read_page) return `Page ${doc.last_read_page} of ${doc.page_count} · ${pct}%`;
+    return `${pct}% read`;
+  }
   if (doc.is_read || pct >= 100) return "Đã đọc xong";
   if (pct <= 0) {
     if (doc.page_count) return `Chưa đọc · ${doc.page_count} trang`;
@@ -45,14 +56,22 @@ export function progressLabel(doc: DocumentListItem, pct: number): string {
   return `Đã đọc ${pct}%`;
 }
 
-export function relativeTime(iso: string): string {
+export function relativeTime(iso: string, lang: Lang = currentLang()): string {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.round(diff / 60000);
+  const h = Math.round(min / 60);
+  const d = Math.round(h / 24);
+  if (lang === "en") {
+    if (min < 1) return "just now";
+    if (min < 60) return `${min} min ago`;
+    if (h < 24) return h === 1 ? "an hour ago" : `${h} hours ago`;
+    if (d === 1) return "yesterday";
+    if (d < 7) return `${d} days ago`;
+    return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  }
   if (min < 1) return "vừa xong";
   if (min < 60) return `${min} phút trước`;
-  const h = Math.round(min / 60);
   if (h < 24) return `${h} giờ trước`;
-  const d = Math.round(h / 24);
   if (d === 1) return "hôm qua";
   if (d < 7) return `${d} ngày trước`;
   return new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });

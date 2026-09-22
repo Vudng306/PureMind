@@ -18,8 +18,8 @@ export const metadata: Metadata = {
   description: "Không gian yên tĩnh để đọc, suy nghĩ và lưu giữ ý tưởng.",
 };
 
-// Apply the saved theme before first paint to avoid a flash.
-const themeScript = `try{var p=JSON.parse(localStorage.getItem("puremind-preferences")||"{}");document.documentElement.dataset.theme=(p.state&&p.state.theme)||"light"}catch(e){}`;
+// Apply the saved theme and language before first paint to avoid a flash.
+const themeScript = `try{var p=(JSON.parse(localStorage.getItem("puremind-preferences")||"{}").state)||{};var d=document.documentElement;d.dataset.theme=p.theme||"light";d.lang=p.language||"vi"}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

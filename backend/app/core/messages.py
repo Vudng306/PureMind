@@ -1,6 +1,16 @@
-"""User-facing messages (SRS Appendix B)."""
+"""User-facing messages (SRS Appendix B), in the language the request asked for.
 
-MSG = {
+`MSG["MSG-10"]` keeps reading like a plain dictionary at every call site, but resolves against the
+language of the request being served, which `language_middleware` puts in a context variable.
+"""
+
+from contextvars import ContextVar
+from typing import Literal
+
+Language = Literal["vi", "en"]
+DEFAULT_LANGUAGE: Language = "vi"
+
+VI: dict[str, str] = {
     "MSG-06": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
     "MSG-07": "Họ tên không được để trống và tối đa 255 ký tự.",
     "MSG-08": "Ảnh đại diện phải là JPEG, PNG hoặc WebP.",
@@ -37,4 +47,94 @@ MSG = {
     "MSG-CHAT-NOT-FOUND": "Không tìm thấy cuộc trò chuyện.",
     "MSG-CHAT-NO-TEXT": "Tài liệu này chưa có văn bản để trò chuyện.",
     "MSG-99": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+    # Body that fails validation before a route sees it (SRS 3.4).
+    "MSG-INVALID": "Dữ liệu không hợp lệ.",
 }
+
+EN: dict[str, str] = {
+    "MSG-06": "Your session has expired. Please sign in again.",
+    "MSG-07": "A display name is required and can be at most 255 characters.",
+    "MSG-08": "The profile picture must be a JPEG, PNG or WebP image.",
+    "MSG-09": "The profile picture must be 2 MB or smaller.",
+    "MSG-10": "Only PDF and EPUB files are supported.",
+    "MSG-11": "The file is larger than the 50 MB limit.",
+    "MSG-12": "The file could not be uploaded. Please try again.",
+    "MSG-13": "The file could not be opened. It may be damaged.",
+    "MSG-14": "This PDF is password-protected, so its text cannot be read.",
+    "MSG-15": "No text was found in this document (it may be a scan). You can still read the original.",
+    "MSG-16": "That link is not valid. It has to start with http:// or https://.",
+    "MSG-17": "This link cannot be saved.",
+    "MSG-18": "The page could not be reached. Check the link or try again later.",
+    "MSG-18-REFUSED": "This site does not let PureMind fetch its pages. You can save the page as a PDF (Ctrl+P) and upload it.",
+    "MSG-19": "Document not found.",
+    "MSG-22": "That selection is too long. Please select at most 5,000 characters.",
+    "MSG-20": "Changes saved.",
+    "MSG-23": "Could not save. Check your connection and try again.",
+    "MSG-24": "A note can be at most 10,000 characters.",
+    "MSG-25": "You have used all of today's AI credits. They are renewed at midnight.",
+    "MSG-26": "The AI service is having trouble. Please try again in a few minutes.",
+    "MSG-27": "Please select at least one highlight.",
+    "MSG-28": "A notebook can be built from at most 100 highlights.",
+    "MSG-29": "The notebook is longer than the limit.",
+    "MSG-33": "This document has no summary yet.",
+    "MSG-34": "Make some highlights before building a notebook.",
+    "MSG-35": "No notebooks yet.",
+    "MSG-CHAT-EMPTY": "The question cannot be empty.",
+    "MSG-CHAT-LONG": "A question can be at most 2,000 characters.",
+    "MSG-CHAT-QUOTA": "You have used all of today's chat credits. They are renewed at midnight.",
+    "MSG-CHAT-FULL": "This conversation has grown too long. Please start a new one.",
+    "MSG-CHAT-NOT-FOUND": "Conversation not found.",
+    "MSG-CHAT-NO-TEXT": "This document has no text to chat about.",
+    "MSG-99": "Something went wrong. Please try again.",
+    "MSG-INVALID": "That data is not valid.",
+}
+
+TABLES: dict[Language, dict[str, str]] = {"vi": VI, "en": EN}
+
+_current: ContextVar[Language] = ContextVar("language", default=DEFAULT_LANGUAGE)
+
+
+def parse_language(header: str | None) -> Language:
+    """The first language of an Accept-Language header that PureMind speaks.
+
+    Quality values are ignored: browsers list languages in order of preference anyway, and the app
+    sends a single tag of its own.
+    """
+    for part in (header or "").split(","):
+        tag = part.split(";")[0].strip().lower()
+        if tag.startswith("en"):
+            return "en"
+        if tag.startswith("vi"):
+            return "vi"
+    return DEFAULT_LANGUAGE
+
+
+def set_language(language: Language) -> None:
+    _current.set(language)
+
+
+def current_language() -> Language:
+    return _current.get()
+
+
+class _Messages:
+    """Reads like a dict of messages, answers in the language of the current request."""
+
+    def __getitem__(self, code: str) -> str:
+        table = TABLES[_current.get()]
+        # A message missing from a translation falls back to Vietnamese rather than to the code.
+        return table.get(code) or VI.get(code, code)
+
+    def get(self, code: str, default: str | None = None) -> str | None:
+        table = TABLES[_current.get()]
+        return table.get(code) or VI.get(code, default)
+
+    def __contains__(self, code: str) -> bool:
+        return code in VI or code in EN
+
+    def __iter__(self):
+        """The codes, so callers can look for one inside a validation error's text."""
+        return iter(VI)
+
+
+MSG = _Messages()

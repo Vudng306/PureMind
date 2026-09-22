@@ -1,6 +1,8 @@
 import time
 import uuid
 
+import pytest
+
 from tests.conftest import make_token
 
 
@@ -64,3 +66,48 @@ def test_settings_parse_comma_separated_cors(monkeypatch):
     assert Settings().cors_origins == ["http://localhost:3000", "https://puremind.example"]
     monkeypatch.setenv("CORS_ORIGINS", '["http://a.example"]')
     assert Settings().cors_origins == ["http://a.example"]
+
+
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [
+        (None, "vi"),
+        ("en", "en"),
+        ("en-GB,en;q=0.9", "en"),
+        ("vi-VN,vi;q=0.9,en;q=0.8", "vi"),
+        ("fr-FR", "vi"),  # a language PureMind does not speak falls back to Vietnamese
+    ],
+)
+def test_accept_language_is_read(header, expected):
+    from app.core.messages import parse_language
+
+    assert parse_language(header) == expected
+
+
+async def test_errors_come_back_in_the_language_asked_for(client, auth):
+    h = auth()
+    body = {"display_name": "   "}
+    r = await client.patch("/api/account", headers=h, json=body)
+    assert r.json()["detail"] == "Họ tên không được để trống và tối đa 255 ký tự."
+
+    r = await client.patch("/api/account", headers={**h, "Accept-Language": "en"}, json=body)
+    assert r.json()["detail"] == "A display name is required and can be at most 255 characters."
+
+    # Back to Vietnamese on the next request: the language is per request, not a server-wide setting.
+    r = await client.patch("/api/account", headers=h, json=body)
+    assert r.json()["detail"] == "Họ tên không được để trống và tối đa 255 ký tự."
+
+
+async def test_interface_language_is_kept_with_the_account(client, auth):
+    h = auth()
+    r = await client.patch("/api/account", headers=h, json={"reading_preferences": {"language": "en"}})
+    assert r.status_code == 200 and r.json()["reading_preferences"]["language"] == "en"
+
+    r = await client.patch("/api/account", headers=h, json={"reading_preferences": {"language": "de"}})
+    assert r.status_code == 422
+
+
+def test_every_message_is_translated():
+    from app.core.messages import EN, VI
+
+    assert set(VI) == set(EN)

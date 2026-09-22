@@ -19,6 +19,7 @@ import {
 } from "@/lib/doc-view";
 import { MAX_DOCUMENT_TITLE, useDeleteDocument, useDocuments, useUpdateDocument } from "@/lib/documents";
 import { normalize } from "@/lib/find";
+import { useLang, useMsg, useT, type Key, type T } from "@/lib/i18n";
 import { MSG, messageFor } from "@/lib/messages";
 import type { DocumentListItem } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
@@ -26,13 +27,17 @@ import { useUi } from "@/lib/ui-store";
 type Source = "all" | "upload" | "manual";
 type Sort = "recent" | "title" | "progress";
 
-const SORT_LABEL: Record<Sort, string> = { recent: "Gần đây", title: "Tên A–Z", progress: "Tiến độ" };
+const SORT_LABEL: Record<Sort, Key> = {
+  recent: "library.sortRecentShort",
+  title: "library.sortTitleShort",
+  progress: "library.sortProgress",
+};
 const SORT_NEXT: Record<Sort, Sort> = { recent: "title", title: "progress", progress: "recent" };
-const READ_LABEL: Record<ReadState | "all", string> = {
-  all: "Mọi trạng thái",
-  unread: "Chưa đọc",
-  reading: "Đang đọc",
-  read: "Đã đọc xong",
+const READ_LABEL: Record<ReadState | "all", Key> = {
+  all: "library.readAll",
+  unread: "library.readUnread",
+  reading: "library.readReading",
+  read: "library.readDone",
 };
 
 /** F-16: the card's "⋯" menu. Closes on Escape, on a click outside and after a choice. */
@@ -47,6 +52,7 @@ function CardMenu({
   onToggleRead: () => void;
   onDelete: () => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -85,7 +91,7 @@ function CardMenu({
         ref={button}
         type="button"
         onClick={() => setOpen(!open)}
-        aria-label={`Tùy chọn cho ${doc.title}`}
+        aria-label={t("library.cardMenu", { title: doc.title })}
         aria-haspopup="menu"
         aria-expanded={open}
         className="flex h-11 w-11 items-center justify-center rounded-[10px] opacity-70 transition hover:bg-surface/60 hover:opacity-100 aria-expanded:bg-surface/60 aria-expanded:opacity-100"
@@ -100,15 +106,15 @@ function CardMenu({
         >
           <button type="button" role="menuitem" className={item} onClick={choose(onRename)}>
             <Icon name="pencil" size={16} />
-            Đổi tên
+            {t("common.rename")}
           </button>
           <button type="button" role="menuitem" className={item} onClick={choose(onToggleRead)}>
             <Icon name={doc.is_read ? "minus" : "check"} size={16} />
-            {doc.is_read ? "Đánh dấu chưa đọc" : "Đánh dấu đã đọc"}
+            {t(doc.is_read ? "library.markUnread" : "library.markRead")}
           </button>
           <button type="button" role="menuitem" className={`${item} text-danger`} onClick={choose(onDelete)}>
             <Icon name="trash" size={16} />
-            Xóa
+            {t("common.delete")}
           </button>
         </div>
       )}
@@ -129,6 +135,7 @@ function RenameDialog({
   onSave: (title: string) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const ref = useModal(doc !== null);
   const [title, setTitle] = useState("");
   useEffect(() => {
@@ -140,7 +147,7 @@ function RenameDialog({
   return (
     <dialog
       ref={ref}
-      aria-label="Đổi tên tài liệu"
+      aria-label={t("library.renameTitle")}
       onCancel={(e) => {
         e.preventDefault();
         if (!busy) onClose();
@@ -154,9 +161,9 @@ function RenameDialog({
           if (ok && !busy) onSave(clean);
         }}
       >
-        <h2 className="font-serif text-2xl font-medium">Đổi tên tài liệu</h2>
+        <h2 className="font-serif text-2xl font-medium">{t("library.renameTitle")}</h2>
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted">Tên mới</span>
+          <span className="text-sm text-muted">{t("library.newTitle")}</span>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -164,14 +171,14 @@ function RenameDialog({
             className="h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-accent"
           />
         </label>
-        {!clean && <span className="text-sm text-danger">Tên tài liệu không được để trống.</span>}
+        {!clean && <span className="text-sm text-danger">{t("library.titleRequired")}</span>}
         {error && <Alert>{error}</Alert>}
         <div className="mt-1.5 flex justify-end gap-2.5">
           <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>
-            Hủy
+            {t("common.cancel")}
           </button>
           <button type="submit" className="btn-primary" disabled={!ok || busy}>
-            {busy ? "Đang lưu…" : "Lưu"}
+            {t(busy ? "common.saving" : "common.save")}
           </button>
         </div>
       </form>
@@ -180,6 +187,7 @@ function RenameDialog({
 }
 
 function DocumentCard({ doc, pct, menu }: { doc: DocumentListItem; pct: number; menu: React.ReactNode }) {
+  const t = useT();
   const failed = doc.extraction_status === "failed";
   const processing = isProcessing(doc);
   const initial = doc.title.trim().charAt(0).toUpperCase() || "?";
@@ -211,7 +219,7 @@ function DocumentCard({ doc, pct, menu }: { doc: DocumentListItem; pct: number; 
             <span className="relative h-1 overflow-hidden rounded-sm bg-soft">
               <span className="absolute left-0 top-0 h-1 w-2/5 animate-pm-slide rounded-sm bg-accent" />
             </span>
-            <span className="text-[13px] text-muted">Đang trích xuất văn bản…</span>
+            <span className="text-[13px] text-muted">{t("library.extracting")}</span>
           </div>
         ) : failed && doc.file_type !== "pdf" ? (
           <span className="text-[13px] leading-snug text-danger">{messageFor(doc.extraction_error)}</span>
@@ -229,7 +237,7 @@ function DocumentCard({ doc, pct, menu }: { doc: DocumentListItem; pct: number; 
             )}
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-[13px] text-muted">{failed ? "" : progressLabel(doc, pct)}</span>
-              <span className="btn-outline pointer-events-none px-4 text-sm font-semibold">{failed ? "Xem bản gốc" : "Đọc"}</span>
+              <span className="btn-outline pointer-events-none px-4 text-sm font-semibold">{t(failed ? "library.viewOriginal" : "library.readAction")}</span>
             </div>
           </div>
         )}
@@ -252,6 +260,9 @@ export default function LibraryPage() {
   const { data: highlights } = useHighlights();
   const [actionError, setActionError] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<DocumentListItem | null>(null);
+  const t: T = useT();
+  const msg = useMsg();
+  const lang = useLang();
 
   const docs = useMemo(() => data ?? [], [data]);
   const pctOf = (d: DocumentListItem) => progressOf(d);
@@ -274,7 +285,7 @@ export default function LibraryPage() {
     .filter((d) => readState === "all" || readStateOf(d) === readState)
     .filter((d) => !q || normalize(`${d.title} ${origin(d)}`).includes(q))
     .sort((a, b) => {
-      if (sort === "title") return a.title.localeCompare(b.title, "vi");
+      if (sort === "title") return a.title.localeCompare(b.title, lang);
       if (sort === "progress") return pctOf(b) - pctOf(a);
       return b.updated_at.localeCompare(a.updated_at);
     });
@@ -295,7 +306,7 @@ export default function LibraryPage() {
     const doc = toDelete;
     try {
       await del.mutateAsync(doc.id);
-      showToast(`Đã xóa “${doc.title}”`);
+      showToast(t("library.deleted", { title: doc.title }));
     } catch (err) {
       setActionError(err instanceof Error ? err.message : MSG["MSG-99"]);
     } finally {
@@ -309,7 +320,7 @@ export default function LibraryPage() {
     try {
       await update.mutateAsync({ id: toRename.id, patch: { title } });
       setToRename(null);
-      showToast("Đã đổi tên tài liệu");
+      showToast(t("library.renamed"));
     } catch (err) {
       setRenameError(err instanceof Error ? err.message : MSG["MSG-99"]);
     }
@@ -319,7 +330,7 @@ export default function LibraryPage() {
     setActionError(null);
     try {
       await update.mutateAsync({ id: doc.id, patch: { is_read: !doc.is_read } });
-      showToast(doc.is_read ? "Đã đánh dấu chưa đọc" : "Đã đánh dấu đã đọc");
+      showToast(t(doc.is_read ? "library.markedUnread" : "library.markedRead"));
     } catch (err) {
       setActionError(err instanceof Error ? err.message : MSG["MSG-99"]);
     }
@@ -330,10 +341,10 @@ export default function LibraryPage() {
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">Hôm nay bạn muốn đọc gì?</h1>
+        <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">{t("library.title")}</h1>
         {docs.length > 0 && (
           <p className="text-base text-muted">
-            {docs.length} tài liệu · {readingCount} đang đọc · {hlCount} highlight
+            {t("library.stats", { docs: docs.length, reading: readingCount, hl: hlCount })}
           </p>
         )}
       </div>
@@ -343,7 +354,7 @@ export default function LibraryPage() {
       {cont && (
         <section className="overflow-hidden rounded-[14px] border border-line bg-surface">
           <div className="flex flex-col gap-3.5 px-6 py-7 sm:px-9 sm:py-8">
-            <span className="eyebrow">ĐỌC TIẾP</span>
+            <span className="eyebrow">{t("library.continue")}</span>
             <span className="line-clamp-3 font-serif text-3xl font-medium leading-[1.15] sm:text-4xl">{cont.title}</span>
             <span className="text-[15px] text-muted">
               {KIND_LABEL[cont.file_type]} · {origin(cont)} · {progressLabel(cont, contPct)}
@@ -352,7 +363,7 @@ export default function LibraryPage() {
               <span className="block h-1.5 rounded-[3px] bg-accent" style={{ width: `${contPct}%` }} />
             </span>
             <Link href={`/reader/${cont.id}`} className="btn-dark mt-1.5 h-12 self-start px-[22px]">
-              {contPct > 0 ? "Đọc tiếp" : "Bắt đầu đọc"}
+              {t(contPct > 0 ? "library.continueRead" : "library.startReading")}
               <Icon name="arrow" />
             </Link>
           </div>
@@ -362,28 +373,28 @@ export default function LibraryPage() {
       <div className="flex flex-wrap items-center gap-2.5">
         {(
           [
-            ["all", "Tất cả"],
-            ["upload", "Tải lên"],
-            ["manual", "Link"],
+            ["all", "common.all"],
+            ["upload", "library.sourceUpload"],
+            ["manual", "library.sourceLink"],
           ] as const
         ).map(([value, label]) => (
           <button key={value} type="button" className="chip" aria-pressed={source === value} onClick={() => setSource(value)}>
-            {label} · {counts[value]}
+            {t(label)} · {counts[value]}
           </button>
         ))}
         <span className="hidden flex-1 sm:block" />
         <label className="flex h-10 w-full items-center gap-2 rounded-full border border-field bg-surface px-3 text-muted focus-within:border-accent sm:w-[280px]">
           <Icon name="search" size={16} />
-          <span className="sr-only">Lọc theo tên</span>
+          <span className="sr-only">{t("library.filterName")}</span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Lọc theo tên hoặc nguồn"
+            placeholder={t("library.filterPlaceholder")}
             className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none"
           />
         </label>
         <label>
-          <span className="sr-only">Trạng thái đọc</span>
+          <span className="sr-only">{t("library.readStatus")}</span>
           <select
             value={readState}
             onChange={(e) => setReadState(e.target.value as ReadState | "all")}
@@ -391,14 +402,19 @@ export default function LibraryPage() {
           >
             {(Object.keys(READ_LABEL) as (ReadState | "all")[]).map((value) => (
               <option key={value} value={value}>
-                {READ_LABEL[value]}
+                {t(READ_LABEL[value])}
               </option>
             ))}
           </select>
         </label>
-        <button type="button" className="chip" onClick={() => setSort(SORT_NEXT[sort])} aria-label={`Sắp xếp: ${SORT_LABEL[sort]}`}>
+        <button
+          type="button"
+          className="chip"
+          onClick={() => setSort(SORT_NEXT[sort])}
+          aria-label={t("library.sortLabel", { sort: t(SORT_LABEL[sort]) })}
+        >
           <Icon name="sort" size={16} />
-          {SORT_LABEL[sort]}
+          {t(SORT_LABEL[sort])}
         </button>
       </div>
 
@@ -408,16 +424,14 @@ export default function LibraryPage() {
         <div className="flex flex-col items-start gap-3">
           <Alert>{error instanceof Error ? error.message : MSG["MSG-99"]}</Alert>
           <button type="button" className="btn-outline" onClick={() => refetch()}>
-            Thử lại
+            {t("common.retry")}
           </button>
         </div>
       ) : view.length === 0 ? (
         <div className="flex flex-col items-center gap-3.5 rounded-[14px] border border-dashed border-field px-6 py-16 text-center">
-          <span className="font-serif text-[28px]">{filtered ? "Không có tài liệu nào khớp" : MSG["MSG-30"]}</span>
+          <span className="font-serif text-[28px]">{filtered ? t("library.noMatch") : msg("MSG-30")}</span>
           <span className="max-w-md text-[15px] text-muted">
-            {filtered
-              ? "Thử từ khóa khác hoặc thêm tài liệu mới."
-              : "Tải lên giáo trình, bài báo, ebook (PDF, EPUB tối đa 50 MB) hoặc lưu một bài viết từ link để bắt đầu đọc."}
+            {t(filtered ? "library.noMatchHint" : "library.emptyHintLong")}
           </span>
           <div className="flex gap-2.5">
             {filtered && (
@@ -430,11 +444,11 @@ export default function LibraryPage() {
                   setReadState("all");
                 }}
               >
-                Xóa bộ lọc
+                {t("library.clearFilters")}
               </button>
             )}
             <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
-              Thêm tài liệu
+              {t("nav.addDocument")}
             </button>
           </div>
         </div>
@@ -471,12 +485,12 @@ export default function LibraryPage() {
 
       <ConfirmDialog
         open={toDelete !== null}
-        title="Xóa tài liệu này?"
+        title={t("library.deleteDocTitle")}
         busy={del.isPending}
         onCancel={() => setToDelete(null)}
         onConfirm={confirmDelete}
       >
-        “{toDelete?.title}” cùng tệp gốc, highlight và ghi chú sẽ bị xóa vĩnh viễn.
+        {t("library.deleteDocBody", { title: toDelete?.title ?? "" })}
       </ConfirmDialog>
     </div>
   );

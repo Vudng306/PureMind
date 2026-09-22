@@ -37,7 +37,7 @@ describe("highlightsMarkdown", () => {
         hl({ id: "3", docId: "d2", text: "Trên web" }),
       ],
       docs,
-      { ...DEFAULT_COLOR_LABELS, yellow: "Ý chính" },
+      { ...DEFAULT_COLOR_LABELS.vi, yellow: "Ý chính" },
       { category: "concept" },
       now,
     );
@@ -51,7 +51,7 @@ describe("highlightsMarkdown", () => {
   });
 
   it("handles an empty export", () => {
-    expect(highlightsMarkdown([], docs, DEFAULT_COLOR_LABELS, {}, now)).toContain("0 highlight");
+    expect(highlightsMarkdown([], docs, DEFAULT_COLOR_LABELS.vi, {}, now)).toContain("0 highlight");
   });
 });
 
