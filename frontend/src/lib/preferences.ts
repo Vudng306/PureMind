@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import type { Lang, ReadingPreferences, Theme } from "./types";
+import type { AppTheme, Lang, ReadingPreferences, Theme } from "./types";
 
 export type HighlightColor = "yellow" | "green" | "blue" | "pink" | "purple";
 export type LineHeight = 1.5 | 1.65 | 1.8;
@@ -46,7 +46,7 @@ export const COLOR_DOT: Record<HighlightColor, string> = {
 export const MAX_COLOR_LABEL = 24;
 
 interface Prefs {
-  theme: Theme;
+  theme: AppTheme;
   fontSize: number;
   lineHeight: LineHeight;
   width: ColumnWidth;
@@ -73,6 +73,13 @@ function unnamed(labels: Partial<Record<HighlightColor, string>> | undefined) {
   return out;
 }
 
+/** The app has two themes; an account still holding the reader's sepia page reads back as light. */
+function appTheme(theme: Theme | undefined, fallback: AppTheme): AppTheme {
+  if (theme === "light" || theme === "dark") return theme;
+  if (theme === "sepia") return "light";
+  return fallback;
+}
+
 /**
  * FR-ACC-04: applied locally at once and synced to the account by <PreferencesSync/>.
  */
@@ -89,7 +96,7 @@ export const usePreferences = create<PreferencesState>()(
       set: (p) => set(p),
       applyServer: (p) =>
         set((s) => ({
-          theme: p.theme ?? s.theme,
+          theme: appTheme(p.theme, s.theme),
           fontSize: p.font_size ?? s.fontSize,
           lineHeight: p.line_height ?? s.lineHeight,
           width: p.column_width ?? s.width,
@@ -110,8 +117,13 @@ export const usePreferences = create<PreferencesState>()(
         colorLabels,
       }),
       merge: (persisted, current) => {
-        const p = (persisted ?? {}) as Partial<Prefs>;
-        return { ...current, ...p, colorLabels: unnamed(p.colorLabels) };
+        const p = (persisted ?? {}) as Partial<Prefs> & { theme?: Theme };
+        return {
+          ...current,
+          ...p,
+          theme: appTheme(p.theme, current.theme),
+          colorLabels: unnamed(p.colorLabels),
+        };
       },
     },
   ),

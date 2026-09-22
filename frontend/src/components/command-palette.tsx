@@ -9,7 +9,7 @@ import { useDocuments } from "@/lib/documents";
 import { normalize } from "@/lib/find";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import { COLOR_DOT, colorLabel, usePreferences } from "@/lib/preferences";
-import type { Theme } from "@/lib/types";
+import type { AppTheme } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
 
 import { Icon, type IconName } from "./icons";
@@ -20,9 +20,8 @@ type Item =
   | { kind: "hl"; key: string; run: () => void; node: React.ReactNode }
   | { kind: "action"; key: string; run: () => void; node: React.ReactNode };
 
-const THEME_NAME: Record<Theme, Key> = {
+const THEME_NAME: Record<AppTheme, Key> = {
   light: "palette.themeLight",
-  sepia: "palette.themeSepia",
   dark: "palette.themeDark",
 };
 
@@ -131,7 +130,7 @@ export function CommandPalette() {
         run: () => router.push("/notebooks/new"),
       },
       { key: "settings", icon: "gear", label: t("palette.readingSettings"), run: () => router.push("/settings") },
-      ...(["light", "sepia", "dark"] as Theme[]).map((theme) => ({
+      ...(["light", "dark"] as AppTheme[]).map((theme) => ({
         key: `theme-${theme}`,
         icon: "spark" as IconName,
         label: t("palette.switchTheme", { name: t(THEME_NAME[theme]) }),

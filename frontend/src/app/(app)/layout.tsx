@@ -6,24 +6,24 @@ import { useEffect } from "react";
 
 import { AddDocumentDialog } from "@/components/add-document-dialog";
 import { useAuth } from "@/components/auth-provider";
-import { Avatar } from "@/components/avatar";
 import { CommandPalette } from "@/components/command-palette";
 import { Icon } from "@/components/icons";
 import { LanguageToggle } from "@/components/language-toggle";
 import { LocalDataImport } from "@/components/local-data-import";
 import { PreferencesSync } from "@/components/preferences-sync";
 import { Spinner } from "@/components/ui";
+import { UserMenu } from "@/components/user-menu";
 import { useT } from "@/lib/i18n";
 import { useAccount } from "@/lib/queries";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { useUi } from "@/lib/ui-store";
 
 // Highlight và Tìm kiếm không nằm trên thanh này: highlight đọc ngay trong tài liệu, còn tìm kiếm
-// đã có ô Ctrl K bên phải. Hai trang vẫn sống ở /highlights và /search.
+// đã có ô Ctrl K bên phải. Hai trang vẫn sống ở /highlights và /search. Cài đặt nằm trong menu ảnh
+// đại diện, còn tùy chọn đọc thì ngay trong trình đọc.
 const NAV = [
   { href: "/library", label: "nav.library" },
   { href: "/notebooks", label: "nav.notebooks" },
-  { href: "/settings", label: "nav.settings" },
 ] as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -121,13 +121,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="hidden sm:inline">{t("nav.addDocument")}</span>
           </button>
           <LanguageToggle />
-          <Link href="/settings" aria-label={t("nav.account")} className="rounded-full">
-            {user ? (
-              <Avatar user={user} size={44} />
-            ) : (
-              <span className="block h-11 w-11 rounded-full bg-soft" aria-hidden />
-            )}
-          </Link>
+          <UserMenu user={user} />
         </div>
         <nav aria-label={t("nav.ariaMobile")} className="flex gap-1 px-4 pb-3 md:hidden">
           {NAV.map((item) => (

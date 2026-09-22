@@ -50,9 +50,14 @@ async def chat(
     purpose: str,
     json_schema: dict | None = None,
     max_tokens: int = 4000,
+    model: str | None = None,
 ) -> Completion:
-    """One chat completion; transport errors and 429/5xx are retried once."""
-    body: dict = {"model": settings.openai_model, "messages": messages, "max_completion_tokens": max_tokens}
+    """One chat completion; transport errors and 429/5xx are retried once.
+
+    `model` overrides the default for this call, so each purpose can use the model that suits it.
+    """
+    model = model or settings.openai_model
+    body: dict = {"model": model, "messages": messages, "max_completion_tokens": max_tokens}
     if json_schema is not None:
         body["response_format"] = {"type": "json_schema", "json_schema": json_schema}
 
@@ -80,7 +85,7 @@ async def chat(
             log.warning(
                 "openai call failed purpose=%s model=%s attempt=%d duration_ms=%d error=%s",
                 purpose,
-                settings.openai_model,
+                model,
                 attempt + 1,
                 (time.monotonic() - started) * 1000,
                 e,
@@ -92,7 +97,7 @@ async def chat(
         log.info(
             "openai call ok purpose=%s model=%s prompt_tokens=%d completion_tokens=%d duration_ms=%d",
             purpose,
-            settings.openai_model,
+            model,
             usage.prompt_tokens,
             usage.completion_tokens,
             (time.monotonic() - started) * 1000,
@@ -108,14 +113,16 @@ async def chat_stream(
     purpose: str,
     usage: Usage,
     max_tokens: int = 4000,
+    model: str | None = None,
 ) -> AsyncIterator[str]:
     """A streamed chat completion: yields text deltas and adds the token counts to `usage` at the end.
 
     Failures before the first delta are retried once like `chat`; after that the error is raised (the caller
     has already shown part of the answer). A truncated or empty answer raises AIError.
     """
+    model = model or settings.openai_model
     body = {
-        "model": settings.openai_model,
+        "model": model,
         "messages": messages,
         "max_completion_tokens": max_tokens,
         "stream": True,
@@ -160,7 +167,7 @@ async def chat_stream(
             log.warning(
                 "openai stream failed purpose=%s model=%s attempt=%d duration_ms=%d error=%s",
                 purpose,
-                settings.openai_model,
+                model,
                 attempt + 1,
                 (time.monotonic() - started) * 1000,
                 e,
@@ -172,7 +179,7 @@ async def chat_stream(
         log.info(
             "openai stream ok purpose=%s model=%s prompt_tokens=%d completion_tokens=%d duration_ms=%d",
             purpose,
-            settings.openai_model,
+            model,
             got.prompt_tokens,
             got.completion_tokens,
             (time.monotonic() - started) * 1000,

@@ -9,7 +9,7 @@ from app.core.config import get_settings
 from app.core.messages import MSG
 from app.db.session import SessionLocal
 from app.models import ChatConversation, ChatMessage, DocumentChunk, User
-from app.services import ai_quota, doc_chat, embeddings
+from app.services import ai_quota, doc_chat, embeddings, openai_client
 from app.services.openai_client import AIError, Usage
 from tests.pdfs import text_pdf
 from tests.test_summaries import consent, new_doc
@@ -68,6 +68,7 @@ def chat_ai(monkeypatch):
     settings = get_settings()
     monkeypatch.setattr(settings, "openai_api_key", "sk-test")
     monkeypatch.setattr(settings, "openai_model", "gpt-test")
+    monkeypatch.setattr(settings, "openai_chat_model", "gpt-ask-test")
     from app.api.routes import chat
 
     chat._running.clear()
@@ -126,7 +127,7 @@ async def test_question_is_answered_from_the_document(client, auth, chat_ai):
     assert body["question"]["role"] == "user" and body["question"]["content"] == "Tài liệu này nói về gì?"
     assert body["answer"]["role"] == "assistant"
     assert body["answer"]["content"].startswith("Tài liệu nói về học máy [2]")
-    assert body["answer"]["ai_model"] == "gpt-test"
+    assert body["answer"]["ai_model"] == "gpt-ask-test"  # questions use the stronger model
     # Only the cited passages are kept with the answer, numbered as the model saw them.
     assert [c["position"] for c in body["answer"]["citations"]] == [2, 3]
     assert all(c["page_number"] in (1, 2, 3) for c in body["answer"]["citations"])
@@ -373,3 +374,34 @@ async def test_embeddings_of_the_wrong_shape_fail(monkeypatch):
     settings = get_settings().model_copy(update={"openai_api_key": "sk-x", "embedding_dimensions": 3})
     with pytest.raises(AIError):
         await embeddings.embed(settings, ["một đoạn"], purpose="t", usage=Usage())
+
+
+async def test_a_question_uses_the_stronger_model(monkeypatch):
+    """A question goes to openai_chat_model; summaries and notebooks stay on the cheaper default."""
+    seen: list[dict] = []
+    chunk = {
+        "choices": [{"delta": {"content": "Có."}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 9, "completion_tokens": 2},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content))
+        return httpx.Response(200, text=f"data: {json.dumps(chunk)}\n\ndata: [DONE]\n\n")
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        openai_client.httpx, "AsyncClient", lambda **kw: real(transport=httpx.MockTransport(handler), **kw)
+    )
+    settings = get_settings().model_copy(
+        update={"openai_api_key": "sk-x", "openai_model": "gpt-write", "openai_chat_model": "gpt-ask"}
+    )
+
+    usage = Usage()
+    text = "".join([delta async for delta in doc_chat.answer(settings, [], usage)])
+    assert text == "Có." and usage.prompt_tokens == 9
+    assert seen[-1]["model"] == "gpt-ask" and seen[-1]["max_completion_tokens"] == doc_chat.MAX_ANSWER_TOKENS
+
+    # A notebook names no model, so it keeps the default.
+    async for _ in openai_client.chat_stream(settings, [], purpose="notebook", usage=Usage()):
+        pass
+    assert seen[-1]["model"] == "gpt-write"

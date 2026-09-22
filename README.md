@@ -224,7 +224,8 @@ Phải trả về `{"status":"ok"}`. Ở `ENVIRONMENT=production`, `/api/docs` t
 | `SUPABASE_SERVICE_ROLE_KEY` | `backend/.env`, `.env` | để xóa tài khoản | Secret key. Chỉ để ở backend. |
 | `SUPABASE_JWT_SECRET` | `backend/.env`, `.env` | không | Chỉ cần cho dự án còn ký token HS256. |
 | `OPENAI_API_KEY` | `backend/.env`, `.env` | cho tính năng AI | Chỉ để ở backend. |
-| `OPENAI_MODEL` | `backend/.env`, `.env` | không | Mặc định `gpt-4.1-mini`. |
+| `OPENAI_MODEL` | `backend/.env`, `.env` | không | Model viết: tóm tắt, tổng hợp highlight và notebook. Mặc định `gpt-4o-mini`. |
+| `OPENAI_CHAT_MODEL` | `backend/.env`, `.env` | không | Model trả lời câu hỏi về tài liệu (FR-CHAT). Mặc định `gpt-4.1`. |
 | `OPENAI_EMBEDDING_MODEL` | `backend/.env`, `.env` | không | Model nhúng dùng cho trò chuyện. Mặc định `text-embedding-3-small`. Đổi model thì tài liệu sẽ được nhúng lại ở câu hỏi kế tiếp. |
 | `CHAT_DAILY_QUOTA` | `backend/.env`, `.env` | không | Số câu hỏi trò chuyện mỗi người mỗi ngày. Mặc định `50`. |
 | `WEB_FETCH_CONTACT` | `backend/.env`, `.env` | không | URL hoặc email đưa vào User-Agent khi lưu link. Một số trang như Wikipedia yêu cầu có thông tin này. Để trống thì dùng giá trị đầu tiên của `CORS_ORIGINS`. Khi deploy thật, hãy đặt URL hoặc email liên hệ thật. |

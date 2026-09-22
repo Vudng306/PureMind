@@ -25,7 +25,13 @@ import { documentsKey, updateDocument, useDocument } from "@/lib/documents";
 import { currentLang, translate, useLang, useT, type Key } from "@/lib/i18n";
 import { parseMarkdown, type Inline } from "@/lib/markdown";
 import { MSG, messageFor } from "@/lib/messages";
-import { colorLabel, usePreferences, type HighlightColor } from "@/lib/preferences";
+import {
+  colorLabel,
+  usePreferences,
+  type ColumnWidth,
+  type HighlightColor,
+  type LineHeight,
+} from "@/lib/preferences";
 import type { Theme } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
 
@@ -44,6 +50,16 @@ const THEMES: { value: Theme; label: Key; swatch: string }[] = [
   { value: "light", label: "reader.themeLightLabel", swatch: "#F4EFE4" },
   { value: "sepia", label: "reader.themeSepiaLabel", swatch: "#EBDDC3" },
   { value: "dark", label: "reader.themeDarkLabel", swatch: "#1B1A17" },
+];
+const LINE_HEIGHTS: [LineHeight, Key][] = [
+  [1.5, "settings.lhTight"],
+  [1.65, "settings.lhNormal"],
+  [1.8, "settings.lhLoose"],
+];
+const WIDTHS: [ColumnWidth, Key][] = [
+  [600, "settings.widthNarrow"],
+  [680, "settings.widthMedium"],
+  [780, "settings.widthWide"],
 ];
 const TOOLBAR_SPACE = 120;
 const inlineText = (nodes: Inline[]): string => nodes.map((n) => ("v" in n ? n.v : inlineText(n.c))).join("");
@@ -80,6 +96,8 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelTab, setPanelTab] = useState<PanelTab>("highlights");
   const [tocOpen, setTocOpen] = useState(false);
+  // FR-RDR-03: the reading options live behind this gear, so the toolbar stays short.
+  const [optsOpen, setOptsOpen] = useState(false);
   const [activeHl, setActiveHl] = useState<string | null>(null);
   const [flashHl, setFlashHl] = useState<string | null>(null);
   const [lostHl, setLostHl] = useState<string[]>([]);
@@ -646,6 +664,77 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
             />
           )}
 
+          {optsOpen && !focus && (
+            <div
+              role="dialog"
+              aria-label={t("settings.readingOptions")}
+              className="absolute bottom-[96px] left-1/2 z-20 flex w-[min(360px,calc(100%-24px))] -translate-x-1/2 flex-col gap-4 rounded-[14px] border border-line bg-surface p-4 shadow-float"
+            >
+              <div className="flex flex-col gap-2">
+                <span className="text-[13px] font-semibold text-muted">{t("reader.themeAria")}</span>
+                <div className="flex items-center gap-1" role="radiogroup" aria-label={t("reader.themeAria")}>
+                  {THEMES.map((th) => (
+                    <button
+                      key={th.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={readingTheme === th.value}
+                      title={t(th.label)}
+                      onClick={() => setReadingTheme(th.value)}
+                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[10px] border border-line text-[13px] text-ink hover:bg-soft"
+                      style={{ borderColor: readingTheme === th.value ? "rgb(var(--accent))" : undefined }}
+                    >
+                      <span className="h-[18px] w-[18px] rounded-full border border-line" style={{ background: th.swatch }} />
+                      {t(th.label)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {clean && (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[13px] font-semibold text-muted">{t("settings.lineHeight")}</span>
+                    <div className="flex gap-1.5" role="radiogroup" aria-label={t("settings.lineHeight")}>
+                      {LINE_HEIGHTS.map(([v, l]) => (
+                        <button
+                          key={v}
+                          type="button"
+                          role="radio"
+                          aria-checked={lineHeight === v}
+                          className="chip flex-1"
+                          onClick={() => setPrefs({ lineHeight: v })}
+                        >
+                          {t(l)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[13px] font-semibold text-muted">{t("settings.columnWidth")}</span>
+                    <div className="flex gap-1.5" role="radiogroup" aria-label={t("settings.columnWidth")}>
+                      {WIDTHS.map(([v, l]) => (
+                        <button
+                          key={v}
+                          type="button"
+                          role="radio"
+                          aria-checked={width === v}
+                          className="chip flex-1"
+                          onClick={() => setPrefs({ width: v })}
+                        >
+                          {t(l)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+              <Link href="/settings" className="flex items-center gap-1.5 text-[13px] text-accent hover:underline">
+                <Icon name="gear" size={14} />
+                {t("settings.allOptions")}
+              </Link>
+            </div>
+          )}
+
           {tocOpen && !focus && (
             <div
               role="dialog"
@@ -682,7 +771,16 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
               aria-label={t("reader.tools")}
               className="absolute bottom-3 left-1/2 z-10 flex h-[60px] w-[min(640px,calc(100%-16px))] -translate-x-1/2 items-center justify-between gap-0.5 rounded-[18px] border border-line bg-surface px-2 shadow-float sm:bottom-6"
             >
-              <button type="button" className={toolBtn} onClick={() => setTocOpen((o) => !o)} disabled={!clean} aria-expanded={tocOpen}>
+              <button
+                type="button"
+                className={toolBtn}
+                onClick={() => {
+                  setTocOpen((o) => !o);
+                  setOptsOpen(false);
+                }}
+                disabled={!clean}
+                aria-expanded={tocOpen}
+              >
                 <Icon name="toc" />
                 <span className="hidden sm:inline">{t("reader.outline")}</span>
               </button>
@@ -718,28 +816,18 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
                   {divider}
                 </>
               )}
-              <div className="flex items-center" role="radiogroup" aria-label={t("reader.themeAria")}>
-                {THEMES.map((th) => (
-                  <button
-                    key={th.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={readingTheme === th.value}
-                    aria-label={t(th.label)}
-                    title={t(th.label)}
-                    onClick={() => setReadingTheme(th.value)}
-                    className="flex h-11 w-9 items-center justify-center sm:w-11"
-                  >
-                    <span
-                      className="h-[26px] w-[26px] rounded-full border-2"
-                      style={{
-                        background: th.swatch,
-                        borderColor: readingTheme === th.value ? "rgb(var(--accent))" : "rgb(var(--line))",
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label={t("settings.readingOptions")}
+                onClick={() => {
+                  setOptsOpen((o) => !o);
+                  setTocOpen(false);
+                }}
+                aria-expanded={optsOpen}
+              >
+                <Icon name="gear" />
+              </button>
               {divider}
               <button
                 type="button"

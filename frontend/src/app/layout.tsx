@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 // Apply the saved theme and language before first paint to avoid a flash.
-const themeScript = `try{var p=(JSON.parse(localStorage.getItem("puremind-preferences")||"{}").state)||{};var d=document.documentElement;d.dataset.theme=p.theme||"light";d.lang=p.language||"vi"}catch(e){}`;
+const themeScript = `try{var p=(JSON.parse(localStorage.getItem("puremind-preferences")||"{}").state)||{};var d=document.documentElement;d.dataset.theme=p.theme==="dark"?"dark":"light";d.lang=p.language||"vi"}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

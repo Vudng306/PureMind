@@ -234,7 +234,7 @@ async def _save_turn(
             role="assistant",
             content=answer,
             citations=citations,
-            ai_model=settings.openai_model,
+            ai_model=settings.openai_chat_model,
             prompt_tokens=usage.prompt_tokens,
             completion_tokens=usage.completion_tokens,
         )

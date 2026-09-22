@@ -1,4 +1,8 @@
+/** The backgrounds the reader offers for one sitting (FR-RDR-03). */
 export type Theme = "light" | "dark" | "sepia";
+
+/** The app itself only has day and night: the sepia page is a reading background, not a skin. */
+export type AppTheme = "light" | "dark";
 
 /** The language of the interface (FR-ACC-04), kept with the account so it follows the reader. */
 export type Lang = "vi" | "en";

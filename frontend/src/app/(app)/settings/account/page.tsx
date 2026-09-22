@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Profile now lives on the combined settings page. */
+/** The profile is a tab of the settings page now; the old address still leads to it. */
 export default function AccountPage() {
-  redirect("/settings");
+  redirect("/settings?tab=account");
 }

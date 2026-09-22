@@ -155,7 +155,12 @@ def build_messages(
 async def answer(settings: Settings, messages: list[dict], usage: Usage) -> AsyncIterator[str]:
     """Stream the answer (FR-CHAT-02 step 4)."""
     async for delta in chat_stream(
-        settings, messages, purpose="chat", usage=usage, max_tokens=MAX_ANSWER_TOKENS
+        settings,
+        messages,
+        purpose="chat",
+        usage=usage,
+        max_tokens=MAX_ANSWER_TOKENS,
+        model=settings.openai_chat_model,
     ):
         yield delta
 

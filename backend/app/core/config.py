@@ -32,9 +32,13 @@ class Settings(BaseSettings):
     max_avatar_bytes: int = 2 * 1024 * 1024
     async_extraction_threshold_bytes: int = 10 * 1024 * 1024  # FR-DOC-02 step 6
 
-    # AI (FR-SUM, FR-NB). The key stays on the server (NFR-SEC-01); the model is configurable (NFR-MNT-03).
+    # AI (FR-SUM, FR-NB). The key stays on the server (NFR-SEC-01); the models are configurable (NFR-MNT-03).
+    # Summaries and notebooks read a whole document and write to a fixed shape, so a small model is enough.
+    # A question is answered from a handful of passages and has to reason about them, so it gets a
+    # stronger model: the answer is short, which keeps the cost of the better model low.
     openai_api_key: str = ""
-    openai_model: str = "gpt-4.1-mini"
+    openai_model: str = "gpt-4o-mini"
+    openai_chat_model: str = "gpt-4.1"
     openai_base_url: str = "https://api.openai.com/v1"
     openai_timeout_seconds: float = 90
     ai_daily_quota: int = 20  # BR: 20 AI requests per user per day, reset at 00:00 Vietnam time
