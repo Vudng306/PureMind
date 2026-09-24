@@ -28,7 +28,16 @@ export interface ChatMessage {
   content: string;
   citations: ChatCitation[];
   ai_model: string | null;
+  /** The document figure a question was about: `pm-image:<name>` or the image's web address. */
+  image?: string | null;
   created_at: string;
+}
+
+/** A figure of the document the reader asked the chat to explain; `key` tells two requests for it apart. */
+export interface ChatImage {
+  src: string;
+  alt: string;
+  key: number;
 }
 
 export interface ChatConversation {
@@ -105,12 +114,13 @@ export function useDeleteConversation(docId: string) {
 export async function askQuestion(
   docId: string,
   conversationId: string,
-  input: { content: string; quote?: string | null },
+  input: { content: string; quote?: string | null; image?: string | null },
   handlers: { onSources?: (sources: ChatCitation[]) => void; onDelta: (text: string) => void },
   signal?: AbortSignal,
 ): Promise<ChatAnswer> {
   const body: Record<string, unknown> = { content: input.content };
   if (input.quote?.trim()) body.quote = input.quote.trim();
+  if (input.image) body.image = input.image;
 
   const res = await apiFetch(`/documents/${docId}/chat/conversations/${conversationId}/messages`, {
     method: "POST",

@@ -191,6 +191,29 @@ body {
   outline: 2px solid rgb(var(--accent));
   outline-offset: 1px;
 }
+/* "View in the original": the passage outlined on the page, fading out */
+.pdf-source {
+  position: absolute;
+  border-radius: 3px;
+  outline: 2px solid rgb(var(--accent));
+  outline-offset: 3px;
+  background: rgb(var(--accent) / 0.08);
+  animation: pdf-source-fade 2.6s ease-in forwards;
+}
+@keyframes pdf-source-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdf-source {
+    animation: none;
+  }
+}
 
 /* Reader highlights with meaning (painted with the CSS Custom Highlight API; React DOM is never mutated) */
 ::highlight(pm-hl-yellow) {

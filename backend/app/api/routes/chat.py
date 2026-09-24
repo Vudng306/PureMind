@@ -35,7 +35,7 @@ from app.models import (
     utcnow,
 )
 from app.schemas import ChatAnswerOut, ChatAsk, ChatConversationItem, ChatConversationOut, ChatMessageOut
-from app.services import ai_quota, doc_chat, embeddings
+from app.services import ai_quota, chat_image, doc_chat, embeddings
 from app.services.openai_client import AIError, Usage
 from app.services.summarizer import detect_language
 
@@ -49,7 +49,13 @@ MAX_CITATION_CHARS = 600  # how much of a passage is kept with the answer for th
 _running: set[uuid.UUID] = set()
 
 
-def _digest(content: str) -> str:
+def _digest(content: str, notes: dict[str, str] | None = None, charts: dict | None = None) -> str:
+    """What the passages are cut from: the text, the figure descriptions once they are written, and the
+    charts' data."""
+    if notes:
+        content += "\n" + json.dumps(notes, sort_keys=True, ensure_ascii=False)
+    if charts:
+        content += "\n" + json.dumps(charts, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
@@ -110,13 +116,17 @@ async def _index(settings: Settings, document_id: uuid.UUID, usage: Usage) -> No
         doc = await session.get(Document, document_id)
         if doc is None:
             return
-        if doc.chunks_hash == _digest(doc.content_clean) and doc.chunks_model == (
-            settings.openai_embedding_model
-        ):
+        notes, charts = (
+            await session.execute(
+                select(Document.figure_notes, Document.chart_data).where(Document.id == document_id)
+            )
+        ).one()
+        digest = _digest(doc.content_clean, notes, charts)
+        if doc.chunks_hash == digest and doc.chunks_model == settings.openai_embedding_model:
             return
         content, page_count = doc.content_clean, doc.page_count
 
-    chunks = doc_chat.split_chunks(content, settings.chat_chunk_tokens, page_count)
+    chunks = doc_chat.split_chunks(content, settings.chat_chunk_tokens, page_count, notes, charts)
     if not chunks:
         raise HTTPException(422, MSG["MSG-CHAT-NO-TEXT"])
     vectors = await embeddings.embed(
@@ -142,7 +152,7 @@ async def _index(settings: Settings, document_id: uuid.UUID, usage: Usage) -> No
                 for c, v in zip(chunks, vectors, strict=True)
             ]
         )
-        doc.chunks_hash = _digest(content)
+        doc.chunks_hash = digest
         doc.chunks_model = settings.openai_embedding_model
         await session.commit()
 
@@ -222,13 +232,14 @@ async def _save_turn(
     answer: str,
     citations: list[dict],
     usage: Usage,
+    image: str | None = None,
 ) -> ChatAnswerOut | None:
     """Store both turns, name a new conversation after its first question and count one question."""
     async with SessionLocal() as session:
         conv = await session.get(ChatConversation, conversation_id)
         if conv is None:  # deleted while the answer was being written
             return None
-        asked = ChatMessage(conversation_id=conv.id, role="user", content=question, citations=[])
+        asked = ChatMessage(conversation_id=conv.id, role="user", content=question, citations=[], image=image)
         replied = ChatMessage(
             conversation_id=conv.id,
             role="assistant",
@@ -351,18 +362,25 @@ async def ask(
     )
     if (total or 0) >= MAX_CHAT_MESSAGES:
         raise HTTPException(status.HTTP_409_CONFLICT, MSG["MSG-CHAT-FULL"])
+    # Only a figure that is in this document can be asked about (see chat_image).
+    figure = chat_image.find(doc.content_clean, payload.image) if payload.image else None
+    if payload.image and figure is None:
+        raise HTTPException(422, MSG["MSG-CHAT-IMAGE"])
 
     # The last few turns, newest first, reversed below; a question and its answer can share a creation
     # time, so the role breaks the tie — ascending here, because reversing puts "user" back in front.
     recent = (
         await session.execute(
-            select(ChatMessage.role, ChatMessage.content)
+            select(ChatMessage.role, ChatMessage.content, ChatMessage.image)
             .where(ChatMessage.conversation_id == conv.id)
             .order_by(ChatMessage.created_at.desc(), ChatMessage.role.asc())
             .limit(settings.chat_history_messages)
         )
     ).all()
-    history = [(r.role, r.content) for r in reversed(recent)]
+    history = [
+        (r.role, f"(About a figure in the document) {r.content}" if r.image else r.content)
+        for r in reversed(recent)
+    ]
     question, quote = payload.content, (payload.quote or "").strip() or None
     title, language, user_id = doc.title, conv.language, user.id
     await session.commit()  # hold no database connection while the AI works
@@ -371,12 +389,22 @@ async def ask(
         """(event, data) pairs: the passages found, the answer as it is written, then the saved turn."""
         # Embedding tokens are logged on their own; what is stored with the answer is the answer.
         indexing, usage = Usage(), Usage()
+        attached = None
+        if figure is not None:
+            try:
+                data_url = await chat_image.load(settings, document_id, figure.src)
+            except chat_image.ImageUnavailable:
+                raise HTTPException(422, MSG["MSG-CHAT-IMAGE"]) from None
+            attached = doc_chat.FigureInput(data_url, figure.alt, figure.context)
         await _index(settings, document_id, indexing)
-        vector = (await embeddings.embed(settings, [question], purpose="chat_query", usage=indexing))[0]
+        # A question about a figure ("what does this show?") says little by itself: search with its
+        # caption and the text around it as well.
+        query = "\n".join(x for x in (question, figure.alt, figure.context) if x) if figure else question
+        vector = (await embeddings.embed(settings, [query], purpose="chat_query", usage=indexing))[0]
         chunks = await _closest(document_id, vector, settings.chat_context_chunks)
         yield "sources", {"sources": [_source(n, c) for n, c in enumerate(chunks, 1)]}
 
-        messages = doc_chat.build_messages(title, question, chunks, history, language, quote)
+        messages = doc_chat.build_messages(title, question, chunks, history, language, quote, attached)
         parts: list[str] = []
         async for delta in doc_chat.answer(settings, messages, usage):
             parts.append(delta)
@@ -384,7 +412,14 @@ async def ask(
 
         answer = "".join(parts).strip()
         saved = await _save_turn(
-            settings, conversation_id, user_id, question, answer, _citations(chunks, answer), usage
+            settings,
+            conversation_id,
+            user_id,
+            question,
+            answer,
+            _citations(chunks, answer),
+            usage,
+            figure.src if figure else None,
         )
         if saved is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, MSG["MSG-CHAT-NOT-FOUND"])

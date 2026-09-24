@@ -2,6 +2,7 @@
 
 import contextlib
 import re
+import shutil
 import unicodedata
 import uuid
 from pathlib import Path
@@ -58,6 +59,16 @@ async def save_upload(file: UploadFile, subdir: str, filename: str, max_bytes: i
         target.unlink(missing_ok=True)
         raise
     return relative, size, head
+
+
+def images_path(document_id: uuid.UUID) -> str:
+    """Where a document's extracted images live, relative to the upload dir."""
+    return f"images/{document_id}"
+
+
+def delete_dir(settings: Settings, relative: str) -> None:
+    with contextlib.suppress(OSError, ValueError):
+        shutil.rmtree(resolve(settings, relative))
 
 
 def delete_file(settings: Settings, relative: str | None) -> None:

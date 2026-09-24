@@ -7,6 +7,7 @@ import "pdfjs-dist/web/pdf_viewer.css";
 
 import type { Highlight } from "@/lib/annotations";
 import { API_URL, authHeader } from "@/lib/api";
+import type { SourceBox } from "@/lib/documents";
 import { clearHighlights, findLoose, findMatches, findRanges, paintHighlights, scrollRangeIntoView } from "@/lib/find";
 import { useT } from "@/lib/i18n";
 import { hitRects, rangeRects, type PdfRect } from "@/lib/pdf-rects";
@@ -40,7 +41,11 @@ export interface PdfSelection {
 export interface PdfViewerHandle {
   /** Scroll to a highlight's page and line; false if its position on the PDF is unknown. */
   scrollToHighlight: (h: Highlight) => boolean;
+  /** Scroll to a passage of the clean text on the PDF and outline it for a moment; false before the PDF loads. */
+  showSource: (boxes: SourceBox[]) => boolean;
 }
+
+const SOURCE_SHOWN_MS = 2600;
 
 /** A highlight drawn on one page. */
 interface Mark {
@@ -65,6 +70,7 @@ function PageView({
   onSize,
   onTextLayer,
   marks,
+  source,
 }: {
   pdf: PDFDocumentProxy;
   pageNumber: number;
@@ -73,6 +79,7 @@ function PageView({
   onSize: (page: number, size: Size) => void;
   onTextLayer: (page: number, el: HTMLElement | null) => void;
   marks: Mark[] | undefined;
+  source: PdfRect[] | undefined;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
 
@@ -138,6 +145,17 @@ function PageView({
           )),
         )}
       </div>
+      {source && (
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-[4]">
+          {source.map((r, i) => (
+            <span
+              key={i}
+              className="pdf-source"
+              style={{ left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%` }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -500,26 +518,45 @@ export function PdfViewer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlights, activeHighlightId, flashHighlightId, locatedVersion, positionOf]);
 
+  // The passage "view in the original" points at, outlined until it fades.
+  const [source, setSource] = useState<Map<number, PdfRect[]> | null>(null);
+  const sourceTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(sourceTimer.current), []);
+
+  const scrollToPoint = useCallback(
+    (page: number, y: number): boolean => {
+      const el = scrollerRef.current;
+      if (!el || !page || !total || page > total) return false;
+      const top = Math.max(0, tops[page - 1] + y * heights[page - 1] - el.clientHeight / 3);
+      // Remember the position so it survives page sizes changing while nearby pages render.
+      const first = pageAt(top + PAD);
+      const fraction = (top + PAD - tops[first - 1]) / (heights[first - 1] + GAP);
+      anchor.current = { page: first, fraction: Math.min(1, Math.max(0, fraction)) };
+      el.scrollTop = top;
+      setCurrent(page);
+      return true;
+    },
+    [pageAt, tops, heights, total],
+  );
+
   useImperativeHandle(
     handleRef,
     () => ({
       scrollToHighlight(h) {
-        const el = scrollerRef.current;
         const pos = positionOf(h);
-        const page = pos?.page ?? h.page;
-        if (!el || !page || !total || page > total) return false;
-        const y = pos?.rects[0]?.y ?? 0;
-        const top = Math.max(0, tops[page - 1] + y * heights[page - 1] - el.clientHeight / 3);
-        // Remember the position so it survives page sizes changing while nearby pages render.
-        const first = pageAt(top + PAD);
-        const fraction = (top + PAD - tops[first - 1]) / (heights[first - 1] + GAP);
-        anchor.current = { page: first, fraction: Math.min(1, Math.max(0, fraction)) };
-        el.scrollTop = top;
-        setCurrent(page);
+        return scrollToPoint(pos?.page ?? h.page ?? 0, pos?.rects[0]?.y ?? 0);
+      },
+      showSource(boxes) {
+        if (!boxes.length || !scrollToPoint(boxes[0].page, boxes[0].y)) return false;
+        const byPage = new Map<number, PdfRect[]>();
+        for (const { page, ...rect } of boxes) byPage.set(page, [...(byPage.get(page) ?? []), rect]);
+        setSource(byPage);
+        clearTimeout(sourceTimer.current);
+        sourceTimer.current = setTimeout(() => setSource(null), SOURCE_SHOWN_MS);
         return true;
       },
     }),
-    [positionOf, pageAt, tops, heights, total],
+    [positionOf, scrollToPoint],
   );
 
   // Selecting text on a page opens the highlight menu; a click on a highlight opens it in the panel.
@@ -672,6 +709,7 @@ export function PdfViewer({
                       onSize={onSize}
                       onTextLayer={onTextLayer}
                       marks={marksByPage.get(page)}
+                      source={source?.get(page)}
                     />
                   ) : (
                     <div className="pdf-page" style={{ width, height: heights[i] }} />

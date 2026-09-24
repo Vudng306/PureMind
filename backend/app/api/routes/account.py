@@ -105,6 +105,7 @@ async def delete_account(user: CurrentUser, session: SessionDep, settings: Setti
             )
         )
     ).all()
+    document_ids = (await session.scalars(select(Document.id).where(Document.user_id == user.id))).all()
     avatar = user.avatar_path
     user_id = user.id
 
@@ -118,3 +119,5 @@ async def delete_account(user: CurrentUser, session: SessionDep, settings: Setti
     await session.commit()
     for p in [*paths, avatar]:
         storage.delete_file(settings, p)
+    for document_id in document_ids:
+        storage.delete_dir(settings, storage.images_path(document_id))

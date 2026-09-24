@@ -46,6 +46,9 @@ VI: dict[str, str] = {
     "MSG-CHAT-FULL": "Cuộc trò chuyện này đã quá dài. Hãy bắt đầu cuộc trò chuyện mới.",
     "MSG-CHAT-NOT-FOUND": "Không tìm thấy cuộc trò chuyện.",
     "MSG-CHAT-NO-TEXT": "Tài liệu này chưa có văn bản để trò chuyện.",
+    "MSG-CHAT-IMAGE": "Không đọc được hình này. Hãy thử hình khác.",
+    "MSG-TR-EMPTY": "Hãy chọn đoạn văn cần dịch.",
+    "MSG-TR-RATE": "Chưa dịch được lúc này. Vui lòng thử lại sau ít phút.",
     "MSG-99": "Đã có lỗi xảy ra. Vui lòng thử lại.",
     # Body that fails validation before a route sees it (SRS 3.4).
     "MSG-INVALID": "Dữ liệu không hợp lệ.",
@@ -85,6 +88,9 @@ EN: dict[str, str] = {
     "MSG-CHAT-FULL": "This conversation has grown too long. Please start a new one.",
     "MSG-CHAT-NOT-FOUND": "Conversation not found.",
     "MSG-CHAT-NO-TEXT": "This document has no text to chat about.",
+    "MSG-CHAT-IMAGE": "This image could not be read. Try another one.",
+    "MSG-TR-EMPTY": "Select the passage to translate.",
+    "MSG-TR-RATE": "Could not translate right now. Please try again in a few minutes.",
     "MSG-99": "Something went wrong. Please try again.",
     "MSG-INVALID": "That data is not valid.",
 }

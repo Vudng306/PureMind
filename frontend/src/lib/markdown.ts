@@ -7,7 +7,8 @@ export type Inline =
   | { t: "text"; v: string }
   | { t: "strong" | "em"; c: Inline[] }
   | { t: "code"; v: string }
-  | { t: "link"; href: string; c: Inline[] };
+  | { t: "link"; href: string; c: Inline[] }
+  | { t: "br" }; // a line break inside a table cell
 
 export type Block =
   | { id: string; t: "heading"; level: 1 | 2 | 3; c: Inline[] }
@@ -15,8 +16,11 @@ export type Block =
   | { id: string; t: "quote"; c: Inline[] }
   | { id: string; t: "code"; v: string }
   | { id: string; t: "list"; ordered: boolean; items: { depth: number; c: Inline[] }[] }
-  | { id: string; t: "table"; rows: Inline[][][] }
+  /** `head`: whether the first row is a header (a table of like rows has none). */
+  | { id: string; t: "table"; rows: Inline[][][]; head: boolean }
   | { id: string; t: "image"; src: string; alt: string }
+  /** A display equation: `$$…$$` on a line of its own, typeset from its LaTeX. */
+  | { id: string; t: "math"; tex: string }
   | { id: string; t: "pagebreak"; page: number };
 
 type BlockData = Block extends infer B ? (B extends Block ? Omit<B, "id"> : never) : never;
@@ -32,9 +36,13 @@ function hash(s: string): string {
 }
 
 const SAFE_HREF = /^https?:\/\//i;
+/** An image extracted from the document itself, served by the API to its owner only. */
+export const DOC_IMAGE = /^pm-image:([0-9a-f]{16}\.webp)$/;
 
 /** A whole line that is nothing but one image, which is how the extractors emit them. */
 const IMAGE_LINE = /^!\[([^\]]*)\]\((\S+)\)$/;
+/** A display equation on one line, which is how the extractors emit them. */
+const MATH_LINE = /^\s*\$\$(.*\S.*)\$\$\s*$/;
 
 export function parseInline(src: string): Inline[] {
   const out: Inline[] = [];
@@ -115,7 +123,12 @@ function splitRow(line: string): string[] {
   return cells;
 }
 
-const cleanCell = (s: string) => s.replace(/<br\s*\/?>/gi, " ");
+/** A cell's text, keeping its line breaks (`<br>`) as line breaks. */
+function parseCell(s: string): Inline[] {
+  return s
+    .split(/<br\s*\/?>/i)
+    .flatMap((part, i) => (i ? [{ t: "br" } as Inline, ...parseInline(part.trim())] : parseInline(part.trim())));
+}
 
 export function parseMarkdown(md: string): Block[] {
   const lines = md.replace(/\r\n?/g, "\n").split("\n");
@@ -154,8 +167,14 @@ export function parseMarkdown(md: string): Block[] {
       continue;
     }
     const image = IMAGE_LINE.exec(line.trim());
-    if (image && SAFE_HREF.test(image[2])) {
+    if (image && (SAFE_HREF.test(image[2]) || DOC_IMAGE.test(image[2]))) {
       push(line, { t: "image", src: image[2], alt: image[1] });
+      i++;
+      continue;
+    }
+    const math = MATH_LINE.exec(line);
+    if (math) {
+      push(line, { t: "math", tex: math[1].trim() });
       i++;
       continue;
     }
@@ -172,8 +191,10 @@ export function parseMarkdown(md: string): Block[] {
       const rows = raw
         .map(splitRow)
         .filter((cells) => !cells.every((c) => /^:?-{2,}:?$/.test(c)))
-        .map((cells) => cells.map((cell) => parseInline(cleanCell(cell))));
-      push(raw.join("\n"), { t: "table", rows });
+        .map((cells) => cells.map(parseCell));
+      // An empty first row stands in for the header a Markdown table must have.
+      const head = !rows[0]?.every((cell) => cell.length === 0);
+      push(raw.join("\n"), { t: "table", rows: head ? rows : rows.slice(1), head });
       continue;
     }
     if (line.startsWith(">")) {
@@ -201,6 +222,7 @@ export function parseMarkdown(md: string): Block[] {
       i < lines.length &&
       lines[i].trim() &&
       !/^(#{1,6}\s|```|>|\||---\s*$)/.test(lines[i]) &&
+      !MATH_LINE.test(lines[i]) &&
       !listItem.test(lines[i])
     ) {
       para.push(lines[i++].trim());

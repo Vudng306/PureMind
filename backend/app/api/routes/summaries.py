@@ -8,9 +8,10 @@ from sqlalchemy import select
 from app.api.deps import CurrentUser, SessionDep, SettingsDep
 from app.api.routes.documents import _owned_document, run_extraction
 from app.core.messages import MSG
-from app.models import ExtractionStatus, Summary, utcnow
+from app.models import Document, ExtractionStatus, Summary, utcnow
 from app.schemas import SummaryCreate, SummaryOut
 from app.services import ai_quota
+from app.services.html_markdown import strip_images
 from app.services.openai_client import AIError
 from app.services.summarizer import detect_language, summarize
 
@@ -64,7 +65,8 @@ async def create_summary(
         raise HTTPException(status.HTTP_409_CONFLICT, IN_PROGRESS)
 
     language = (payload.language if payload else None) or detect_language(doc.content_clean)
-    title, content = doc.title, doc.content_clean
+    notes = await session.scalar(select(Document.figure_notes).where(Document.id == doc.id))
+    title, content = doc.title, strip_images(doc.content_clean, notes)
     await session.commit()  # end the read transaction so no DB connection is held while the AI works
     _running.add(doc.id)
     try:

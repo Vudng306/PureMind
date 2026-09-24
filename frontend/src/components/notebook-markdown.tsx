@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, useMemo } from "react";
 
+import { MathBlock } from "@/components/math-block";
 import { useT } from "@/lib/i18n";
 import { parseMarkdown, type Block, type Inline } from "@/lib/markdown";
 import type { NotebookSource } from "@/lib/notebooks";
@@ -76,6 +77,8 @@ function Inlines({ nodes, renderRef }: { nodes: Inline[]; renderRef: RefRenderer
                 {n.v}
               </code>
             );
+          case "br":
+            return <br key={i} />;
           case "link":
             return (
               <a key={i} href={n.href} target="_blank" rel="noopener noreferrer nofollow" className="text-accent underline underline-offset-2">
@@ -139,7 +142,7 @@ function BlockView({ block, renderRef }: { block: Block; renderRef: RefRenderer 
           <table className="w-full border-collapse font-sans text-[0.85em]">
             <tbody>
               {block.rows.map((row, r) => (
-                <tr key={r} className={r === 0 ? "bg-soft font-medium" : ""}>
+                <tr key={r} className={r === 0 && block.head ? "bg-soft font-medium" : ""}>
                   {row.map((cell, c) => (
                     <td key={c} className="border border-line px-2.5 py-1.5 align-top">
                       <Inlines nodes={cell} renderRef={renderRef} />
@@ -151,13 +154,15 @@ function BlockView({ block, renderRef }: { block: Block; renderRef: RefRenderer 
           </table>
         </div>
       );
+    case "math":
+      return <MathBlock tex={block.tex} className="mb-4" />;
     case "pagebreak":
       return <hr className="my-6 border-line" />;
   }
 }
 
 const plain = (nodes: Inline[]): string =>
-  nodes.map((n) => (n.t === "text" || n.t === "code" ? n.v : plain(n.c))).join("");
+  nodes.map((n) => (n.t === "text" || n.t === "code" ? n.v : n.t === "br" ? " " : plain(n.c))).join("");
 
 /** Parsed Markdown as React elements, never raw HTML (NFR-SEC-09). Citations are drawn by `renderRef`. */
 export function MarkdownView({

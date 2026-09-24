@@ -1,3 +1,5 @@
+import logging
+import re
 import uuid
 from pathlib import Path
 from typing import Literal
@@ -19,14 +21,26 @@ from app.core.ratelimit import upload_limiter
 from app.db.session import SessionLocal
 from app.models import Document, ExtractionStatus, SourceType, User
 from app.schemas import DocumentListItem, DocumentOut, DocumentUpdate
-from app.services import storage, web
+from app.services import equation_ocr, figure_notes, page_ocr, storage, table_ocr, web
 from app.services.epub import extract_epub, looks_like_epub
-from app.services.extraction import ExtractionError, extract_pdf
+from app.services.extraction import (
+    IMAGE_NAME,
+    OCR_LINE,
+    ExtractionError,
+    block_key,
+    equation_count,
+    extract_pdf,
+    reader_keys,
+    scanned_pages,
+)
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 MEDIA_TYPES = {".pdf": "application/pdf", ".epub": "application/epub+zip"}
 EXTRACTORS = {".pdf": extract_pdf, ".epub": extract_epub}
+# Equations the vision model reads, beyond which that takes long enough to go on after the response.
+MANY_EQUATIONS = 12
 
 
 def rate_limited_upload(user: CurrentUser) -> None:
@@ -61,37 +75,130 @@ async def list_documents(
     return (await session.scalars(stmt.order_by(order))).all()
 
 
-async def run_extraction(session: AsyncSession, doc: Document, settings: Settings) -> None:
-    """FR-DOC-02. Updates status and content on the given document and commits."""
+def _with_scanned_pages(content: str, source_map: list, read: dict[int, str]) -> tuple[str, list]:
+    """Each scan mark replaced by the text read from its page, or dropped when the page could not be read.
+    The page's blocks are placed on the whole page: OCR says what a page says, not where."""
+    marks = {block_key(m.group(0)): int(m.group(1)) for m in OCR_LINE.finditer(content)}
+    content = OCR_LINE.sub(lambda m: read.get(int(m.group(1)), ""), content)
+    placed: list = []
+    for key, boxes in source_map:
+        if (page := marks.get(key)) is None:
+            placed.append([key, boxes])
+        elif page in read:
+            placed += [[k, [[page, 0, 0, 1, 1]]] for k in reader_keys(read[page])]
+    return re.sub(r"\n{3,}", "\n\n", content).strip(), placed
+
+
+async def run_extraction(
+    session: AsyncSession, doc: Document, settings: Settings, background: BackgroundTasks | None = None
+) -> None:
+    """FR-DOC-02. Updates status and content on the given document and commits.
+
+    With `background`, the figures are then described for the AI after the response (describe_figures);
+    without it the caller does that itself, or the figures go without descriptions."""
     doc.extraction_status = ExtractionStatus.processing
     await session.commit()
 
     path = storage.resolve(settings, doc.file_storage_path)
     fallback_title = Path(doc.original_filename or "Tài liệu").stem
+    images = storage.images_path(doc.id)
+    storage.delete_dir(settings, images)  # a re-extraction starts from no images
     try:
-        extractor = EXTRACTORS[path.suffix.lower()]
-        result = await run_in_threadpool(extractor, path, fallback_title)
+        suffix = path.suffix.lower()
+        extractor = EXTRACTORS[suffix]
+        args = (path, fallback_title) + ((storage.resolve(settings, images),) if suffix == ".pdf" else ())
+        result = await run_in_threadpool(extractor, *args)
     except ExtractionError as e:
         doc.extraction_status = ExtractionStatus.failed
         doc.extraction_error = e.code
+        storage.delete_dir(settings, images)
     except Exception:
         doc.extraction_status = ExtractionStatus.failed
         doc.extraction_error = "MSG-99"
+        storage.delete_dir(settings, images)
     else:
+        content, source_map = result.content, result.source_map
+        if result.ocr_pages:
+            read = await page_ocr.read_pages(settings, path, result.ocr_pages)
+            content, source_map = _with_scanned_pages(content, source_map, read)
+        if not re.sub(r"^---$", "", content, flags=re.M).strip():  # a scan that could not be read
+            doc.extraction_status = ExtractionStatus.failed
+            doc.extraction_error = "MSG-15"
+            storage.delete_dir(settings, images)
+            await session.commit()
+            return
+        for name, pictures, transcribe in (
+            ("table_ocr", result.table_images, table_ocr.transcribe_tables),
+            ("equation_ocr", result.equation_images, equation_ocr.transcribe_equations),
+        ):
+            if not pictures:
+                continue
+            try:
+                content, replaced = await transcribe(settings, doc.id, content, pictures)
+            except Exception:  # OCR is a bonus: the table or equation stays a picture
+                log.exception("%s failed document=%s", name, doc.id)
+                continue
+            # A block read from its picture is a new block: its place on the PDF is the picture's.
+            keys = {block_key(old): block_key(new) for old, new in replaced.items()}
+            source_map = [[keys.get(key, key), boxes] for key, boxes in source_map]
         doc.title = result.title[:500]
-        doc.content_clean = result.content
+        doc.content_clean = content
+        doc.source_map = source_map or None
+        doc.figure_notes = None  # the figures of the earlier text, if any, are gone
+        doc.chart_data = result.charts or None
         doc.page_count = result.page_count
-        doc.word_count = result.word_count
+        doc.word_count = len(re.findall(r"\w+", content))
         doc.extraction_status = ExtractionStatus.done
         doc.extraction_error = None
     await session.commit()
+    if background is not None and doc.extraction_status == ExtractionStatus.done:
+        background.add_task(describe_figures, doc.id, settings)
+
+
+async def describe_figures(document_id: uuid.UUID, settings: Settings) -> None:
+    """Describe the document's figures for the AI (figure_notes). Seconds per figure, so it runs once the
+    reader already has the text; nothing is saved if the text changed meanwhile."""
+    async with SessionLocal() as session:
+        content = await session.scalar(select(Document.content_clean).where(Document.id == document_id))
+    if not content or not figure_notes.figure_names(content):
+        return
+    try:
+        notes = await figure_notes.describe_figures(settings, document_id, content)
+    except Exception:  # descriptions are a bonus: the AI reads the text without them
+        log.exception("figure_notes failed document=%s", document_id)
+        return
+    if not notes:
+        return
+    async with SessionLocal() as session:
+        doc = await session.get(Document, document_id)
+        if doc is None or doc.content_clean != content:  # deleted or re-extracted meanwhile
+            return
+        doc.figure_notes = notes
+        await session.commit()
+
+
+async def _takes_long(settings: Settings, doc: Document, size: int) -> bool:
+    """A large file, or a PDF the vision model has much to read in (a scan, page by page, or many
+    equations): extracted after the response, while the library shows it as processing (FR-DOC-02 step 6)."""
+    if size > settings.async_extraction_threshold_bytes:
+        return True
+    path = storage.resolve(settings, doc.file_storage_path)
+    if not settings.openai_api_key or path.suffix.lower() != ".pdf":
+        return False
+    if await run_in_threadpool(scanned_pages, path):
+        return True
+    return await run_in_threadpool(equation_count, path) > MANY_EQUATIONS
 
 
 async def _extract_in_background(document_id: uuid.UUID, settings: Settings) -> None:
     async with SessionLocal() as session:
         doc = await session.get(Document, document_id)
-        if doc is not None:
-            await run_extraction(session, doc, settings)
+        if doc is None:
+            return
+        await run_extraction(session, doc, settings)
+        done = doc.extraction_status == ExtractionStatus.done
+    if done:
+        await describe_figures(document_id, settings)
 
 
 @router.post(
@@ -139,10 +246,10 @@ async def upload_document(
     session.add(doc)
     await session.commit()
 
-    if size > settings.async_extraction_threshold_bytes:
+    if await _takes_long(settings, doc, size):
         background.add_task(_extract_in_background, doc.id, settings)
     else:
-        await run_extraction(session, doc, settings)
+        await run_extraction(session, doc, settings, background)
     await session.refresh(doc)
     return doc
 
@@ -173,7 +280,13 @@ class SaveUrlIn(BaseModel):
     status_code=status.HTTP_201_CREATED,
     responses={200: {"model": DocumentOut, "description": "The link was already saved"}},
 )
-async def save_url(payload: SaveUrlIn, user: CurrentUser, session: SessionDep, settings: SettingsDep):
+async def save_url(
+    payload: SaveUrlIn,
+    background: BackgroundTasks,
+    user: CurrentUser,
+    session: SessionDep,
+    settings: SettingsDep,
+):
     """FR-DOC-03: save a web article or an online PDF."""
     try:
         normalized = str(web.validate_url(payload.url))
@@ -220,7 +333,10 @@ async def save_url(payload: SaveUrlIn, user: CurrentUser, session: SessionDep, s
         if (dup := await _commit_new_link(session, doc, user, normalized)) is not None:
             storage.delete_file(settings, relative)
             return dup
-        await run_extraction(session, doc, settings)
+        if await _takes_long(settings, doc, len(fetched.body)):
+            background.add_task(_extract_in_background, doc.id, settings)
+        else:
+            await run_extraction(session, doc, settings, background)
     else:
         article = await run_in_threadpool(web.extract_article, fetched.body, fetched.url)
         has_text = bool(article.content.strip())
@@ -265,6 +381,42 @@ async def get_document_file(
     )
 
 
+@router.get("/{document_id}/source-map")
+async def get_source_map(document_id: uuid.UUID, user: CurrentUser, session: SessionDep):
+    """Where each block of the clean text sits on the original PDF: `[[block key, [[page, x, y, w, h], …]], …]`
+    with boxes normalised to the page. Empty for documents that have no PDF (web pages, EPUB)."""
+    await _owned_document(session, user, document_id)
+    source_map = await session.scalar(select(Document.source_map).where(Document.id == document_id))
+    return JSONResponse(source_map or [], headers={"Cache-Control": "private, no-cache"})
+
+
+@router.get("/{document_id}/charts")
+async def get_charts(document_id: uuid.UUID, user: CurrentUser, session: SessionDep):
+    """The data points of the document's vector charts, read from their drawing: `{image name: {"panels": […]}}`.
+    Empty when no figure is a chart drawn as paths (raster charts are only described, never estimated)."""
+    await _owned_document(session, user, document_id)
+    charts = await session.scalar(select(Document.chart_data).where(Document.id == document_id))
+    return JSONResponse(charts or {}, headers={"Cache-Control": "private, no-cache"})
+
+
+@router.get("/{document_id}/images/{name}")
+async def get_document_image(
+    document_id: uuid.UUID, name: str, user: CurrentUser, session: SessionDep, settings: SettingsDep
+):
+    """An image extracted from the document, referenced in its clean text as `pm-image:<name>`."""
+    doc = await _owned_document(session, user, document_id)
+    if not IMAGE_NAME.match(name):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, MSG["MSG-19"])
+    path = storage.resolve(settings, f"{storage.images_path(doc.id)}/{name}")
+    if not path.is_file():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, MSG["MSG-19"])
+    return FileResponse(
+        path,
+        media_type="image/webp",
+        headers={"Cache-Control": "private, max-age=86400", "X-Content-Type-Options": "nosniff"},
+    )
+
+
 @router.patch("/{document_id}", response_model=DocumentOut)
 async def update_document(
     document_id: uuid.UUID, payload: DocumentUpdate, user: CurrentUser, session: SessionDep
@@ -291,15 +443,20 @@ async def delete_document(
 ):
     """FR-DOC-06."""
     doc = await _owned_document(session, user, document_id)
-    path = doc.file_storage_path
+    path, images = doc.file_storage_path, storage.images_path(doc.id)
     await session.delete(doc)
     await session.commit()
     storage.delete_file(settings, path)
+    storage.delete_dir(settings, images)
 
 
 @router.post("/{document_id}/retry-extraction", response_model=DocumentOut)
 async def retry_extraction(
-    document_id: uuid.UUID, user: CurrentUser, session: SessionDep, settings: SettingsDep
+    document_id: uuid.UUID,
+    background: BackgroundTasks,
+    user: CurrentUser,
+    session: SessionDep,
+    settings: SettingsDep,
 ):
     """Appendix A.1: failed -> pending, only for system errors."""
     doc = await _owned_document(session, user, document_id)
@@ -307,6 +464,6 @@ async def retry_extraction(
         raise HTTPException(status.HTTP_409_CONFLICT, "Không thể thử lại trích xuất cho tài liệu này.")
     doc.extraction_status = ExtractionStatus.pending
     await session.commit()
-    await run_extraction(session, doc, settings)
+    await run_extraction(session, doc, settings, background)
     await session.refresh(doc)
     return doc

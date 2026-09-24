@@ -39,6 +39,16 @@ describe("parseMarkdown", () => {
     expect(pb.t === "pagebreak" && pb.page).toBe(2);
   });
 
+  it("reads a table with an empty header row as headerless, and <br> in a cell as a line break", () => {
+    const [table] = parseMarkdown("|  |  |\n|---|---|\n| Case 1 | a<br>b |\n| Case 2 | c |");
+    if (table.t !== "table") throw new Error("expected table");
+    expect(table.head).toBe(false);
+    expect(table.rows.length).toBe(2);
+    expect(table.rows[0][1].map((n) => n.t)).toEqual(["text", "br", "text"]);
+    const [withHead] = parseMarkdown("| A | B |\n|---|---|\n| 1 | 2 |");
+    expect(withHead.t === "table" && withHead.head).toBe(true);
+  });
+
   it("drops unsafe link targets but keeps their text", () => {
     const para = parseMarkdown(md)[1];
     if (para.t !== "paragraph") throw new Error("expected paragraph");
@@ -65,6 +75,14 @@ describe("parseMarkdown", () => {
     expect(image).toMatchObject({ src: "https://cdn.example.org/a.jpg", alt: "Biểu đồ doanh thu" });
   });
 
+  it("accepts the document's own images, and only well-formed ones", () => {
+    const blocks = parseMarkdown(
+      ["![](pm-image:0123456789abcdef.webp)", "", "![](pm-image:../../secret.webp)"].join(NL),
+    );
+    expect(blocks[0]).toMatchObject({ t: "image", src: "pm-image:0123456789abcdef.webp" });
+    expect(blocks[1].t).toBe("paragraph");
+  });
+
   it("keeps ids of other blocks when an image is added", () => {
     const before = parseMarkdown(["Đoạn một.", "", "Đoạn hai."].join(NL));
     const after = parseMarkdown(
@@ -84,6 +102,21 @@ describe("parseMarkdown", () => {
 
   it("handles escapes and snake_case", () => {
     expect(parseInline("a\\*b\\* snake_case_name")).toEqual([{ t: "text", v: "a*b* snake_case_name" }]);
+  });
+});
+
+describe("display equations", () => {
+  it("reads a $$ line as a math block, also right after a paragraph", () => {
+    const blocks = parseMarkdown("the relationships:\n$$w = \\frac{M}{M_s} - 1 \\tag{1}$$\n\nPrice $5 and $$ or $6.");
+    expect(blocks.map((b) => b.t)).toEqual(["paragraph", "math", "paragraph"]);
+    const math = blocks[1];
+    expect(math.t === "math" && math.tex).toBe("w = \\frac{M}{M_s} - 1 \\tag{1}");
+    // The id is the hash of the line, as the backend's source map keys it (reader_keys).
+    expect(math.id).toBe(parseMarkdown("$$w = \\frac{M}{M_s} - 1 \\tag{1}$$")[0].id);
+  });
+
+  it("leaves an empty $$ $$ as text", () => {
+    expect(parseMarkdown("$$ $$")[0].t).toBe("paragraph");
   });
 });
 

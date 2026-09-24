@@ -338,6 +338,8 @@ class ChatAsk(BaseModel):
 
     content: str
     quote: str | None = Field(default=None, max_length=MAX_SELECTION)
+    # A figure in the document, as written in its clean text: `pm-image:<name>` or the image's URL.
+    image: str | None = Field(default=None, max_length=2048)
 
     @field_validator("content")
     @classmethod
@@ -348,6 +350,28 @@ class ChatAsk(BaseModel):
         if len(v) > MAX_CHAT_QUESTION:
             raise ValueError("MSG-CHAT-LONG")
         return v
+
+
+class TranslateIn(BaseModel):
+    """A passage selected in the reader, to translate from English into Vietnamese."""
+
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def check_text(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("MSG-TR-EMPTY")
+        if len(v) > MAX_SELECTION:
+            raise ValueError("MSG-22")
+        return v
+
+
+class TranslateOut(BaseModel):
+    translation: str
+    source: str
+    target: str
 
 
 class ChatCitation(BaseModel):
@@ -366,6 +390,7 @@ class ChatMessageOut(BaseModel):
     role: Literal["user", "assistant"]
     content: str
     citations: list[ChatCitation]
+    image: str | None = None
     ai_model: str | None
     created_at: datetime
 

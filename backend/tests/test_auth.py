@@ -33,13 +33,21 @@ async def test_first_request_provisions_profile(client, auth):
 
 async def test_rejects_expired_wrong_audience_and_bad_signature(client):
     uid = uuid.uuid4()
-    expired = make_token(uid, exp=int(time.time()) - 10)
+    expired = make_token(uid, exp=int(time.time()) - 120)
     wrong_aud = make_token(uid, aud="anon")
     wrong_iss = make_token(uid, iss="https://evil.supabase.co/auth/v1")
     tampered = make_token(uid)[:-4] + "abcd"
     for token in (expired, wrong_aud, wrong_iss, tampered, "not-a-jwt"):
         r = await client.get("/api/account", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 401, token
+
+
+async def test_small_clock_drift_is_tolerated(client):
+    # Supabase's clock a few seconds ahead of ours: a token issued "in the future" is still fresh.
+    now = int(time.time())
+    for token in (make_token(iat=now + 5, nbf=now + 5), make_token(exp=now - 5)):
+        r = await client.get("/api/account", headers={"Authorization": f"Bearer {token}"})
+        assert r.status_code == 200, r.text
 
 
 async def test_update_profile_and_preferences(client, auth):

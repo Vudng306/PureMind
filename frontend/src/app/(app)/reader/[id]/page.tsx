@@ -11,6 +11,7 @@ import { Icon } from "@/components/icons";
 import type { PdfSelection, PdfViewerHandle } from "@/components/pdf-viewer";
 import { ReaderPanel, type PanelTab } from "@/components/reader-panel";
 import { SelectionMenu } from "@/components/selection-menu";
+import { TranslatePopover } from "@/components/translate-popover";
 import { Alert, Spinner } from "@/components/ui";
 import {
   CATEGORY_FOR_COLOR,
@@ -20,8 +21,9 @@ import {
   useHighlights,
   type Highlight,
 } from "@/lib/annotations";
+import type { ChatImage } from "@/lib/chat";
 import { KIND_LABEL, origin } from "@/lib/doc-view";
-import { documentsKey, updateDocument, useDocument } from "@/lib/documents";
+import { documentsKey, updateDocument, useCharts, useDocument, useSourceMap, type SourceBox } from "@/lib/documents";
 import { currentLang, translate, useLang, useT, type Key } from "@/lib/i18n";
 import { parseMarkdown, type Inline } from "@/lib/markdown";
 import { MSG, messageFor } from "@/lib/messages";
@@ -62,7 +64,7 @@ const WIDTHS: [ColumnWidth, Key][] = [
   [780, "settings.widthWide"],
 ];
 const TOOLBAR_SPACE = 120;
-const inlineText = (nodes: Inline[]): string => nodes.map((n) => ("v" in n ? n.v : inlineText(n.c))).join("");
+const inlineText = (nodes: Inline[]): string => nodes.map((n) => ("v" in n ? n.v : "c" in n ? inlineText(n.c) : " ")).join("");
 const modeKey = (id: string) => `puremind-reader-mode:${id}`;
 
 function readStoredMode(id: string): Mode | null {
@@ -103,6 +105,16 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   const [lostHl, setLostHl] = useState<string[]>([]);
   const [editingHl, setEditingHl] = useState<string | null>(null);
   const [aiQuote, setAiQuote] = useState<string | null>(null);
+  const [aiImage, setAiImage] = useState<ChatImage | null>(null);
+  const [translating, setTranslating] = useState<{ text: string; rect: DOMRect } | null>(null);
+  const closeTranslation = useCallback(() => setTranslating(null), []);
+  // The button on a figure in clean text: the chat explains it.
+  const explainImage = useCallback((src: string, alt: string) => {
+    setAiImage({ src, alt, key: Date.now() });
+    setAiQuote(null);
+    setPanelOpen(true);
+    setPanelTab("chat");
+  }, []);
   const [selection, setSelection] = useState<TextSelection | PdfSelection | null>(null);
   // The highlight a ?hl= link points at; it decides the mode the reader opens in.
   const [hlTarget, setHlTarget] = useState<Highlight | null>(null);
@@ -124,6 +136,11 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   // Non-PDF documents only exist as clean text (FR-RDR-01 step 4).
   const effectiveMode: Mode = !isPdf ? "clean" : mode === "clean" && hasClean ? "clean" : "original";
   const clean = effectiveMode === "clean" && hasClean;
+  // Where each block of the clean text is on the PDF, for "view in the original".
+  const { data: sourceMap } = useSourceMap(id, Boolean(isPdf && hasClean));
+  const { data: charts } = useCharts(id, Boolean(isPdf && hasClean));
+  const hasSource = useCallback((blockId: string) => sourceMap?.has(blockId) ?? false, [sourceMap]);
+  const [sourceRequest, setSourceRequest] = useState<SourceBox[] | null>(null);
 
   const blocks = useMemo(() => {
     const all = doc?.content_clean ? parseMarkdown(doc.content_clean) : [];
@@ -342,6 +359,31 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
     return () => clearInterval(timer);
   }, [effectiveMode, hlTarget, flash]);
 
+  const viewSource = useCallback(
+    (blockId: string) => {
+      const boxes = sourceMap?.get(blockId);
+      if (!boxes?.length) return showToast(t("reader.noSource"));
+      setSourceRequest(boxes);
+      chooseMode("original");
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sourceMap, showToast, t],
+  );
+
+  // The PDF may still be loading after the switch: show the passage as soon as it can be placed.
+  useEffect(() => {
+    if (effectiveMode !== "original" || !sourceRequest) return;
+    let tries = 0;
+    const show = () => {
+      if (!pdfRef.current?.showSource(sourceRequest) && ++tries <= 40) return false;
+      setSourceRequest(null);
+      return true;
+    };
+    if (show()) return;
+    const timer = setInterval(() => show() && clearInterval(timer), 150);
+    return () => clearInterval(timer);
+  }, [effectiveMode, sourceRequest]);
+
   function openHighlight(h: Highlight) {
     if (effectiveMode === "original") {
       setActiveHl(h.id);
@@ -425,6 +467,12 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   }
 
   // FR-RDR-06 / FR-CHAT-02: ask the chat about the selected passage.
+  function translateSelection() {
+    if (!selection) return;
+    setTranslating({ text: selection.text, rect: selection.rect });
+    clearSelection();
+  }
+
   function explainSelection() {
     if (!selection) return;
     setAiQuote(selection.text);
@@ -623,6 +671,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
               <div className="min-h-0 flex-1">
                 <CleanReader
                   handleRef={readerRef}
+                  documentId={doc.id}
                   header={header}
                   blocks={blocks}
                   fontSize={fontSize}
@@ -636,6 +685,10 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
                   onHighlightClick={onHighlightClick}
                   onUnanchored={onUnanchored}
                   onScrollProgress={onScrollProgress}
+                  onExplainImage={explainImage}
+                  onViewSource={isPdf ? viewSource : undefined}
+                  hasSource={hasSource}
+                  charts={charts}
                   bottomPadding={focus ? 80 : 170}
                 />
               </div>
@@ -867,6 +920,8 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
             onJump={openHighlight}
             aiQuote={aiQuote}
             onClearQuote={() => setAiQuote(null)}
+            aiImage={aiImage}
+            onClearImage={() => setAiImage(null)}
             onKeyword={findKeyword}
             canHighlight={clean || isPdf}
             lostIds={clean ? lostHl : []}
@@ -881,7 +936,24 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
           onNote={() => highlightSelection("yellow", true)}
           onCopy={copySelection}
           onExplain={explainSelection}
+          onTranslate={translateSelection}
+          onSource={
+            "blockId" in selection && hasSource(selection.blockId)
+              ? () => {
+                  viewSource(selection.blockId);
+                  clearSelection();
+                }
+              : undefined
+          }
           onDismiss={() => setSelection(null)}
+        />
+      )}
+      {translating && (
+        <TranslatePopover
+          key={translating.text}
+          text={translating.text}
+          rect={translating.rect}
+          onClose={closeTranslation}
         />
       )}
     </div>

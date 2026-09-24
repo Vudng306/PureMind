@@ -33,3 +33,6 @@ class RateLimiter:
 
 
 upload_limiter = RateLimiter(limit=30, window_seconds=3600)
+# Translation costs no AI credits, so these only stop a script from running up the OpenAI bill.
+translate_minute_limiter = RateLimiter(limit=20, window_seconds=60)
+translate_day_limiter = RateLimiter(limit=300, window_seconds=24 * 3600)

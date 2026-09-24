@@ -11,6 +11,8 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup, NavigableString, Tag
 from bs4.element import PreformattedString
 
+from app.services.chart_data import chart_text
+
 STRIP_TAGS = [
     "script",
     "style",
@@ -263,6 +265,26 @@ def html_to_markdown(root: Tag) -> str:
     out: list[str] = []
     _blocks(root, out)
     return "\n\n".join(b for b in out if b.strip())
+
+
+IMAGE_ONLY_LINE = re.compile(r"^[ \t]*!\[[^\]\n]*\]\((?:pm-image:([^)\s]+)|[^)\s]+)\)[ \t]*(\n?)", re.M)
+
+
+def strip_images(
+    markdown: str, notes: dict[str, str] | None = None, charts: dict[str, dict] | None = None
+) -> str:
+    """The text as the AI is given it, since it only reads text: each image line is dropped, or replaced by
+    the figure's description when `notes` (figure_notes: {image name: description}) has one, and by the
+    chart's data when `charts` (chart_data: {image name: chart}) has it."""
+
+    def line(m: re.Match) -> str:
+        name = m.group(1) or ""
+        parts = [f"[Figure: {note}]"] if (note := (notes or {}).get(name)) else []
+        if chart := (charts or {}).get(name):
+            parts.append(chart_text(chart))
+        return "\n\n".join(parts) + m.group(2) if parts else ""
+
+    return re.sub(r"\n{3,}", "\n\n", IMAGE_ONLY_LINE.sub(line, markdown))
 
 
 def word_count(markdown: str) -> int:

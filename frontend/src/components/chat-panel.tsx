@@ -15,6 +15,7 @@ import {
   useCreateConversation,
   useDeleteConversation,
   type ChatCitation,
+  type ChatImage,
   type ChatMessage,
 } from "@/lib/chat";
 import { useDocument } from "@/lib/documents";
@@ -24,6 +25,7 @@ import { MSG, messageFor } from "@/lib/messages";
 import { useAccount } from "@/lib/queries";
 
 import { AiConsentDialog } from "./ai-consent-dialog";
+import { FigureImage } from "./clean-reader";
 import { Icon } from "./icons";
 import { MarkdownView } from "./notebook-markdown";
 import { ConfirmDialog } from "./ui";
@@ -95,14 +97,32 @@ function Answer({
   );
 }
 
-function Turn({ message, onOpen }: { message: ChatMessage; onOpen: (c: ChatCitation) => void }) {
-  if (message.role === "user") {
-    return (
-      <p className="ml-6 self-end rounded-2xl rounded-br-md bg-soft px-3.5 py-2.5 text-[15px] leading-normal text-ink">
-        {message.content}
+/** A question as the reader sent it, with the figure it was about. */
+function Question({ docId, content, image }: { docId: string; content: string; image?: string | null }) {
+  return (
+    <div className="ml-6 flex flex-col items-end gap-1.5 self-end">
+      {image && (
+        <figure className="overflow-hidden rounded-xl border border-line bg-surface">
+          <FigureImage documentId={docId} src={image} alt="" className="block max-h-40 w-auto max-w-full" />
+        </figure>
+      )}
+      <p className="rounded-2xl rounded-br-md bg-soft px-3.5 py-2.5 text-[15px] leading-normal text-ink">
+        {content}
       </p>
-    );
-  }
+    </div>
+  );
+}
+
+function Turn({
+  docId,
+  message,
+  onOpen,
+}: {
+  docId: string;
+  message: ChatMessage;
+  onOpen: (c: ChatCitation) => void;
+}) {
+  if (message.role === "user") return <Question docId={docId} content={message.content} image={message.image} />;
   return <Answer content={message.content} citations={message.citations} onOpen={onOpen} />;
 }
 
@@ -114,12 +134,17 @@ export function ChatPanel({
   docId,
   quote,
   onClearQuote,
+  image,
+  onClearImage,
   onFind,
 }: {
   docId: string;
   /** A passage the reader selected and wants to ask about (FR-RDR-06). */
   quote: string | null;
   onClearQuote: () => void;
+  /** A figure the reader wants explained: asked about as soon as it arrives. */
+  image: ChatImage | null;
+  onClearImage: () => void;
   /** Open a passage in the document: the reader searches for it (FR-RDR-04). */
   onFind: (text: string) => void;
 }) {
@@ -135,6 +160,7 @@ export function ChatPanel({
 
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState<string | null>(null); // the question being answered
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [streamed, setStreamed] = useState("");
   const [sources, setSources] = useState<ChatCitation[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -157,13 +183,15 @@ export function ChatPanel({
     bottom.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [messages.length, streamed, pending]);
 
-  async function send() {
-    const content = draft.trim();
+  async function send(text?: string) {
+    const content = (text ?? draft).trim();
     if (!content || busy) return;
     if (!consented) return setAsk("consent");
 
+    const figure = image?.src ?? null;
     setError(null);
     setPending(content);
+    setPendingImage(figure);
     setStreamed("");
     setSources([]);
     setDraft("");
@@ -175,19 +203,36 @@ export function ChatPanel({
       const result = await askQuestion(
         docId,
         id,
-        { content, quote: asked },
+        { content, quote: asked, image: figure },
         { onSources: setSources, onDelta: (text) => setStreamed((s) => s + text) },
       );
       afterAnswer(qc, docId, id, result);
       onClearQuote();
+      if (figure) onClearImage();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : MSG["MSG-99"]);
       setDraft(content); // the question is given back, unanswered and uncharged
     } finally {
       setPending(null);
+      setPendingImage(null);
       setStreamed("");
     }
   }
+
+  // "Explain this figure" asks right away, with a default question the reader can edit if it fails.
+  const sendRef = useRef(send);
+  useEffect(() => {
+    sendRef.current = send;
+  });
+  const imageKey = image?.key;
+  const askedKey = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (imageKey === undefined || askedKey.current === imageKey) return; // not again when the language changes
+    askedKey.current = imageKey;
+    const question = t("chat.explainImageQuestion");
+    setDraft(question);
+    void sendRef.current(question);
+  }, [imageKey, t]);
 
   async function startNew() {
     if (busy) return;
@@ -255,14 +300,12 @@ export function ChatPanel({
         )}
 
         {messages.map((m) => (
-          <Turn key={m.id} message={m} onOpen={(c) => onFind(snippet(c.text))} />
+          <Turn key={m.id} docId={docId} message={m} onOpen={(c) => onFind(snippet(c.text))} />
         ))}
 
         {pending && (
           <>
-            <p className="ml-6 self-end rounded-2xl rounded-br-md bg-soft px-3.5 py-2.5 text-[15px] leading-normal text-ink">
-              {pending}
-            </p>
+            <Question docId={docId} content={pending} image={pendingImage} />
             {streamed ? (
               <Answer content={streamed} citations={sources} onOpen={(c) => onFind(snippet(c.text))} />
             ) : (
@@ -277,6 +320,20 @@ export function ChatPanel({
       </div>
 
       {error && <p className="text-sm text-danger">{error}</p>}
+
+      {image && !pendingImage && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-line px-3 py-2.5">
+          <figure className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-soft">
+            <FigureImage documentId={docId} src={image.src} alt="" className="h-12 w-16 object-cover" />
+          </figure>
+          <span className="min-w-0 flex-1 text-[14px] leading-normal text-muted">
+            {image.alt ? t("chat.askingAboutImageNamed", { alt: image.alt }) : t("chat.askingAboutImage")}
+          </span>
+          <button type="button" aria-label={t("chat.dropImage")} onClick={onClearImage} className="icon-btn h-7 w-7 text-muted">
+            <Icon name="x" size={14} />
+          </button>
+        </div>
+      )}
 
       {quote && (
         <div className="flex items-start gap-2 rounded-xl border border-line px-3 py-2.5">

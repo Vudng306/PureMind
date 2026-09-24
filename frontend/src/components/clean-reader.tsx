@@ -1,7 +1,19 @@
 "use client";
 
-import { Fragment, memo, useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import {
+  Fragment,
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
+import { apiFetch } from "@/lib/api";
 import {
   blockOf,
   caretAt,
@@ -16,7 +28,12 @@ import {
 } from "@/lib/annotations";
 import { clearHighlights, findRanges, paintHighlights, scrollRangeIntoView } from "@/lib/find";
 import { useLang, useT } from "@/lib/i18n";
-import type { Block, Inline } from "@/lib/markdown";
+import { ChartData } from "@/components/chart-data";
+import { MathBlock } from "@/components/math-block";
+import type { Chart } from "@/lib/documents";
+import { DOC_IMAGE, type Block, type Inline } from "@/lib/markdown";
+
+import { Icon } from "./icons";
 
 export interface SearchState {
   query: string;
@@ -37,6 +54,15 @@ export interface CleanReaderHandle {
   scrollToBlock: (blockId: string) => void;
   scrollToHighlight: (h: Highlight) => boolean;
   scrollToFraction: (fraction: number) => void;
+}
+
+const cellText = (nodes: Inline[]): string =>
+  nodes.map((n) => ("v" in n ? n.v : "c" in n ? cellText(n.c) : "\n")).join("");
+
+/** A short one-line cell ("Case 1", "2.886") is kept on one line rather than wrapped in a narrow column. */
+function isLabel(cell: Inline[]): boolean {
+  const text = cellText(cell).trim();
+  return text.length <= 16 && !text.includes("\n");
 }
 
 function Inlines({ nodes }: { nodes: Inline[] }) {
@@ -64,6 +90,8 @@ function Inlines({ nodes }: { nodes: Inline[] }) {
                 {n.v}
               </code>
             );
+          case "br":
+            return <br key={i} />;
           case "link":
             return (
               <a key={i} href={n.href} target="_blank" rel="noopener noreferrer nofollow" className="text-accent underline underline-offset-2">
@@ -72,6 +100,159 @@ function Inlines({ nodes }: { nodes: Inline[] }) {
             );
         }
       })}
+    </>
+  );
+}
+
+/** The document being read, so its own images can be fetched from the API. */
+interface ReaderImages {
+  documentId: string;
+  /** Ask the chat to explain a figure; no button is shown without it. */
+  onExplain?: (src: string, alt: string) => void;
+  /** Show a block on the original PDF; no button is shown for a block it cannot place. */
+  onViewSource?: (blockId: string) => void;
+  hasSource?: (blockId: string) => boolean;
+  /** The data of the document's vector charts, by image name. */
+  charts?: Record<string, Chart>;
+}
+
+const ImagesContext = createContext<ReaderImages>({ documentId: "" });
+
+/**
+ * An image extracted from the document. It needs the reader's token, which an <img> cannot send, so it is
+ * fetched when it scrolls near and shown from a blob URL. A failed one is left out, like a broken web image.
+ */
+function DocImage({
+  documentId,
+  name,
+  alt,
+  className,
+}: {
+  documentId: string;
+  name: string;
+  alt: string;
+  className: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !documentId) return;
+    let url: string | null = null;
+    let cancelled = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        observer.disconnect();
+        apiFetch(`/documents/${documentId}/images/${name}`)
+          .then((res) => res.blob())
+          .then((blob) => {
+            if (cancelled) return;
+            url = URL.createObjectURL(blob);
+            setSrc(url);
+          })
+          .catch(() => !cancelled && setFailed(true));
+      },
+      { rootMargin: "800px 0px" },
+    );
+    observer.observe(el);
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [documentId, name]);
+
+  if (failed) return null;
+  return src ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} className={className} />
+  ) : (
+    <div ref={ref} className={`${className} min-h-24 min-w-24 animate-pulse bg-soft`} aria-hidden />
+  );
+}
+
+/** A figure of the document: extracted from the file (`pm-image:`) or linked from the web article. */
+export function FigureImage({
+  documentId,
+  src,
+  alt,
+  className = "mx-auto max-h-[70vh] w-auto max-w-full rounded-lg",
+}: {
+  documentId: string;
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  const own = DOC_IMAGE.exec(src);
+  if (own) return <DocImage documentId={documentId} name={own[1]} alt={alt} className={className} />;
+  return (
+    // Articles link images on any host; next/image would need every one of them in an allowlist.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      // The source site learns nothing about who is reading, and referer-based hotlink blocks do not trigger.
+      referrerPolicy="no-referrer"
+      className={className}
+      onError={(e) => {
+        // A removed or blocked image would otherwise leave a broken icon in the middle of the text.
+        e.currentTarget.closest("figure")?.setAttribute("hidden", "");
+      }}
+    />
+  );
+}
+
+const HOVER_CHIP =
+  "chip h-8 bg-surface/95 px-2.5 font-sans text-[12px] shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100 sm:opacity-0 [@media(hover:none)]:opacity-100";
+
+/** "View in the original" on a figure or table: the extraction may have misread it, the PDF has it right. */
+function SourceButton({ blockId }: { blockId: string }) {
+  const t = useT();
+  const { onViewSource, hasSource } = useContext(ImagesContext);
+  if (!onViewSource || !hasSource?.(blockId)) return null;
+  return (
+    <button type="button" onClick={() => onViewSource(blockId)} className={HOVER_CHIP}>
+      <Icon name="file" size={13} className="text-accent" />
+      {t("reader.viewInPdf")}
+    </button>
+  );
+}
+
+function Figure({ blockId, src, alt }: { blockId: string; src: string; alt: string }) {
+  const t = useT();
+  const { documentId, onExplain, charts } = useContext(ImagesContext);
+  const chart = charts?.[DOC_IMAGE.exec(src)?.[1] ?? ""];
+  const [showData, setShowData] = useState(false);
+  return (
+    <>
+      <div className="group relative">
+        <FigureImage documentId={documentId} src={src} alt={alt} />
+        <div className="absolute right-2 top-2 flex flex-wrap justify-end gap-1.5">
+          <SourceButton blockId={blockId} />
+          {chart && (
+            <button
+              type="button"
+              aria-expanded={showData}
+              onClick={() => setShowData((v) => !v)}
+              className={`${HOVER_CHIP} ${showData ? "!opacity-100" : ""}`}
+            >
+              <Icon name="chart" size={13} className="text-accent" />
+              {t("reader.chartData")}
+            </button>
+          )}
+          {onExplain && (
+            <button type="button" onClick={() => onExplain(src, alt)} className={HOVER_CHIP}>
+              <Icon name="spark" size={13} className="text-accent" />
+              {t("chat.explainImage")}
+            </button>
+          )}
+        </div>
+      </div>
+      {chart && showData && <ChartData chart={chart} />}
     </>
   );
 }
@@ -125,39 +306,34 @@ const BlockView = memo(function BlockView({ block }: { block: Block }) {
     }
     case "table":
       return (
-        <div {...common} className="mb-[18px] overflow-x-auto">
-          <table className="w-full border-collapse font-sans text-[0.8em]">
-            <tbody>
-              {block.rows.map((row, r) => (
-                <tr key={r} className={r === 0 ? "bg-soft font-medium" : ""}>
-                  {row.map((cell, c) => (
-                    <td key={c} className="border border-line px-2 py-1 align-top">
-                      <Inlines nodes={cell} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div {...common} className="group relative mb-[18px]">
+          <div className="absolute right-1 top-1 z-[1] flex">
+            <SourceButton blockId={block.id} />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse font-sans text-[0.8em]">
+              <tbody>
+                {block.rows.map((row, r) => (
+                  <tr key={r} className={r === 0 && block.head ? "bg-soft font-medium" : ""}>
+                    {row.map((cell, c) => (
+                      <td
+                        key={c}
+                        className={`border border-line px-2 py-1 align-top ${isLabel(cell) ? "whitespace-nowrap" : ""}`}
+                      >
+                        <Inlines nodes={cell} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       );
     case "image":
       return (
         <figure {...common} className="mb-[18px] select-none">
-          {/* Articles link images on any host; next/image would need every one of them in an allowlist. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={block.src}
-            alt={block.alt}
-            loading="lazy"
-            // The source site learns nothing about who is reading, and referer-based hotlink blocks do not trigger.
-            referrerPolicy="no-referrer"
-            className="mx-auto max-h-[70vh] w-auto max-w-full rounded-lg"
-            onError={(e) => {
-              // A removed or blocked image would otherwise leave a broken icon in the middle of the text.
-              e.currentTarget.closest("figure")?.setAttribute("hidden", "");
-            }}
-          />
+          <Figure blockId={block.id} src={block.src} alt={block.alt} />
           {block.alt && (
             <figcaption className="mt-1.5 text-center font-sans text-[0.72em] leading-normal text-muted">
               {block.alt}
@@ -165,17 +341,20 @@ const BlockView = memo(function BlockView({ block }: { block: Block }) {
           )}
         </figure>
       );
+    case "math":
+      return (
+        // Not selectable: the typeset glyphs are not the equation's text, so a highlight could not hold.
+        <div {...common} className="group relative mb-[18px] select-none">
+          <div className="absolute right-1 top-1 z-[1] flex">
+            <SourceButton blockId={block.id} />
+          </div>
+          <MathBlock tex={block.tex} className="py-1 text-ink" />
+        </div>
+      );
     case "pagebreak":
       return (
-        <div
-          data-page-break={block.page}
-          className="my-10 flex select-none items-center gap-3 font-sans text-xs text-muted"
-          aria-label={`Trang ${block.page}`}
-        >
-          <span className="h-px flex-1 bg-line" />
-          Trang {block.page}
-          <span className="h-px flex-1 bg-line" />
-        </div>
+        // Only a marker for the page indicator: the text reads on across pages, as in a book.
+        <div data-page-break={block.page} aria-hidden="true" />
       );
   }
 });
@@ -190,6 +369,7 @@ function trimSpan(text: string, start: number, end: number): [number, number] {
 /** FR-RDR-05: clean text mode — Source Serif 4, adjustable size, line height and column width; highlights. */
 export function CleanReader({
   handleRef,
+  documentId,
   header,
   blocks,
   fontSize,
@@ -203,9 +383,14 @@ export function CleanReader({
   onHighlightClick,
   onUnanchored,
   onScrollProgress,
+  onExplainImage,
+  onViewSource,
+  hasSource,
+  charts,
   bottomPadding,
 }: {
   handleRef: React.Ref<CleanReaderHandle>;
+  documentId: string;
   header: React.ReactNode;
   blocks: Block[];
   fontSize: number;
@@ -220,10 +405,21 @@ export function CleanReader({
   /** Highlights whose passage could not be found in the current text (FR-HL-02). */
   onUnanchored?: (ids: string[]) => void;
   onScrollProgress: (fraction: number, page: number | null) => void;
+  /** Ask the AI to explain a figure (the button on each image). */
+  onExplainImage?: (src: string, alt: string) => void;
+  /** Show a block on the original PDF (the button on figures and tables). */
+  onViewSource?: (blockId: string) => void;
+  hasSource?: (blockId: string) => boolean;
+  /** The data of the vector charts (the "Chart data" button on those figures). */
+  charts?: Record<string, Chart>;
   bottomPadding: number;
 }) {
   const t = useT();
   const lang = useLang();
+  const images = useMemo(
+    () => ({ documentId, onExplain: onExplainImage, onViewSource, hasSource, charts }),
+    [documentId, onExplainImage, onViewSource, hasSource, charts],
+  );
   const scrollerRef = useRef<HTMLDivElement>(null);
   const articleRef = useRef<HTMLElement>(null);
   const { query, index, onResult } = search;
@@ -395,9 +591,11 @@ export function CleanReader({
         lang={lang}
       >
         {header}
-        {blocks.map((b) => (
-          <BlockView key={b.id} block={b} />
-        ))}
+        <ImagesContext.Provider value={images}>
+          {blocks.map((b) => (
+            <BlockView key={b.id} block={b} />
+          ))}
+        </ImagesContext.Provider>
         <p className="mt-11 select-none font-sans text-[13px] text-muted">{t("reader.tip")}</p>
       </article>
     </div>

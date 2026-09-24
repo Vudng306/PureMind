@@ -6,7 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import account, chat, documents, highlights, notebooks, search, summaries
+from app.api.routes import account, chat, documents, highlights, notebooks, search, summaries, translate
 from app.core import logging as applog
 from app.core import messages
 from app.core.config import get_settings
@@ -128,3 +128,4 @@ app.include_router(search.router, prefix="/api")
 app.include_router(summaries.router, prefix="/api")
 app.include_router(notebooks.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
+app.include_router(translate.router, prefix="/api")

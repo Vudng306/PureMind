@@ -11,6 +11,7 @@ import {
   useHighlightActions,
   type Highlight,
 } from "@/lib/annotations";
+import type { ChatImage } from "@/lib/chat";
 import { useDocument } from "@/lib/documents";
 import { useLang, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
@@ -240,6 +241,8 @@ export function ReaderPanel({
   onJump,
   aiQuote,
   onClearQuote,
+  aiImage,
+  onClearImage,
   onKeyword,
   canHighlight,
   lostIds,
@@ -256,6 +259,9 @@ export function ReaderPanel({
   /** A passage the reader selected to ask AI about (FR-RDR-06), shown in the chat tab. */
   aiQuote: string | null;
   onClearQuote: () => void;
+  /** A figure the reader asked the AI to explain, shown in the chat tab. */
+  aiImage: ChatImage | null;
+  onClearImage: () => void;
   /** A summary keyword or a cited passage was chosen: find it in the document (FR-RDR-04). */
   onKeyword: (keyword: string) => void;
   canHighlight: boolean;
@@ -442,7 +448,14 @@ export function ReaderPanel({
         {tab === "ai" && <SummaryPanel docId={docId} onKeyword={onKeyword} />}
 
         {tab === "chat" && (
-          <ChatPanel docId={docId} quote={aiQuote} onClearQuote={onClearQuote} onFind={onKeyword} />
+          <ChatPanel
+            docId={docId}
+            quote={aiQuote}
+            onClearQuote={onClearQuote}
+            image={aiImage}
+            onClearImage={onClearImage}
+            onFind={onKeyword}
+          />
         )}
       </div>
     </aside>

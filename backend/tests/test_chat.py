@@ -405,3 +405,86 @@ async def test_a_question_uses_the_stronger_model(monkeypatch):
     async for _ in openai_client.chat_stream(settings, [], purpose="notebook", usage=Usage()):
         pass
     assert seen[-1]["model"] == "gpt-write"
+
+
+async def test_a_figure_can_be_explained(client, auth, chat_ai, monkeypatch):
+    import re
+
+    from app.models import Document
+    from app.services import web
+    from tests.pdfs import image_pdf, png
+
+    h = auth()
+    embed, answer = chat_ai("Biểu đồ cho thấy doanh thu tăng [1].")
+    doc, conv = await start(client, h, image_pdf())
+    async with SessionLocal() as session:
+        content = await session.scalar(select(Document.content_clean).where(Document.id == uuid.UUID(doc)))
+    src = re.search(r"\((pm-image:[0-9a-f]{16}\.webp)\)", content).group(1)
+
+    r = await ask(client, h, doc, conv, "Hình này nói gì?", image=src)
+    assert r.status_code == 200, r.text
+    assert r.json()["question"]["image"] == src
+    user_turn = answer.calls[-1][-1]["content"]
+    assert user_turn[0]["type"] == "text" and "Text before the figure" in user_turn[0]["text"]
+    assert user_turn[1]["image_url"]["url"].startswith("data:image/jpeg;base64,")
+    # The retrieval query carries the text around the figure, not just "what does this show?".
+    assert "Text before the figure" in [t for p, t in embed.calls if p == "chat_query"][-1][0]
+    r = await client.get(f"/api/documents/{doc}/chat/conversations/{conv}", headers=h)
+    assert [m["image"] for m in r.json()["messages"]] == [src, None]
+
+    # Earlier figure questions are marked in the history; the image is not sent again.
+    r = await ask(client, h, doc, conv, "Còn gì nữa?")
+    assert r.status_code == 200
+    sent = answer.calls[-1]
+    assert sent[1]["content"].startswith("(About a figure in the document)")
+    assert isinstance(sent[-1]["content"], str)
+
+    # Only images in this document: another address, or a name that is not there, is refused.
+    for other in ("https://evil.example/x.png", "pm-image:0000000000000000.webp", "pm-image:../../x"):
+        r = await ask(client, h, doc, conv, "Hình này?", image=other)
+        assert r.status_code == 422 and r.json()["detail"] == MSG["MSG-CHAT-IMAGE"]
+
+    # An image from a web article is fetched with the article's safety checks.
+    link_image = "https://example.com/chart.png"
+    async with SessionLocal() as session:
+        await session.execute(
+            update(Document)
+            .where(Document.id == uuid.UUID(doc))
+            .values(content_clean=f"# Kết quả\n\nTrước hình.\n\n![Doanh thu]({link_image})\n\nSau hình.")
+        )
+        await session.commit()
+    fetched: list[str] = []
+
+    async def fake_fetch(url, contact=""):
+        fetched.append(url)
+        return web.FetchResult(url, "image/png", png(200, 100, (10, 20, 30)))
+
+    monkeypatch.setattr(web, "fetch_url", fake_fetch)
+    r = await ask(client, h, doc, conv, "Giải thích hình", image=link_image)
+    assert r.status_code == 200, r.text
+    assert fetched == [link_image]
+    text = answer.calls[-1][-1]["content"][0]["text"]
+    assert "Its caption: Doanh thu" in text and "Section: Kết quả" in text and "Sau hình." in text
+
+    # An address that cannot be fetched, or is not an image, is a clear error and costs nothing.
+    async def blocked(url, contact=""):
+        raise web.BlockedAddress
+
+    monkeypatch.setattr(web, "fetch_url", blocked)
+    before = await messages_in(conv)
+    r = await ask(client, h, doc, conv, "Giải thích hình", image=link_image)
+    assert r.status_code == 422 and r.json()["detail"] == MSG["MSG-CHAT-IMAGE"]
+    monkeypatch.setattr(web, "fetch_url", lambda url, contact="": _html(url))
+    r = await client.post(
+        f"/api/documents/{doc}/chat/conversations/{conv}/messages",
+        headers={**h, "Accept": "text/event-stream"},
+        json={"content": "Giải thích hình", "image": link_image},
+    )
+    assert "event: error" in r.text and MSG["MSG-CHAT-IMAGE"] in r.text
+    assert await messages_in(conv) == before
+
+
+async def _html(url):
+    from app.services import web
+
+    return web.FetchResult(url, "text/html", b"<html>not an image</html>")

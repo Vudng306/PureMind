@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
@@ -10,6 +11,8 @@ from app.core.messages import MSG
 from app.core.security import InvalidToken, verify_access_token
 from app.db.session import get_session
 from app.models import User
+
+log = logging.getLogger("app.auth")
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -29,7 +32,9 @@ async def get_current_user(request: Request, session: SessionDep, settings: Sett
         raise _unauthorized()
     try:
         claims = await verify_access_token(token, settings)
-    except InvalidToken:
+    except InvalidToken as e:
+        # The reason only (expired, wrong issuer, unknown key…), never the token itself.
+        log.warning("access token rejected: %r", e.__cause__ or e)
         raise _unauthorized() from None
 
     bind_user(request.scope, claims.user_id)  # NFR-OBS-01: the rest of this request logs under the user

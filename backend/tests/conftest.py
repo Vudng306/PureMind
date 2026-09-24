@@ -16,6 +16,8 @@ os.environ.update(
     SUPABASE_SERVICE_ROLE_KEY="service-role-test",
     UPLOAD_DIR=str(TMP / "uploads"),
     ENVIRONMENT="test",
+    # Never the key from .env: a test that needs OpenAI sets a fake key and mocks the calls.
+    OPENAI_API_KEY="",
 )
 
 import httpx  # noqa: E402
@@ -59,9 +61,11 @@ def make_token(user_id: uuid.UUID | None = None, email: str | None = None, **ove
 
 @pytest.fixture(autouse=True)
 def _reset_rate_limits():
-    from app.core.ratelimit import upload_limiter
+    from app.core.ratelimit import translate_day_limiter, translate_minute_limiter, upload_limiter
 
     upload_limiter.reset()
+    translate_minute_limiter.reset()
+    translate_day_limiter.reset()
 
 
 @pytest.fixture

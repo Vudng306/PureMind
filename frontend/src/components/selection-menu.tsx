@@ -10,16 +10,18 @@ import { Icon } from "./icons";
 /** A clean-text or PDF selection: the menu only needs its position on screen. */
 type Selected = { rect: DOMRect };
 
-const MENU_W = 470;
+const MENU_W = 530;
 const MENU_H = 104;
 
-/** Dark floating menu over a selected passage: color by meaning, note, copy, explain. */
+/** Dark floating menu over a selected passage: color by meaning, note, copy, explain, translate. */
 export function SelectionMenu({
   selection,
   onColor,
   onNote,
   onCopy,
   onExplain,
+  onTranslate,
+  onSource,
   onDismiss,
 }: {
   selection: Selected;
@@ -27,6 +29,9 @@ export function SelectionMenu({
   onNote: () => void;
   onCopy: () => void;
   onExplain: () => void;
+  onTranslate: () => void;
+  /** Show the passage on the original PDF; left out where it cannot be placed. */
+  onSource?: () => void;
   onDismiss: () => void;
 }) {
   const t = useT();
@@ -70,7 +75,7 @@ export function SelectionMenu({
       className="fixed z-30 flex flex-col gap-0.5 rounded-[14px] bg-menu p-1.5 font-sans text-menu-fg shadow-[0_12px_30px_rgba(0,0,0,0.28)]"
       style={{ left, top, width }}
     >
-      <div className="flex items-center gap-0.5 overflow-x-auto">
+      <div className="flex items-center gap-0.5 overflow-x-auto [scrollbar-width:none]">
         {HIGHLIGHT_COLORS.map((c) => (
           <button
             key={c}
@@ -98,6 +103,16 @@ export function SelectionMenu({
           <Icon name="spark" size={16} />
           {t("selection.explain")}
         </button>
+        <button type="button" onClick={onTranslate} className={item}>
+          <Icon name="translate" size={16} />
+          {t("selection.translate")}
+        </button>
+        {onSource && (
+          <button type="button" onClick={onSource} className={item}>
+            <Icon name="file" size={16} />
+            {t("selection.source")}
+          </button>
+        )}
       </div>
     </div>
   );

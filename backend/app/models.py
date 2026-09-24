@@ -128,6 +128,15 @@ class Document(TimestampMixin, Base):
     # FR-CHAT-01: sha256 of the text the chat index was built from; a re-extraction makes it stale.
     chunks_hash: Mapped[str | None] = mapped_column(String(64))
     chunks_model: Mapped[str | None] = mapped_column(String(100))
+    # Where each block of the clean text is on the original PDF: [[block key, [[page, x, y, w, h], …]], …]
+    # with the key the reader's block id is made from and boxes as fractions of the page. Loaded on demand.
+    source_map: Mapped[list | None] = mapped_column(JsonType, deferred=True)
+    # {image name: description} of the document's figures, written by the vision model after extraction so
+    # the AI, which reads text only, knows what they show (services/figure_notes). Loaded on demand.
+    figure_notes: Mapped[dict | None] = mapped_column(JsonType, deferred=True)
+    # {image name: chart} of the charts drawn as vector paths, their data read from the drawing at
+    # extraction (services/chart_data): for the reader's data table and the AI. Loaded on demand.
+    chart_data: Mapped[dict | None] = mapped_column(JsonType, deferred=True)
 
     user: Mapped[User] = relationship(back_populates="documents")
 
@@ -348,6 +357,8 @@ class ChatMessage(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     # [{position, page_number, heading, text}] — the numbered passages the answer was given (FR-CHAT-02).
     citations: Mapped[list] = mapped_column(JsonType, default=list, nullable=False)
+    # A question about a figure: the image as written in the clean text (`pm-image:…` or its URL).
+    image: Mapped[str | None] = mapped_column(String(2048))
     ai_model: Mapped[str | None] = mapped_column(String(100))
     prompt_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     completion_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

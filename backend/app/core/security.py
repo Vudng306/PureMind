@@ -10,6 +10,9 @@ from starlette.concurrency import run_in_threadpool
 from app.core.config import Settings
 
 ASYMMETRIC_ALGS = ["ES256", "RS256", "EdDSA"]
+# A token is issued by Supabase's clock and checked by ours; a few seconds of drift must not reject a fresh one
+# ("not yet valid (iat)") or keep an expired one alive for long.
+CLOCK_LEEWAY_SECONDS = 30
 
 
 class InvalidToken(Exception):
@@ -57,6 +60,7 @@ async def verify_access_token(token: str, settings: Settings) -> TokenClaims:
             audience=settings.supabase_jwt_audience,
             issuer=settings.supabase_issuer,
             options=options,
+            leeway=CLOCK_LEEWAY_SECONDS,
         )
         user_id = UUID(claims["sub"])
     except (jwt.PyJWTError, ValueError) as e:

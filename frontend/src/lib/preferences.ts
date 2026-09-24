@@ -134,12 +134,12 @@ export function currentLang(): Lang {
   return usePreferences.getState().language;
 }
 
-/** Label shown for a color; an unnamed color falls back to the color's name. */
+/** Label shown for a color: the user's own name for it, else what the color means by default. */
 export function colorLabel(
   labels: Record<HighlightColor, string>,
   color: HighlightColor,
   lang: Lang = currentLang(),
 ): string {
-  if (labels[color]?.trim()) return labels[color].trim();
-  return lang === "en" ? `${COLOR_NAME.en[color]} highlight` : `Màu ${COLOR_NAME.vi[color]}`;
+  // Unnamed, a color still says what it means (the category it sets), not just which color it is.
+  return labels[color]?.trim() || DEFAULT_COLOR_LABELS[lang][color];
 }

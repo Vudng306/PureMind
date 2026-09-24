@@ -66,6 +66,7 @@ const PATHS = {
   pencil: <path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />,
   check: <path d="M5 12.5l4.5 4.5L19 7" />,
   download: <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />,
+  chart: <path d="M4 4v16h16M8 15l4-5 3 3 5-6" />,
   history: (
     <>
       <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
@@ -78,6 +79,7 @@ const PATHS = {
       <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
     </>
   ),
+  translate: <path d="M4 5h9M8.5 3v2M11 5c-.8 3.8-3.4 6.8-7 8.5M6 8.5c1.2 2 3 3.6 5 4.5M13 21l4-9 4 9M14.4 18h5.2" />,
   moon: <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z" />,
   user: (
     <>
