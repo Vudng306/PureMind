@@ -27,6 +27,7 @@ export function AddDocumentDialog() {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(0);
   const upload = useUploadDocument();
   const saveUrl = useSaveUrl();
   const busy = upload.isPending || saveUrl.isPending;
@@ -64,8 +65,9 @@ export function AddDocumentDialog() {
   async function submitFile() {
     if (!file) return fileInput.current?.click();
     setError(null);
+    setSent(0);
     try {
-      const doc = await upload.mutateAsync(file);
+      const doc = await upload.mutateAsync({ file, onProgress: setSent });
       // A failed extraction still keeps the document; PDFs can be read as the original.
       if (doc.extraction_status === "failed" && doc.file_type === "pdf") {
         onClose();
@@ -189,6 +191,9 @@ export function AddDocumentDialog() {
         )}
         <input ref={fileInput} type="file" accept=".pdf,.epub,application/pdf,application/epub+zip" className="hidden" onChange={pickFile} />
 
+        {upload.isPending && file && <UploadProgress size={file.size} sent={sent} />}
+        {saveUrl.isPending && <UploadProgress />}
+
         {error && <Alert>{error}</Alert>}
 
         <div className="flex justify-end gap-2.5">
@@ -207,5 +212,39 @@ export function AddDocumentDialog() {
         </div>
       </div>
     </dialog>
+  );
+}
+
+/**
+ * The bytes of a file as they are sent, then (all sent, the server reading and cleaning it) a bar with no end;
+ * a link has only the second: the server fetches the page itself.
+ */
+function UploadProgress({ size, sent }: { size?: number; sent?: number }) {
+  const t = useT();
+  const sending = size !== undefined && sent !== undefined && sent < 1;
+  const pct = Math.round((sent ?? 0) * 100);
+  const label = size === undefined ? t("add.fetchingNote") : sending ? t("add.sent", { sent: formatSize(size * (sent ?? 0)), total: formatSize(size) }) : t("add.processing");
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-3 text-[13px] text-muted" aria-live="polite">
+        <span className="truncate">{label}</span>
+        {sending && <span className="font-medium tabular-nums text-ink">{pct}%</span>}
+      </div>
+      <span
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={sending ? pct : undefined}
+        className="relative h-1.5 overflow-hidden rounded-sm bg-soft"
+      >
+        {sending ? (
+          <span className="absolute inset-y-0 left-0 rounded-sm bg-accent transition-[width] duration-200" style={{ width: `${pct}%` }} />
+        ) : (
+          <span className="absolute inset-y-0 left-0 w-2/5 animate-pm-slide rounded-sm bg-accent motion-reduce:w-full motion-reduce:animate-none motion-reduce:opacity-60" />
+        )}
+      </span>
+    </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { highlightsKey } from "./annotations";
-import { api } from "./api";
+import { api, apiUpload } from "./api";
 import { currentLang } from "./preferences";
 import type { DocumentDetail, DocumentListItem, Lang } from "./types";
 
@@ -37,10 +37,10 @@ export function useDocument(id: string) {
 export function useUploadDocument() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: ({ file, onProgress }: { file: File; onProgress: (fraction: number) => void }) => {
       const body = new FormData();
       body.append("file", file);
-      return api<DocumentDetail>("/documents/upload", { method: "POST", body });
+      return apiUpload<DocumentDetail>("/documents/upload", body, onProgress);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: documentsKey }),
   });
