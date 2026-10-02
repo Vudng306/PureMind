@@ -22,6 +22,8 @@ export function authErrorMessage(error: AuthError | Error | null | undefined): s
     case "validation_failed":
     case "email_address_invalid":
       return MSG["MSG-01"];
+    case "user_banned": // FR-ADM-03: locked from the admin page
+      return MSG["MSG-ACC-DISABLED"];
     case "email_not_confirmed":
       return translate(currentLang(), "auth.emailNotConfirmed");
   }

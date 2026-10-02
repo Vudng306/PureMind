@@ -13,9 +13,10 @@ import { LocalDataImport } from "@/components/local-data-import";
 import { PreferencesSync } from "@/components/preferences-sync";
 import { Spinner } from "@/components/ui";
 import { UserMenu } from "@/components/user-menu";
+import { ApiError } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { useAccount } from "@/lib/queries";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useUi } from "@/lib/ui-store";
 
 // Highlight và Tìm kiếm không nằm trên thanh này: highlight đọc ngay trong tài liệu, còn tìm kiếm
@@ -30,7 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { session, loading } = useAuth();
-  const { data: user } = useAccount();
+  const { data: user, error: accountError } = useAccount();
   const { setAddOpen, setPaletteOpen } = useUi();
   const t = useT();
 
@@ -38,6 +39,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isSupabaseConfigured || (!loading && !session)) router.replace("/login");
   }, [loading, session, router]);
+
+  // FR-ADM-03: a locked account is refused by the API; sign it out here and say why on the login page.
+  useEffect(() => {
+    if (!(accountError instanceof ApiError) || accountError.status !== 403) return;
+    void supabase()
+      .auth.signOut({ scope: "local" })
+      .catch(() => undefined)
+      .finally(() => router.replace("/login?disabled=1"));
+  }, [accountError, router]);
 
   // Ctrl/Cmd+K opens quick search everywhere in the app.
   useEffect(() => {

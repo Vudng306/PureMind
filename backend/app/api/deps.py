@@ -1,4 +1,5 @@
 import logging
+from datetime import UTC, timedelta
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
@@ -10,12 +11,15 @@ from app.core.logging import bind_user
 from app.core.messages import MSG
 from app.core.security import InvalidToken, verify_access_token
 from app.db.session import get_session
-from app.models import User
+from app.models import User, utcnow
 
 log = logging.getLogger("app.auth")
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
+
+
+LAST_SEEN_EVERY = timedelta(hours=1)
 
 
 def _unauthorized() -> HTTPException:
@@ -56,7 +60,29 @@ async def get_current_user(request: Request, session: SessionDep, settings: Sett
             user = await session.get(User, claims.user_id)
             if user is None:
                 raise _unauthorized() from None
+
+    # FR-ADM-03: a locked account is refused even with a token issued before the lock.
+    if user.disabled_at is not None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=MSG["MSG-ACC-DISABLED"])
+
+    now = utcnow()
+    seen = user.last_seen_at
+    if seen is not None and seen.tzinfo is None:  # SQLite hands timestamps back without their zone
+        seen = seen.replace(tzinfo=UTC)
+    if seen is None or now - seen >= LAST_SEEN_EVERY:
+        user.last_seen_at = now
+        await session.commit()
     return user
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def require_admin(user: CurrentUser) -> User:
+    """FR-ADM-01: the role is read from the database on every request, so revoking it takes effect at once."""
+    if not user.is_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=MSG["MSG-ADM-FORBIDDEN"])
+    return user
+
+
+AdminUser = Annotated[User, Depends(require_admin)]

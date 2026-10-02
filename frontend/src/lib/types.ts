@@ -28,6 +28,8 @@ export interface User {
   ai_quota_remaining: number;
   /** Chat questions left today, counted apart from summaries and notebooks (FR-CHAT-02). */
   chat_quota_remaining: number;
+  /** FR-ADM-01: "admin" opens the admin pages; the server checks it again on every request. */
+  role: "user" | "admin";
   created_at: string;
   updated_at: string;
 }

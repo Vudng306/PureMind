@@ -103,6 +103,12 @@ export function UserMenu({ user }: { user?: User }) {
             <Icon name="gear" />
             {t("settings.readingOptions")}
           </Link>
+          {user?.role === "admin" && (
+            <Link href="/admin/users" role="menuitem" className={item} onClick={() => setOpen(false)}>
+              <Icon name="shield" />
+              {t("admin.menu")}
+            </Link>
+          )}
           <button type="button" role="menuitem" onClick={signOut} className={`${item} border-t border-line text-danger`}>
             <Icon name="logout" />
             {t("settings.signOut")}

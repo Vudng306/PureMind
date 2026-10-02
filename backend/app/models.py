@@ -42,10 +42,14 @@ class TimestampMixin:
     )
 
 
+USER_ROLES = ("user", "admin")
+
+
 class User(TimestampMixin, Base):
     """Profile row; `id` equals the Supabase Auth user id (JWT `sub`)."""
 
     __tablename__ = "users"
+    __table_args__ = (CheckConstraint("role IN ('user', 'admin')", name="ck_users_role"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -57,6 +61,12 @@ class User(TimestampMixin, Base):
     # FR-CHAT-02: questions have their own daily allowance, reset at 00:00 Vietnam time like the other one.
     chat_quota_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     chat_quota_date: Mapped[date | None] = mapped_column(Date)
+    # FR-ADM-01: one role besides the default; the first admin is made with `python -m app.scripts.make_admin`.
+    role: Mapped[str] = mapped_column(String(8), default="user", server_default="user", nullable=False)
+    # FR-ADM-03: set while the account is locked; every request is refused and Supabase bans the login.
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Refreshed at most once an hour (api/deps.py), for the admin's user list.
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     documents: Mapped[list["Document"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
@@ -67,6 +77,10 @@ class User(TimestampMixin, Base):
         if not self.avatar_path:
             return None
         return f"/api/account/avatar?v={int(self.updated_at.timestamp())}"
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == "admin"
 
     @property
     def ai_quota_remaining(self) -> int:
@@ -362,4 +376,27 @@ class ChatMessage(Base):
     ai_model: Mapped[str | None] = mapped_column(String(100))
     prompt_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     completion_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+ADMIN_ACTIONS = ("user.disable", "user.enable", "user.reset_quota", "user.delete")
+
+
+class AdminAuditLog(Base):
+    """FR-ADM-05: every change an admin makes, kept after the admin or the target account is gone.
+
+    The emails are copied at the time of the action because either account may be deleted later.
+    `detail` holds counts and flags only, never anything a user wrote (NFR-PRV-01).
+    """
+
+    __tablename__ = "admin_audit_log"
+    __table_args__ = (Index("ix_admin_audit_log_created", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    admin_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("users.id", ondelete="SET NULL"))
+    admin_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    target_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, index=True)
+    target_email: Mapped[str | None] = mapped_column(String(255))
+    detail: Mapped[dict] = mapped_column(JsonType, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

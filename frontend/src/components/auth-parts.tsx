@@ -27,7 +27,14 @@ export function AuthTabs({ active }: { active: "login" | "register" }) {
 }
 
 /** An "or" divider + Google sign-in (Supabase OAuth; the provider must be enabled in the Supabase project). */
-export function GoogleSignIn({ onError }: { onError: (message: string) => void }) {
+export function GoogleSignIn({
+  onError,
+  redirectPath = "/library",
+}: {
+  onError: (message: string) => void;
+  /** Where Supabase sends the browser back to; it must match the project's allowed Redirect URLs. */
+  redirectPath?: string;
+}) {
   const t = useT();
   const [busy, setBusy] = useState(false);
 
@@ -50,7 +57,7 @@ export function GoogleSignIn({ onError }: { onError: (message: string) => void }
     setBusy(true);
     const { error } = await supabase().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/library` },
+      options: { redirectTo: `${window.location.origin}${redirectPath}` },
     });
     if (error) {
       setBusy(false);

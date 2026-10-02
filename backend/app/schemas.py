@@ -50,6 +50,7 @@ class UserOut(BaseModel):
     reading_preferences: dict
     ai_quota_remaining: int
     chat_quota_remaining: int
+    role: Literal["user", "admin"]
     created_at: datetime
     updated_at: datetime
 
@@ -422,3 +423,57 @@ class ChatAnswerOut(BaseModel):
     question: ChatMessageOut
     answer: ChatMessageOut
     chat_quota_remaining: int
+
+
+# --- Admin page (FR-ADM). Counts and account metadata only: nothing a user wrote is ever returned. ---
+
+
+class AdminUserItem(BaseModel):
+    id: uuid.UUID
+    email: str
+    display_name: str | None
+    role: Literal["user", "admin"]
+    created_at: datetime
+    last_seen_at: datetime | None
+    disabled_at: datetime | None
+    document_count: int
+    storage_bytes: int
+    ai_used_today: int
+    chat_used_today: int
+
+
+class AdminUserPage(BaseModel):
+    items: list[AdminUserItem]
+    total: int
+    page: int
+    page_size: int
+
+
+class AdminAuditEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    admin_email: str
+    action: str
+    target_user_id: uuid.UUID | None
+    target_email: str | None
+    detail: dict
+    created_at: datetime
+
+
+class AdminAuditPage(BaseModel):
+    items: list[AdminAuditEntry]
+    total: int
+    page: int
+    page_size: int
+
+
+class AdminUserDetail(AdminUserItem):
+    documents_by_status: dict[str, int]
+    highlight_count: int
+    notebook_count: int
+    conversation_count: int
+    summary_count: int
+    ai_daily_quota: int
+    chat_daily_quota: int
+    recent_actions: list[AdminAuditEntry]

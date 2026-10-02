@@ -20,7 +20,9 @@ function LoginForm() {
   const { session, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(params.get("expired") ? MSG["MSG-06"] : null);
+  const [error, setError] = useState<string | null>(
+    params.get("disabled") ? MSG["MSG-ACC-DISABLED"] : params.get("expired") ? MSG["MSG-06"] : null,
+  );
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

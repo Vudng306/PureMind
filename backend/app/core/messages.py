@@ -49,6 +49,11 @@ VI: dict[str, str] = {
     "MSG-CHAT-IMAGE": "Không đọc được hình này. Hãy thử hình khác.",
     "MSG-TR-EMPTY": "Hãy chọn đoạn văn cần dịch.",
     "MSG-TR-RATE": "Chưa dịch được lúc này. Vui lòng thử lại sau ít phút.",
+    # Admin page (FR-ADM): added after SRS v1.1, so named like the chat codes.
+    "MSG-ACC-DISABLED": "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.",
+    "MSG-ADM-FORBIDDEN": "Bạn không có quyền truy cập trang quản trị.",
+    "MSG-ADM-NOT-FOUND": "Không tìm thấy người dùng.",
+    "MSG-ADM-PROTECTED": "Không thể khóa hoặc xóa tài khoản quản trị.",
     "MSG-99": "Đã có lỗi xảy ra. Vui lòng thử lại.",
     # Body that fails validation before a route sees it (SRS 3.4).
     "MSG-INVALID": "Dữ liệu không hợp lệ.",
@@ -91,6 +96,10 @@ EN: dict[str, str] = {
     "MSG-CHAT-IMAGE": "This image could not be read. Try another one.",
     "MSG-TR-EMPTY": "Select the passage to translate.",
     "MSG-TR-RATE": "Could not translate right now. Please try again in a few minutes.",
+    "MSG-ACC-DISABLED": "Your account has been locked. Please contact the administrator.",
+    "MSG-ADM-FORBIDDEN": "You do not have access to the admin pages.",
+    "MSG-ADM-NOT-FOUND": "User not found.",
+    "MSG-ADM-PROTECTED": "Admin accounts cannot be locked or deleted.",
     "MSG-99": "Something went wrong. Please try again.",
     "MSG-INVALID": "That data is not valid.",
 }

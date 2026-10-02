@@ -39,6 +39,7 @@ const PATHS = {
     </>
   ),
   logout: <path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11" />,
+  shield: <path d="M12 3l7 3v6c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6z" />,
   sort: <path d="M7 4v16M4 17l3 3 3-3M17 20V4M14 7l3-3 3 3" />,
   note: (
     <>

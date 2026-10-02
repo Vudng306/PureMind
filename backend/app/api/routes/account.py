@@ -4,14 +4,13 @@ import uuid
 from fastapi import APIRouter, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from PIL import Image, UnidentifiedImageError
-from sqlalchemy import select
 from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import CurrentUser, SessionDep, SettingsDep
 from app.core.messages import MSG
-from app.models import Document
 from app.schemas import AccountUpdate, UserOut
 from app.services import storage
+from app.services.accounts import purge_user
 from app.services.supabase_admin import SupabaseAdminError, delete_auth_user
 
 router = APIRouter(prefix="/account", tags=["account"])
@@ -98,26 +97,9 @@ async def get_avatar(user: CurrentUser, settings: SettingsDep):
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_account(user: CurrentUser, session: SessionDep, settings: SettingsDep):
     """FR-ACC-05: delete data, files and the Supabase Auth user."""
-    paths = (
-        await session.scalars(
-            select(Document.file_storage_path).where(
-                Document.user_id == user.id, Document.file_storage_path.is_not(None)
-            )
-        )
-    ).all()
-    document_ids = (await session.scalars(select(Document.id).where(Document.user_id == user.id))).all()
-    avatar = user.avatar_path
-    user_id = user.id
-
     # Remove the login first: if Supabase fails we keep all data and report an error.
     try:
-        await delete_auth_user(settings, user_id)
+        await delete_auth_user(settings, user.id)
     except SupabaseAdminError:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, MSG["MSG-99"]) from None
-
-    await session.delete(user)
-    await session.commit()
-    for p in [*paths, avatar]:
-        storage.delete_file(settings, p)
-    for document_id in document_ids:
-        storage.delete_dir(settings, storage.images_path(document_id))
+    await purge_user(session, settings, user)

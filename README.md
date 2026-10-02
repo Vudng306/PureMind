@@ -24,6 +24,15 @@ Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh
 - **Trò chuyện với tài liệu:** hỏi đáp ngay trong trình đọc. Nội dung tài liệu được cắt thành đoạn và nhúng (embedding) một lần; mỗi câu hỏi chỉ được trả lời bằng những đoạn liên quan nhất, câu trả lời luôn kèm số đoạn [n] — bấm vào để mở đúng đoạn trong bài. Bôi đen một câu rồi chọn “Hỏi AI” để hỏi về chính đoạn đó. Mỗi tài liệu giữ được nhiều cuộc trò chuyện.
 - **Notebook AI:** chọn tối đa 100 highlight để AI viết notebook Markdown có trích dẫn nguồn [n]; nội dung hiện dần trong lúc AI viết; chỉnh sửa, tự lưu, lịch sử phiên bản.
 - **Giới hạn AI:** 20 lượt tóm tắt/notebook và 50 câu hỏi trò chuyện mỗi người dùng mỗi ngày (đặt lại lúc 00:00 giờ Việt Nam). Người dùng phải đồng ý trước khi nội dung được gửi tới OpenAI.
+- **Trang quản trị** (`/admin`): danh sách người dùng kèm số tài liệu, dung lượng, lượt AI đã dùng; khóa/mở khóa (khóa cả đăng nhập trên Supabase), đặt lại lượt AI, xóa tài khoản; nhật ký mọi thao tác quản trị. Admin chỉ thấy số liệu, không thấy nội dung tài liệu, highlight, ghi chú hay cuộc trò chuyện.
+
+  Cấp quyền admin bằng dòng lệnh (tài khoản phải đăng nhập PureMind ít nhất một lần trước), chạy trong `backend/`:
+
+  ```bash
+  python -m app.scripts.make_admin ban@vidu.com
+  ```
+
+  Thêm `--revoke` để thu hồi quyền. Trên Railway, chạy lệnh này trong shell của service backend.
 
 ## Yêu cầu
 
@@ -42,7 +51,7 @@ Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh
 3. **Project Settings → API**, lấy 3 giá trị:
    - `Project URL`, ví dụ `https://abcd1234.supabase.co`;
    - **publishable / anon key** (`sb_publishable_…` hoặc `eyJ…`): khóa công khai, được phép dùng ở frontend;
-   - **secret / service_role key** (`sb_secret_…`): khóa bí mật, **chỉ để ở backend**. Backend chỉ dùng khóa này khi xóa tài khoản.
+   - **secret / service_role key** (`sb_secret_…`): khóa bí mật, **chỉ để ở backend**. Backend chỉ dùng khóa này khi xóa, khóa hoặc mở khóa tài khoản.
 4. Lấy OpenAI API key tại <https://platform.openai.com/api-keys>.
 
 Supabase hiện ký token đăng nhập bằng ES256, và backend tự tải khóa công khai (JWKS) từ `SUPABASE_URL`, nên **không cần** `SUPABASE_JWT_SECRET`. Biến này chỉ dùng cho dự án cũ còn ký token bằng HS256.

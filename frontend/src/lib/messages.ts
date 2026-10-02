@@ -54,6 +54,9 @@ export const MSG_VI = {
   "MSG-CHAT-FULL": "Cuộc trò chuyện này đã quá dài. Hãy bắt đầu cuộc trò chuyện mới.",
   "MSG-CHAT-NOT-FOUND": "Không tìm thấy cuộc trò chuyện.",
   "MSG-CHAT-NO-TEXT": "Tài liệu này chưa có văn bản để trò chuyện.",
+  // Admin page (FR-ADM), also added after SRS v1.1.
+  "MSG-ACC-DISABLED": "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.",
+  "MSG-ADM-FORBIDDEN": "Bạn không có quyền truy cập trang quản trị.",
   "MSG-99": "Đã có lỗi xảy ra. Vui lòng thử lại.",
   // The server was never reached; not in SRS Appendix B because it never leaves the browser.
   "MSG-NET": "Không kết nối được máy chủ. Kiểm tra kết nối và thử lại.",
@@ -106,6 +109,8 @@ export const MSG_EN: Record<MsgCode, string> = {
   "MSG-CHAT-FULL": "This conversation has grown too long. Please start a new one.",
   "MSG-CHAT-NOT-FOUND": "Conversation not found.",
   "MSG-CHAT-NO-TEXT": "This document has no text to chat about.",
+  "MSG-ACC-DISABLED": "Your account has been locked. Please contact the administrator.",
+  "MSG-ADM-FORBIDDEN": "You do not have access to the admin pages.",
   "MSG-99": "Something went wrong. Please try again.",
   "MSG-NET": "The server could not be reached. Check your connection and try again.",
 };
