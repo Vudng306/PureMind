@@ -7,6 +7,7 @@ from PIL import Image
 
 from app.core.config import get_settings
 from tests.pdfs import encrypted_pdf, image_only_pdf, text_pdf
+from tests.test_summaries import consent
 
 
 def pdf_file(data: bytes, name: str = "giao-trinh.pdf"):
@@ -458,6 +459,7 @@ async def test_table_picture_is_read_by_ocr(client, auth, monkeypatch):
 
     monkeypatch.setattr(openai_client, "chat", chat)
     h = auth()
+    await consent(client, h)
     doc = (await upload(client, h, image_table_pdf())).json()
     assert doc["extraction_status"] == "done", doc
     content = doc["content_clean"]
@@ -542,6 +544,7 @@ async def test_scanned_pages_are_read_by_ocr(client, auth, monkeypatch):
     monkeypatch.setattr(openai_client, "chat", chat)
     monkeypatch.setattr(page_ocr, "CONCURRENCY", 1)  # pages read in order, so the answers match them
     h = auth()
+    await consent(client, h)
     first = (await upload(client, h, mixed_scan_pdf(), "scan.pdf")).json()
     # A scan is read after the response, while the library shows it as being processed.
     assert first["extraction_status"] == "pending"
@@ -568,6 +571,30 @@ async def test_scanned_pages_are_read_by_ocr(client, auth, monkeypatch):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
         assert scanned_pages(path) == pages
+
+
+async def test_upload_sends_nothing_to_openai_without_consent(client, auth, monkeypatch):
+    """NFR-PRV: until the user agrees, no picture of a new document is read by OpenAI."""
+    from app.services import openai_client
+    from tests.pdfs import equation_pdf, image_table_pdf, mixed_scan_pdf, scanned_pdf
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "openai_api_key", "sk-test")
+    calls = AsyncMock(return_value=openai_client.Completion("x", openai_client.Usage()))
+    monkeypatch.setattr(openai_client, "chat", calls)
+    h = auth()
+
+    # Tables, equations and figures stay pictures, and no figure is described.
+    for data in (image_table_pdf(), equation_pdf()):
+        doc = (await upload(client, h, data)).json()
+        assert doc["extraction_status"] == "done" and "pm-image:" in doc["content_clean"]
+    # A scan's typed pages are kept and its scanned pages left out; a scan with no typed page has no text.
+    mixed = (await upload(client, h, mixed_scan_pdf(), "mixed.pdf")).json()
+    assert mixed["extraction_status"] == "done"  # read in the request: nothing for the model to do
+    assert "Typed first page" in mixed["content_clean"] and "pm-ocr" not in mixed["content_clean"]
+    scan = (await upload(client, h, scanned_pdf(), "scan.pdf")).json()
+    assert scan["extraction_status"] == "failed" and scan["extraction_error"] == "MSG-15"
+    assert calls.await_count == 0
 
 
 def test_ocr_page_is_cleaned_up():
@@ -683,6 +710,7 @@ async def test_table_picture_stays_when_ocr_cannot_read_it(client, auth, monkeyp
 
     settings = get_settings()
     h = auth()
+    await consent(client, h)
     calls = AsyncMock(return_value=openai_client.Completion("NOT_A_TABLE", openai_client.Usage()))
     monkeypatch.setattr(openai_client, "chat", calls)
     # Without an API key there is no OCR at all.
@@ -779,6 +807,7 @@ async def test_equations_are_read_as_latex(client, auth, monkeypatch):
 
     monkeypatch.setattr(openai_client, "chat", chat)
     h = auth()
+    await consent(client, h)
     doc = (await upload(client, h, equation_pdf())).json()
     assert doc["extraction_status"] == "done", doc
     content = doc["content_clean"]

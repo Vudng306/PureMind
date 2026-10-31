@@ -1,8 +1,16 @@
-import type { AuthError } from "@supabase/supabase-js";
+import type { AuthError, User } from "@supabase/supabase-js";
 
 import { translate } from "./i18n";
 import { MSG } from "./messages";
 import { currentLang } from "./preferences";
+
+/**
+ * With "Confirm email" on, signing up with an email that is already registered and confirmed gets no error
+ * and no email: Supabase answers with a stand-in user that has no identities.
+ */
+export function isAlreadyRegistered(user: Pick<User, "identities"> | null): boolean {
+  return user?.identities?.length === 0;
+}
 
 /** Maps Supabase Auth errors to Appendix B messages. */
 export function authErrorMessage(error: AuthError | Error | null | undefined): string {

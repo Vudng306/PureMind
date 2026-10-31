@@ -24,6 +24,9 @@ class TokenClaims:
     user_id: UUID
     email: str
     display_name: str | None
+    # What the sign-up form recorded in the user's metadata: the terms accepted, and the OpenAI choice.
+    terms_version: str | None = None
+    ai_consent: bool = False
 
 
 @lru_cache
@@ -67,8 +70,11 @@ async def verify_access_token(token: str, settings: Settings) -> TokenClaims:
         raise InvalidToken from e
 
     metadata = claims.get("user_metadata") or {}
+    terms = metadata.get("terms_version")
     return TokenClaims(
         user_id=user_id,
         email=(claims.get("email") or "").strip().lower(),
         display_name=metadata.get("display_name"),
+        terms_version=terms if isinstance(terms, str) else None,
+        ai_consent=metadata.get("ai_consent") is True,
     )

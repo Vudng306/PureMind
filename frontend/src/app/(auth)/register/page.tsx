@@ -8,18 +8,22 @@ import { useAuth } from "@/components/auth-provider";
 import { AuthTabs, GoogleSignIn } from "@/components/auth-parts";
 import { SupabaseConfigNotice } from "@/components/config-notice";
 import { Icon } from "@/components/icons";
+import { TermsChoices } from "@/components/terms-choices";
 import { Alert } from "@/components/ui";
 import { api } from "@/lib/api";
-import { authErrorMessage } from "@/lib/auth-errors";
+import { authErrorMessage, isAlreadyRegistered } from "@/lib/auth-errors";
 import { useT } from "@/lib/i18n";
 import { EMAIL_RE, MSG, PASSWORD_RE } from "@/lib/messages";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import { TERMS_VERSION } from "@/lib/terms";
 
 export default function RegisterPage() {
   const t = useT();
   const router = useRouter();
   const { session, loading } = useAuth();
   const [form, setForm] = useState({ displayName: "", email: "", password: "", confirm: "" });
+  const [terms, setTerms] = useState(false);
+  const [aiConsent, setAiConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -41,6 +45,7 @@ export default function RegisterPage() {
     if (!EMAIL_RE.test(email) || email.length > 255) return setError(MSG["MSG-01"]);
     if (!PASSWORD_RE.test(form.password)) return setError(MSG["MSG-02"]);
     if (form.password !== form.confirm) return setError(t("auth.confirmMismatch"));
+    if (!terms) return setError(t("terms.required"));
 
     setBusy(true);
     try {
@@ -48,15 +53,18 @@ export default function RegisterPage() {
         email,
         password: form.password,
         options: {
-          data: { display_name: displayName },
+          // The profile is made on the first API request, maybe after the e-mail is confirmed: the
+          // choices go with the account so the server records them then (api/deps.py).
+          data: { display_name: displayName, terms_version: TERMS_VERSION, ai_consent: aiConsent },
           // This also makes confirmation work outside localhost when Supabase email
           // confirmation is enabled.
           emailRedirectTo: `${window.location.origin}/library`,
         },
       });
       if (authError) return setError(authErrorMessage(authError));
+      if (isAlreadyRegistered(data.user)) return setError(MSG["MSG-03"]);
       if (!data.session) {
-        // Supabase returns no session when "Confirm email" is enabled, or silently for an existing email.
+        // Supabase returns no session when "Confirm email" is enabled; an unconfirmed email is sent the link again.
         setSentTo(email);
         return;
       }
@@ -131,6 +139,7 @@ export default function RegisterPage() {
             <input className="input" type="password" autoComplete="new-password" value={form.confirm} onChange={update("confirm")} />
           </label>
         </div>
+        <TermsChoices terms={terms} ai={aiConsent} onTerms={setTerms} onAi={setAiConsent} />
         {error && <Alert>{error}</Alert>}
         <button className="btn-primary h-[50px] text-base" disabled={busy || !isSupabaseConfigured}>
           {t(busy ? "auth.signingUp" : "auth.signUp")}

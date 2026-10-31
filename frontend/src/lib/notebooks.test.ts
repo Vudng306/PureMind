@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { citedPositions, readEvents } from "./notebooks";
+import { citedPositions, groupSources, readEvents, type NotebookSource } from "./notebooks";
 
 function streamOf(chunks: string[]): ReadableStream<Uint8Array> {
   const enc = new TextEncoder();
@@ -42,5 +42,24 @@ describe("readEvents", () => {
 describe("citedPositions", () => {
   it("lists [n] references once, in order of first use", () => {
     expect(citedPositions("a [2] b [10][2] c [x] [1]")).toEqual([2, 10, 1]);
+  });
+});
+
+describe("groupSources", () => {
+  const source = (position: number, doc: string): NotebookSource =>
+    ({
+      position,
+      document_title: `Bài ${doc}`,
+      file_type: "pdf",
+      highlight: { id: `h${position}`, document_id: doc },
+    }) as NotebookSource;
+
+  it("gathers the sources by document, in the order of their numbers", () => {
+    const groups = groupSources([source(3, "b"), source(1, "a"), source(4, "a"), source(2, "b")]);
+    expect(groups.map((g) => [g.title, g.sources.map((s) => s.position)])).toEqual([
+      ["Bài a", [1, 4]],
+      ["Bài b", [2, 3]],
+    ]);
+    expect(groupSources([])).toEqual([]);
   });
 });

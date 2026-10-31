@@ -89,7 +89,7 @@ export default function HighlightsPage() {
   return (
     <div className="mx-auto flex max-w-[880px] flex-col gap-7">
       <div className="flex flex-wrap items-end gap-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex min-w-0 flex-1 basis-60 flex-col gap-2">
           <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">{t("highlights.title")}</h1>
           <p className="text-base text-muted">
             {query.isSuccess

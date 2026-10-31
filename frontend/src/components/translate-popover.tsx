@@ -6,14 +6,18 @@ import { ApiError } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { useAccount } from "@/lib/queries";
-import { translateText } from "@/lib/translate";
+import { cachedTranslation, translateText } from "@/lib/translate";
 import { useUi } from "@/lib/ui-store";
 
 import { AiConsentDialog } from "./ai-consent-dialog";
 import { Icon } from "./icons";
+import { selectionMenuBounds } from "./selection-menu";
 
 const CARD_W = 440;
 const CARD_MAX_H = 360;
+// The reader opens this on every finished selection; a selection still being stretched with Shift+arrow
+// replaces it before the wait is over, so only the last one is sent.
+const SETTLE_MS = 350;
 
 /** The translation of a selected passage, in a card next to where it was selected. */
 export function TranslatePopover({
@@ -61,14 +65,21 @@ export function TranslatePopover({
     if (!loaded) return;
     if (!consented) return setAsking(true);
     const controller = new AbortController();
-    void run(controller.signal);
-    return () => controller.abort();
-  }, [loaded, consented, run]);
+    const wait = cachedTranslation(text) ? 0 : SETTLE_MS;
+    const timer = setTimeout(() => void run(controller.signal), wait);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [loaded, consented, run, text]);
 
   useEffect(() => {
     if (asking) return; // the consent dialog handles its own clicks and keys
     function onDown(e: MouseEvent | TouchEvent) {
-      if (!ref.current?.contains(e.target as Node)) onClose();
+      const target = e.target as Element;
+      // The selection menu stays usable next to the card: highlighting the passage keeps its translation.
+      if (ref.current?.contains(target) || target.closest?.("[data-selection-menu]")) return;
+      onClose();
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -96,13 +107,17 @@ export function TranslatePopover({
   const vh = window.innerHeight;
   const width = Math.min(CARD_W, vw - 24);
   const left = Math.min(Math.max(12, rect.left + rect.width / 2 - width / 2), vw - width - 12);
-  // Below the passage when there is room, otherwise above it, otherwise pinned to the bottom.
-  const top =
-    rect.bottom + 10 + CARD_MAX_H < vh
-      ? rect.bottom + 10
-      : rect.top - 10 - CARD_MAX_H > 12
-        ? rect.top - 10 - CARD_MAX_H
-        : Math.max(12, vh - CARD_MAX_H - 12);
+  // Clear of the passage and of the selection menu next to it: below them when there is room, otherwise
+  // above them (held by its bottom edge, so a short translation stays close), otherwise pinned to the bottom.
+  const menu = selectionMenuBounds(rect);
+  const upper = Math.min(rect.top, menu.top);
+  const lower = Math.max(rect.bottom, menu.bottom);
+  const place =
+    lower + 10 + CARD_MAX_H < vh
+      ? { top: lower + 10 }
+      : upper - 10 - CARD_MAX_H > 12
+        ? { bottom: vh - upper + 10 }
+        : { top: Math.max(12, vh - CARD_MAX_H - 12) };
 
   return (
     <>
@@ -112,7 +127,7 @@ export function TranslatePopover({
           role="dialog"
           aria-label={t("translate.title")}
           className="fixed z-30 flex flex-col gap-2.5 rounded-[14px] border border-line bg-surface p-3.5 font-sans shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
-          style={{ left, top, width, maxHeight: CARD_MAX_H }}
+          style={{ left, width, maxHeight: CARD_MAX_H, ...place }}
         >
           <div className="flex items-center gap-2">
             <Icon name="translate" size={16} className="text-accent" />

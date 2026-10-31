@@ -12,6 +12,7 @@ Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh
 | Xác thực | Supabase Auth |
 | Xử lý tài liệu | PyMuPDF (PDF), BeautifulSoup (EPUB, bài báo web) |
 | AI | OpenAI API (mặc định `gpt-4.1-mini`; embedding `text-embedding-3-small` cho trò chuyện) |
+| Hosting | Vercel (frontend), Render (backend, Docker) |
 
 ## Tính năng
 
@@ -32,7 +33,29 @@ Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh
   python -m app.scripts.make_admin ban@vidu.com
   ```
 
-  Thêm `--revoke` để thu hồi quyền. Trên Railway, chạy lệnh này trong shell của service backend.
+  Thêm `--revoke` để thu hồi quyền. Với bản production, chạy lệnh này trong tab **Shell** của service backend trên Render (chỉ gói trả phí mới có), hoặc chạy trên máy với `DATABASE_URL` trỏ vào database production.
+- **Bảng tin** (`/feed`): bài có giấy phép mở từ The Conversation (CC BY-ND), Our World in Data (CC BY), PLOS (CC BY), eLife Insights (CC BY, nhà khoa học giải thích một nghiên cứu mới cho người ngoài ngành), Frontiers for Young Minds (CC BY, khoa học viết cho người trẻ) và Europe PMC (CC BY), chia theo 16 chủ đề; lần đầu vào, người dùng chọn chủ đề muốn đọc. Bấm “Đọc” là bài được chép vào thư viện, kèm dòng ghi công tác giả và giấy phép ở đầu, rồi mở trong trình đọc: highlight, tóm tắt, hỏi AI như mọi tài liệu khác. Ảnh của The Conversation, eLife và Frontiers for Young Minds bị bỏ vì có thể có giấy phép riêng.
+
+  Bài được lấy về bằng lệnh đồng bộ, chạy trong `backend/` (nên chạy hằng ngày bằng cron hoặc scheduled job). Bài đã có thì được cập nhật; bài trùng tiêu đề từ nguồn khác không bị thêm lần hai:
+
+  ```bash
+  python -m app.scripts.sync_articles                    # mọi nguồn
+  python -m app.scripts.sync_articles conversation owid  # một vài nguồn
+  ```
+
+  Sau đó, AI (`OPENAI_GUIDE_MODEL`, mặc định gpt-4.1) viết **bài tiếng Việt** từ các bài CC BY và CC BY-SA: mở bằng một tình huống đời thường, vài câu hỏi kèm “Điểm cốt lõi”, phần “Thử ngay” hoặc “Điều đáng nhớ” và một câu hỏi để bàn luận. Bài AI dùng cùng giấy phép với bài gốc, ghi nguồn và có link về bài gốc. Bài CC BY-ND (The Conversation) không được chuyển thể nên không có bài AI. Mỗi bài là một lần gọi API; bài gốc đã có bài AI thì được bỏ qua:
+
+  ```bash
+  python -m app.scripts.write_guides                        # 2 bài mỗi chủ đề
+  python -m app.scripts.write_guides --per-topic 1 health   # một vài chủ đề
+  ```
+
+  Tab **Bài ngắn** (mặc định của Bảng tin) cho đọc lướt từng bài một, mỗi bài đọc trong một phút: tiêu đề, một câu mở đầu, ba ý chính và một điều đáng nhớ. Bài ngắn cũng do AI viết từ bài CC BY và CC BY-SA, ghi nguồn bài gốc. Nút “Đọc đầy đủ” mở bài tiếng Việt do AI biên soạn từ cùng bài gốc nếu đã có, nếu chưa thì mở chính bài gốc. Lệnh dưới đây viết bài ngắn cho các bài chưa có:
+
+  ```bash
+  python -m app.scripts.write_shorts                        # 3 bài mỗi chủ đề
+  python -m app.scripts.write_shorts --per-topic 1 mind     # một vài chủ đề
+  ```
 
 ## Yêu cầu
 
@@ -150,74 +173,95 @@ npm run dev
 
 Mở <http://localhost:3000>, đăng ký tài khoản rồi thêm tài liệu đầu tiên.
 
-## Deploy lên Railway
+## Deploy (Vercel + Render)
 
-Dự án lên Railway thành **ba service trong cùng một project**: PostgreSQL, backend và frontend. Cả hai
-service ứng dụng dùng Dockerfile sẵn có; `backend/railway.json` và `frontend/railway.json` khai báo builder,
-health check và chính sách khởi động lại nên không phải cấu hình tay.
+Bản production chạy tách làm hai nơi:
 
-### 1. Đẩy code lên GitHub
+| Thành phần | Nơi chạy | Domain hiện tại |
+|---|---|---|
+| Frontend (Next.js) | Vercel | <https://pure-mind-one.vercel.app> |
+| Backend (FastAPI, Docker) | Render | `https://puremind-api.onrender.com` |
+| Cơ sở dữ liệu | PostgreSQL bất kỳ (Render Postgres, Supabase…) | — |
+| Xác thực | Supabase Auth | — |
 
-Railway deploy từ một nhánh GitHub, nên nhánh muốn chạy phải được push trước.
+Cả Vercel và Render đều deploy từ một nhánh GitHub, nên nhánh muốn chạy phải được push trước. Mỗi lần push
+lên nhánh đó, hai nơi tự build lại.
 
-### 2. Tạo PostgreSQL
+### 1. PostgreSQL
 
-Trong project Railway: **New → Database → Add PostgreSQL**.
+Dùng Postgres của Render (**New → Postgres**) hoặc database có sẵn của dự án Supabase đều được. Nếu dùng
+Supabase, lấy chuỗi kết nối **Direct connection** hoặc **Session pooler** (cổng 5432); *Transaction pooler*
+(cổng 6543) không hợp với asyncpg vì không hỗ trợ prepared statement.
 
-Bản migration đầu tiên cần extension `unaccent` cho tìm kiếm không dấu (FR-SRCH-01) — đây là contrib
-trusted nên Postgres của Railway tạo được. `pgvector` là tùy chọn: nếu có, việc xếp hạng đoạn cho tính năng
-trò chuyện chạy ngay trong database (`<=>`); nếu không có, backend tính độ tương đồng trong Python trên các
-đoạn của đúng tài liệu đó. Migration không fail khi thiếu pgvector.
+Bản migration đầu tiên cần extension `unaccent` cho tìm kiếm không dấu (FR-SRCH-01). Đây là contrib trusted
+nên cả Render lẫn Supabase đều tạo được. `pgvector` là tùy chọn: nếu có, việc xếp hạng đoạn cho tính năng trò
+chuyện chạy ngay trong database (`<=>`); nếu không có, backend tính độ tương đồng trong Python trên các đoạn
+của đúng tài liệu đó. Migration không fail khi thiếu pgvector.
 
-### 3. Service backend
+### 2. Backend trên Render
 
-**New → GitHub Repo**, chọn repo này, rồi trong **Settings → Root Directory** điền `backend`.
+**New → Web Service**, chọn repo này, rồi đặt:
 
-Biến môi trường (**Variables**):
+| Mục | Giá trị |
+|---|---|
+| Language | Docker |
+| Root Directory | `backend` |
+| Dockerfile Path | `./Dockerfile` |
+| Health Check Path | `/api/healthz` |
+
+Container tự chạy `alembic upgrade head` trước khi khởi động `uvicorn`, nên không cần lệnh migrate riêng.
+Không cần đặt `PORT`: Render tự cấp và container dùng đúng biến đó.
+
+Biến môi trường (**Environment**):
 
 | Biến | Giá trị |
 |---|---|
-| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` — tham chiếu service Postgres, không chép tay |
+| `DATABASE_URL` | chuỗi kết nối Postgres (với Render Postgres, dùng *Internal Database URL*) |
 | `ENVIRONMENT` | `production` |
-| `CORS_ORIGINS` | domain của service frontend, ví dụ `https://puremind-web.up.railway.app` |
+| `CORS_ORIGINS` | domain frontend trên Vercel, ví dụ `https://pure-mind-one.vercel.app` |
 | `UPLOAD_DIR` | `/data/uploads` |
 | `SUPABASE_URL` | Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret key |
 | `OPENAI_API_KEY` | khóa OpenAI |
 | `WEB_FETCH_CONTACT` | email hoặc URL liên hệ thật |
 
-Không cần đặt `PORT`: Railway tự cấp và container dùng đúng biến đó. `DATABASE_URL` của Railway ở dạng
-`postgresql://…`; backend tự đổi sang driver `asyncpg` và bỏ tham số `sslmode` mà asyncpg không nhận.
+`DATABASE_URL` của các nhà cung cấp thường ở dạng `postgresql://…`; backend tự đổi sang driver `asyncpg` và
+bỏ tham số `sslmode` mà asyncpg không nhận.
 
-**Bắt buộc**: thêm **Volume** gắn vào `/data/uploads`. Không có volume thì mọi PDF/EPUB người dùng tải lên
-sẽ mất sau mỗi lần deploy, trong khi bản ghi trong cơ sở dữ liệu vẫn còn.
+**Lưu ý về tệp tải lên:** PDF/EPUB được lưu trên đĩa của container tại `UPLOAD_DIR`. Filesystem của Render
+mất sạch sau mỗi lần deploy hoặc khởi động lại, nên phải gắn **Disk** (**Advanced → Add Disk**, mount path
+`/data/uploads`). Disk chỉ có ở gói trả phí; ở gói Free, tệp người dùng tải lên sẽ mất trong khi bản ghi
+trong cơ sở dữ liệu vẫn còn. Gói Free còn cho service ngủ sau một thời gian không có request, nên request
+đầu tiên sau đó có thể mất gần một phút.
 
-Rồi **Settings → Networking → Generate Domain** để lấy domain công khai.
+### 3. Frontend trên Vercel
 
-### 4. Service frontend
+**Add New → Project**, import repo này, đặt **Root Directory** là `frontend`. Vercel tự nhận ra Next.js nên
+không cần `vercel.json`; Vercel cũng không dùng `frontend/Dockerfile` (file đó chỉ dành cho Docker Compose).
 
-Thêm một service nữa từ cùng repo, **Root Directory** là `frontend`.
+Biến môi trường (**Settings → Environment Variables**):
 
 | Biến | Giá trị |
 |---|---|
-| `NEXT_PUBLIC_API_URL` | domain của backend, ví dụ `https://puremind-api.up.railway.app` |
+| `NEXT_PUBLIC_API_URL` | domain backend trên Render, ví dụ `https://puremind-api.onrender.com` |
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | publishable/anon key |
 
 Ba biến này được đọc **lúc build** và nướng thẳng vào JavaScript gửi xuống trình duyệt. Đổi chúng thì phải
-deploy lại mới có tác dụng. Cũng vì vậy, tuyệt đối không đặt secret vào biến `NEXT_PUBLIC_*`.
+**Redeploy** mới có tác dụng. Cũng vì vậy, tuyệt đối không đặt secret vào biến `NEXT_PUBLIC_*`.
 
-Sinh domain cho service này, rồi quay lại backend cập nhật `CORS_ORIGINS` cho khớp.
+Mỗi pull request trên Vercel có một domain preview riêng. Backend chỉ nhận các origin trong `CORS_ORIGINS`,
+nên muốn dùng thử bản preview thì thêm domain đó vào `CORS_ORIGINS` (phân tách bằng dấu phẩy).
 
-### 5. Supabase
+### 4. Supabase
 
-Trong **Authentication → URL Configuration**, thêm domain frontend vào *Site URL* và *Redirect URLs*. Thiếu
-bước này thì đăng nhập sẽ quay về `localhost`.
+Trong **Authentication → URL Configuration**, đặt domain Vercel vào *Site URL* và thêm vào *Redirect URLs*.
+Thiếu bước này thì đăng nhập (kể cả Google OAuth) sẽ quay về `localhost`.
 
-### 6. Kiểm tra
+### 5. Kiểm tra
 
 ```bash
-curl https://<backend>/api/healthz
+curl https://puremind-api.onrender.com/api/healthz
 ```
 
 Phải trả về `{"status":"ok"}`. Ở `ENVIRONMENT=production`, `/api/docs` trả 404 và phản hồi có thêm

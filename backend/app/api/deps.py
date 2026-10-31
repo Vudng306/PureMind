@@ -11,7 +11,7 @@ from app.core.logging import bind_user
 from app.core.messages import MSG
 from app.core.security import InvalidToken, verify_access_token
 from app.db.session import get_session
-from app.models import User, utcnow
+from app.models import TERMS_VERSION, User, utcnow
 
 log = logging.getLogger("app.auth")
 
@@ -52,6 +52,9 @@ async def get_current_user(request: Request, session: SessionDep, settings: Sett
             display_name=(claims.display_name or "").strip()[:255] or None,
             reading_preferences={},
         )
+        # Accepted on the sign-up form, before there was a profile (the e-mail may have needed confirming).
+        if claims.terms_version == TERMS_VERSION:
+            user.accept_terms(claims.ai_consent)
         session.add(user)
         try:
             await session.commit()

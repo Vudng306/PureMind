@@ -6,7 +6,8 @@ import { useAiConsent } from "@/lib/summary";
 
 import { ConfirmDialog } from "./ui";
 
-/** NFR-PRV: asked once, before the first AI request sends the user's content to OpenAI. */
+/** NFR-PRV: asked once, before the first AI request sends the user's content to OpenAI. The same consent
+ * also lets extraction read a new document's pictures (scans, tables, equations, figures) with OpenAI. */
 export function AiConsentDialog({
   open,
   what,
@@ -43,7 +44,7 @@ export function AiConsentDialog({
       onCancel={onCancel}
     >
       <p>{t("consent.bodyWhat", { what })}</p>
-      <p className="mt-2 text-sm text-muted">{t("consent.onceOnly")}</p>
+      <p className="mt-2 text-sm text-muted">{t("consent.scope")}</p>
       {consent.isError && <p className="mt-2 text-sm text-danger">{MSG["MSG-23"]}</p>}
     </ConfirmDialog>
   );

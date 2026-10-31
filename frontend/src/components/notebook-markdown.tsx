@@ -191,10 +191,12 @@ export function NotebookMarkdown({
   content,
   sources,
   title,
+  className,
 }: {
   content: string;
   sources: NotebookSource[] | null;
   title?: string;
+  className?: string;
 }) {
   const blocks = useMemo(() => {
     const all = parseMarkdown(content);
@@ -203,5 +205,5 @@ export function NotebookMarkdown({
     return same ? all.slice(1) : all;
   }, [content, title]);
   const byPosition = useMemo(() => (sources ? new Map(sources.map((s) => [s.position, s])) : null), [sources]);
-  return <MarkdownView blocks={blocks} renderRef={(n) => <NotebookRef n={n} sources={byPosition} />} />;
+  return <MarkdownView blocks={blocks} renderRef={(n) => <NotebookRef n={n} sources={byPosition} />} className={className} />;
 }

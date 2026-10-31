@@ -119,3 +119,34 @@ def test_every_message_is_translated():
     from app.core.messages import EN, VI
 
     assert set(VI) == set(EN)
+
+
+async def test_terms_are_accepted_with_a_separate_ai_choice(client, auth):
+    from app.models import TERMS_VERSION
+
+    h = auth()
+    me = (await client.get("/api/account", headers=h)).json()
+    assert me["terms_accepted"] is False and "ai_consent" not in me["reading_preferences"]
+
+    # The terms can be accepted without agreeing to OpenAI, and the choice changed later in the settings.
+    r = await client.post("/api/account/terms", headers=h, json={"ai_consent": False})
+    assert r.status_code == 200 and r.json()["terms_accepted"] is True
+    assert r.json()["reading_preferences"]["ai_consent"] is False
+    r = await client.post("/api/account/terms", headers=h, json={"ai_consent": True})
+    assert r.json()["reading_preferences"]["ai_consent"] is True
+    r = await client.patch("/api/account", headers=h, json={"reading_preferences": {"ai_consent": False}})
+    assert r.json()["reading_preferences"]["ai_consent"] is False and r.json()["terms_accepted"] is True
+    assert (await client.post("/api/account/terms", headers=h, json={})).status_code == 422
+
+    # Accepted on the sign-up form: the profile starts with the terms and the choice the form recorded.
+    meta = {"display_name": "Mới", "terms_version": TERMS_VERSION, "ai_consent": True}
+    token = make_token(user_metadata=meta)
+    me = (await client.get("/api/account", headers={"Authorization": f"Bearer {token}"})).json()
+    assert me["terms_accepted"] is True and me["reading_preferences"]["ai_consent"] is True
+    # An older version of the terms is asked again; no recorded choice means no consent.
+    token = make_token(user_metadata={"terms_version": "2000-01-01", "ai_consent": True})
+    me = (await client.get("/api/account", headers={"Authorization": f"Bearer {token}"})).json()
+    assert me["terms_accepted"] is False and "ai_consent" not in me["reading_preferences"]
+    token = make_token(user_metadata={"terms_version": TERMS_VERSION})
+    me = (await client.get("/api/account", headers={"Authorization": f"Bearer {token}"})).json()
+    assert me["terms_accepted"] is True and me["reading_preferences"]["ai_consent"] is False

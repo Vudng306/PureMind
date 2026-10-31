@@ -17,11 +17,11 @@ from starlette.concurrency import run_in_threadpool
 from app.api.deps import CurrentUser, SessionDep, SettingsDep
 from app.core.config import Settings
 from app.core.messages import MSG
-from app.core.ratelimit import upload_limiter
+from app.core.ratelimit import doi_limiter, upload_limiter
 from app.db.session import SessionLocal
 from app.models import Document, ExtractionStatus, SourceType, User
-from app.schemas import DocumentListItem, DocumentOut, DocumentUpdate
-from app.services import equation_ocr, figure_notes, page_ocr, storage, table_ocr, web
+from app.schemas import DocumentListItem, DocumentOut, DocumentUpdate, DoiLookup
+from app.services import doi, equation_ocr, figure_notes, page_ocr, storage, table_ocr, web
 from app.services.epub import extract_epub, looks_like_epub
 from app.services.extraction import (
     IMAGE_NAME,
@@ -33,6 +33,7 @@ from app.services.extraction import (
     reader_keys,
     scanned_pages,
 )
+from app.services.html_markdown import word_count
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -75,6 +76,12 @@ async def list_documents(
     return (await session.scalars(stmt.order_by(order))).all()
 
 
+def ai_consented(user: User | None) -> bool:
+    """NFR-PRV: the user agreed to send their content to OpenAI. Until then extraction reads no picture
+    (scanned pages, tables, equations, figures): those stay pictures, a scan has no clean text."""
+    return bool(user and (user.reading_preferences or {}).get("ai_consent"))
+
+
 def _with_scanned_pages(content: str, source_map: list, read: dict[int, str]) -> tuple[str, list]:
     """Each scan mark replaced by the text read from its page, or dropped when the page could not be read.
     The page's blocks are placed on the whole page: OCR says what a page says, not where."""
@@ -98,6 +105,7 @@ async def run_extraction(
     without it the caller does that itself, or the figures go without descriptions."""
     doc.extraction_status = ExtractionStatus.processing
     await session.commit()
+    ai = ai_consented(await session.get(User, doc.user_id))
 
     path = storage.resolve(settings, doc.file_storage_path)
     fallback_title = Path(doc.original_filename or "Tài liệu").stem
@@ -119,7 +127,7 @@ async def run_extraction(
     else:
         content, source_map = result.content, result.source_map
         if result.ocr_pages:
-            read = await page_ocr.read_pages(settings, path, result.ocr_pages)
+            read = await page_ocr.read_pages(settings, path, result.ocr_pages) if ai else {}
             content, source_map = _with_scanned_pages(content, source_map, read)
         if not re.sub(r"^---$", "", content, flags=re.M).strip():  # a scan that could not be read
             doc.extraction_status = ExtractionStatus.failed
@@ -131,7 +139,7 @@ async def run_extraction(
             ("table_ocr", result.table_images, table_ocr.transcribe_tables),
             ("equation_ocr", result.equation_images, equation_ocr.transcribe_equations),
         ):
-            if not pictures:
+            if not pictures or not ai:
                 continue
             try:
                 content, replaced = await transcribe(settings, doc.id, content, pictures)
@@ -141,7 +149,8 @@ async def run_extraction(
             # A block read from its picture is a new block: its place on the PDF is the picture's.
             keys = {block_key(old): block_key(new) for old, new in replaced.items()}
             source_map = [[keys.get(key, key), boxes] for key, boxes in source_map]
-        doc.title = result.title[:500]
+        if not doc.citation:  # a title that came with the DOI is the publisher's own
+            doc.title = result.title[:500]
         doc.content_clean = content
         doc.source_map = source_map or None
         doc.figure_notes = None  # the figures of the earlier text, if any, are gone
@@ -159,7 +168,10 @@ async def describe_figures(document_id: uuid.UUID, settings: Settings) -> None:
     """Describe the document's figures for the AI (figure_notes). Seconds per figure, so it runs once the
     reader already has the text; nothing is saved if the text changed meanwhile."""
     async with SessionLocal() as session:
-        content = await session.scalar(select(Document.content_clean).where(Document.id == document_id))
+        doc = await session.get(Document, document_id)
+        if doc is None or not ai_consented(await session.get(User, doc.user_id)):
+            return
+        content = doc.content_clean
     if not content or not figure_notes.figure_names(content):
         return
     try:
@@ -177,13 +189,13 @@ async def describe_figures(document_id: uuid.UUID, settings: Settings) -> None:
         await session.commit()
 
 
-async def _takes_long(settings: Settings, doc: Document, size: int) -> bool:
+async def _takes_long(settings: Settings, doc: Document, size: int, user: User) -> bool:
     """A large file, or a PDF the vision model has much to read in (a scan, page by page, or many
     equations): extracted after the response, while the library shows it as processing (FR-DOC-02 step 6)."""
     if size > settings.async_extraction_threshold_bytes:
         return True
     path = storage.resolve(settings, doc.file_storage_path)
-    if not settings.openai_api_key or path.suffix.lower() != ".pdf":
+    if not settings.openai_api_key or not ai_consented(user) or path.suffix.lower() != ".pdf":
         return False
     if await run_in_threadpool(scanned_pages, path):
         return True
@@ -246,7 +258,7 @@ async def upload_document(
     session.add(doc)
     await session.commit()
 
-    if await _takes_long(settings, doc, size):
+    if await _takes_long(settings, doc, size, user):
         background.add_task(_extract_in_background, doc.id, settings)
     else:
         await run_extraction(session, doc, settings, background)
@@ -268,6 +280,44 @@ async def _commit_new_link(session: AsyncSession, doc: Document, user: User, url
         if existing is None:
             raise
         return JSONResponse(DocumentOut.model_validate(existing).model_dump(mode="json"), status_code=200)
+
+
+async def _save_fetched_pdf(
+    fetched: web.FetchResult,
+    url: str,
+    user: User,
+    session: AsyncSession,
+    settings: Settings,
+    background: BackgroundTasks,
+    work: doi.Work | None = None,
+) -> Document | JSONResponse:
+    """Keep a PDF fetched from `url` and extract it. `work` is what its DOI says it is, when it came by one."""
+    name = storage.sanitize_filename(Path(httpx.URL(fetched.url).path).name or "tai-lieu.pdf")
+    if not name.lower().endswith(".pdf"):
+        name += ".pdf"
+    relative = f"documents/{user.id}/{uuid.uuid4().hex}_{name}"
+    target = storage.resolve(settings, relative)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(fetched.body)
+    doc = Document(
+        user_id=user.id,
+        source_type=SourceType.manual,
+        url=url,
+        title=work.title if work else Path(name).stem[:500],
+        file_storage_path=relative,
+        original_filename=name[:500],
+        file_size=len(fetched.body),
+        citation=work.citation if work else None,
+    )
+    if (dup := await _commit_new_link(session, doc, user, url)) is not None:
+        storage.delete_file(settings, relative)
+        return dup
+    if await _takes_long(settings, doc, len(fetched.body), user):
+        background.add_task(_extract_in_background, doc.id, settings)
+    else:
+        await run_extraction(session, doc, settings, background)
+    await session.refresh(doc)
+    return doc
 
 
 class SaveUrlIn(BaseModel):
@@ -314,45 +364,107 @@ async def save_url(
     if web.is_pdf(fetched):
         if not fetched.body.startswith(b"%PDF"):
             raise HTTPException(422, MSG["MSG-18"])
-        name = storage.sanitize_filename(Path(httpx.URL(fetched.url).path).name or "tai-lieu.pdf")
-        if not name.lower().endswith(".pdf"):
-            name += ".pdf"
-        relative = f"documents/{user.id}/{uuid.uuid4().hex}_{name}"
-        target = storage.resolve(settings, relative)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(fetched.body)
-        doc = Document(
-            user_id=user.id,
-            source_type=SourceType.manual,
-            url=normalized,
-            title=Path(name).stem[:500],
-            file_storage_path=relative,
-            original_filename=name[:500],
-            file_size=len(fetched.body),
-        )
-        if (dup := await _commit_new_link(session, doc, user, normalized)) is not None:
-            storage.delete_file(settings, relative)
-            return dup
-        if await _takes_long(settings, doc, len(fetched.body)):
-            background.add_task(_extract_in_background, doc.id, settings)
-        else:
-            await run_extraction(session, doc, settings, background)
-    else:
-        article = await run_in_threadpool(web.extract_article, fetched.body, fetched.url)
-        has_text = bool(article.content.strip())
-        doc = Document(
-            user_id=user.id,
-            source_type=SourceType.manual,
-            url=normalized,
-            title=article.title or normalized[:500],
-            content_clean=article.content,
-            word_count=article.word_count,
-            published_at=article.published_at,
-            extraction_status=ExtractionStatus.done if has_text else ExtractionStatus.failed,
-            extraction_error=None if has_text else "MSG-15",
-        )
-        if (dup := await _commit_new_link(session, doc, user, normalized)) is not None:
-            return dup
+        return await _save_fetched_pdf(fetched, normalized, user, session, settings, background)
+    article = await run_in_threadpool(web.extract_article, fetched.body, fetched.url)
+    has_text = bool(article.content.strip())
+    doc = Document(
+        user_id=user.id,
+        source_type=SourceType.manual,
+        url=normalized,
+        title=article.title or normalized[:500],
+        content_clean=article.content,
+        word_count=article.word_count,
+        published_at=article.published_at,
+        extraction_status=ExtractionStatus.done if has_text else ExtractionStatus.failed,
+        extraction_error=None if has_text else "MSG-15",
+    )
+    if (dup := await _commit_new_link(session, doc, user, normalized)) is not None:
+        return dup
+    await session.refresh(doc)
+    return doc
+
+
+class DoiIn(BaseModel):
+    doi: str
+
+
+async def _lookup_doi(raw: str, user: User, settings: Settings) -> doi.Work:
+    try:
+        doi.parse(raw)
+    except doi.InvalidDoi:
+        raise HTTPException(422, MSG["MSG-DOI-INVALID"]) from None
+    if not doi_limiter.hit(str(user.id)):
+        raise HTTPException(429, MSG["MSG-DOI-LIMIT"])
+    try:
+        return await doi.lookup(raw, settings.web_contact)
+    except doi.DoiNotFound:
+        raise HTTPException(422, MSG["MSG-DOI-NOTFOUND"]) from None
+
+
+@router.get("/doi-lookup", response_model=DoiLookup)
+async def lookup_doi(doi: str, user: CurrentUser, settings: SettingsDep):
+    """What a DOI names, to fill in the citation of a document the user already has."""
+    work = await _lookup_doi(doi, user, settings)
+    return {"title": work.title, "citation": work.citation}
+
+
+@router.post(
+    "/import-doi",
+    response_model=DocumentOut,
+    status_code=status.HTTP_201_CREATED,
+    responses={200: {"model": DocumentOut, "description": "The DOI was already imported"}},
+)
+async def import_doi(
+    payload: DoiIn,
+    background: BackgroundTasks,
+    user: CurrentUser,
+    session: SessionDep,
+    settings: SettingsDep,
+):
+    """Add a work by its DOI: the citation from doi.org, the text from wherever the DOI leads.
+
+    That is the publisher's page, or the PDF itself (for arXiv, always the PDF). A publisher that refuses
+    PureMind or shows nothing without a subscription leaves the abstract, if doi.org has one; with no text
+    at all nothing is saved, as a document that cannot be read is of no use in the library."""
+    try:
+        url = doi.url_of(doi.parse(payload.doi))
+    except doi.InvalidDoi:
+        raise HTTPException(422, MSG["MSG-DOI-INVALID"]) from None
+    existing = await session.scalar(select(Document).where(Document.user_id == user.id, Document.url == url))
+    if existing is not None:
+        return JSONResponse(DocumentOut.model_validate(existing).model_dump(mode="json"), status_code=200)
+
+    work = await _lookup_doi(payload.doi, user, settings)
+    rate_limited_upload(user)
+    fetched = None
+    for source in (*doi.open_pdf_urls(work.doi), url):
+        try:
+            fetched = await web.fetch_url(source, settings.web_contact)
+            break
+        except (web.InvalidUrl, web.BlockedAddress, web.FetchFailed):
+            continue
+
+    if fetched is not None and fetched.body.startswith(b"%PDF"):
+        return await _save_fetched_pdf(fetched, url, user, session, settings, background, work)
+    content = ""
+    if fetched is not None and not web.is_pdf(fetched):
+        content = (await run_in_threadpool(web.extract_article, fetched.body, fetched.url)).content
+    if word_count(content) < word_count(work.abstract):
+        content = work.abstract  # the page gave less than its own abstract: a paywall, or a cookie notice
+    if not content.strip():
+        raise HTTPException(422, MSG["MSG-DOI-NOTEXT"])
+    doc = Document(
+        user_id=user.id,
+        source_type=SourceType.manual,
+        url=url,
+        title=work.title,
+        content_clean=content,
+        word_count=word_count(content),
+        extraction_status=ExtractionStatus.done,
+        citation=work.citation,
+    )
+    if (dup := await _commit_new_link(session, doc, user, url)) is not None:
+        return dup
     await session.refresh(doc)
     return doc
 

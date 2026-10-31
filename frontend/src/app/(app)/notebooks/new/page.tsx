@@ -20,6 +20,7 @@ import {
   afterGenerate,
   generateNotebook,
   type NotebookLanguage,
+  type NotebookLayout,
 } from "@/lib/notebooks";
 import { accountKey, useAccount } from "@/lib/queries";
 import { useUi } from "@/lib/ui-store";
@@ -30,6 +31,10 @@ const LANGUAGES: [NotebookLanguage, Key | null][] = [
   ["en", null],
 ];
 const LANGUAGE_NAME: Record<NotebookLanguage, string> = { auto: "", vi: "Tiếng Việt", en: "English" };
+const LAYOUTS: [NotebookLayout, Key, Key][] = [
+  ["topic", "notebooks.layoutTopic", "notebooks.layoutTopicHint"],
+  ["document", "notebooks.layoutDocument", "notebooks.layoutDocumentHint"],
+];
 
 /** UI-07, FR-NB-01/02: step 1 pick highlights, step 2 the AI writes a draft (streamed), then it opens in the editor. */
 function NewNotebook() {
@@ -44,6 +49,7 @@ function NewNotebook() {
   const [selected, setSelected] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [language, setLanguage] = useState<NotebookLanguage>("auto");
+  const [layout, setLayout] = useState<NotebookLayout>("topic");
   const [writing, setWriting] = useState(false);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +88,7 @@ function NewNotebook() {
     let acc = "";
     try {
       const nb = await generateNotebook(
-        { highlight_ids: selected, title, language },
+        { highlight_ids: selected, title, language, layout },
         (delta) => {
           acc += delta;
           setText(acc);
@@ -144,9 +150,35 @@ function NewNotebook() {
         </p>
       </div>
 
+      <fieldset className="flex flex-col gap-3">
+        <legend className="eyebrow mb-3">{t("notebooks.layout").toUpperCase()}</legend>
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          {LAYOUTS.map(([value, label, hint]) => (
+            <label
+              key={value}
+              className={`flex cursor-pointer gap-3 rounded-xl border p-3.5 transition-colors ${
+                layout === value ? "border-accent bg-accent/5" : "border-line bg-surface hover:bg-soft/50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="notebook-layout"
+                className="mt-1 h-4 w-4 shrink-0 accent-[rgb(var(--accent))]"
+                checked={layout === value}
+                onChange={() => setLayout(value)}
+              />
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-[15px] font-semibold text-ink">{t(label)}</span>
+                <span className="text-sm leading-normal text-muted">{t(hint)}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <HighlightPicker selected={selected} onChange={setSelected} initialDocId={fromDoc} />
 
-      <div className="sticky bottom-0 z-10 -mx-4 flex flex-col gap-3 border-t border-line bg-bg px-4 py-4 sm:-mx-10 sm:px-10">
+      <div className="glass sticky bottom-[92px] z-10 flex flex-col gap-3 rounded-[22px] border px-4 py-4 lg:bottom-3 sm:px-6">
         {error && <Alert>{error}</Alert>}
         <div className="flex flex-wrap items-center gap-2.5">
           <label className="min-w-0 flex-1 basis-[240px]">

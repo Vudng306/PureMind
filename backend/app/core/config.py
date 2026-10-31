@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     openai_chat_model: str = "gpt-4.1"
+    # Feed guides (services/guides) are written once and read by everyone: worth the stronger model.
+    openai_guide_model: str = "gpt-4.1"
     openai_base_url: str = "https://api.openai.com/v1"
     openai_timeout_seconds: float = 90
     ai_daily_quota: int = 20  # BR: 20 AI requests per user per day, reset at 00:00 Vietnam time
@@ -53,6 +55,7 @@ class Settings(BaseSettings):
     chat_chunk_tokens: int = 400  # size of one indexed passage
     chat_context_chunks: int = 8  # passages given to the model with a question
     chat_history_messages: int = 8  # earlier turns kept in the prompt
+    explore_chat_articles: int = 8  # the feed's articles given to the feed's chat with a message
 
     # Save-by-link (FR-DOC-03): a URL or e-mail put in the User-Agent so sites can reach the operator.
     # Some sites (e.g. Wikipedia) refuse crawlers without one. Empty = the first CORS origin (the app's URL).

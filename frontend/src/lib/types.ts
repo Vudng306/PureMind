@@ -30,11 +30,35 @@ export interface User {
   chat_quota_remaining: number;
   /** FR-ADM-01: "admin" opens the admin pages; the server checks it again on every request. */
   role: "user" | "admin";
+  /** False until the current terms of use are accepted (sign-up form or the welcome screen). */
+  terms_accepted: boolean;
   created_at: string;
   updated_at: string;
 }
 
 export type ExtractionStatus = "pending" | "processing" | "done" | "failed";
+
+export type CitationType = "article" | "book" | "chapter" | "conference" | "thesis" | "report" | "misc";
+
+/** `family` alone is a name kept whole, e.g. an organisation. */
+export interface CitationAuthor {
+  family: string;
+  given: string;
+}
+
+/** How a document is cited: filled from its DOI or by hand, written out as BibTeX. */
+export interface Citation {
+  type: CitationType;
+  authors: CitationAuthor[];
+  /** The journal, the book or the proceedings the work appeared in. */
+  container: string;
+  publisher: string;
+  year: number | null;
+  volume: string;
+  issue: string;
+  pages: string;
+  doi: string;
+}
 
 export interface DocumentListItem {
   id: string;
@@ -53,6 +77,7 @@ export interface DocumentListItem {
   /** Clean-text scroll position 0..1 */
   read_fraction: number | null;
   is_read: boolean;
+  citation: Citation | null;
   created_at: string;
   updated_at: string;
 }

@@ -33,6 +33,10 @@ class RateLimiter:
 
 
 upload_limiter = RateLimiter(limit=30, window_seconds=3600)
+# Looking a DOI up saves nothing, but each one is a request to doi.org made in PureMind's name.
+doi_limiter = RateLimiter(limit=60, window_seconds=3600)
+# A search of arXiv is a request in PureMind's name too; repeated searches are answered from memory.
+papers_search_limiter = RateLimiter(limit=120, window_seconds=3600)
 # Translation costs no AI credits, so these only stop a script from running up the OpenAI bill.
 translate_minute_limiter = RateLimiter(limit=20, window_seconds=60)
 translate_day_limiter = RateLimiter(limit=300, window_seconds=24 * 3600)

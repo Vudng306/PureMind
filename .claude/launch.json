@@ -4,14 +4,56 @@
     {
       "name": "frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev"
+      ],
       "port": 3000
     },
     {
       "name": "backend",
       "runtimeExecutable": "backend/.venv/Scripts/python.exe",
-      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--app-dir", "backend", "--reload", "--reload-dir", "backend/app", "--port", "8010"],
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "app.main:app",
+        "--app-dir",
+        "backend",
+        "--reload",
+        "--reload-dir",
+        "backend/app",
+        "--port",
+        "8010"
+      ],
       "port": 8010
+    },
+    {
+      "name": "backend-8000",
+      "runtimeExecutable": "backend/.venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-m",
+        "uvicorn",
+        "app.main:app",
+        "--app-dir",
+        "backend",
+        "--reload",
+        "--reload-dir",
+        "backend/app",
+        "--port",
+        "8000"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "tutor",
+      "runtimeExecutable": "C:/Program Files/Git/usr/bin/bash.exe",
+      "runtimeArgs": [
+        "-c",
+        "export PATH=/usr/bin:$PATH; export OPENAI_API_KEY=\"$(grep -E '^OPENAI_API_KEY=' backend/.env | head -1 | cut -d= -f2- | tr -d '\\\"\\r ')\"; cd ../linear-algebra-tutor && exec /c/Users/aceto/AppData/Local/Programs/Python/Python311/python.exe -m uvicorn app:app --port ${PORT:-8790}"
+      ],
+      "port": 8790
     }
   ]
 }

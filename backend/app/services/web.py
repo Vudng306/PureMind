@@ -109,8 +109,11 @@ async def _checked_ips(url: httpx.URL) -> list[str]:
     return sorted(ips, key=lambda ip: ":" in ip)
 
 
+ACCEPT_PAGE = "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.5"
+
+
 async def _send_pinned(
-    client: httpx.AsyncClient, url: httpx.URL, ips: list[str], agent: str
+    client: httpx.AsyncClient, url: httpx.URL, ips: list[str], agent: str, accept: str = ACCEPT_PAGE
 ) -> httpx.Response:
     """Connect to a vetted IP (no second DNS lookup, so no DNS rebinding) while keeping Host and TLS SNI."""
     host_header = url.host if url.port is None else f"{url.host}:{url.port}"
@@ -122,7 +125,7 @@ async def _send_pinned(
             headers={
                 "Host": host_header,
                 "User-Agent": agent,
-                "Accept": "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.5",
+                "Accept": accept,
                 "Accept-Language": "vi,en;q=0.8",
             },
             extensions={"sni_hostname": url.host} if url.scheme == "https" else {},
@@ -134,14 +137,15 @@ async def _send_pinned(
     raise FetchFailed from last_error
 
 
-async def fetch_url(raw_url: str, contact: str = "") -> FetchResult:
+async def fetch_url(raw_url: str, contact: str = "", accept: str = ACCEPT_PAGE) -> FetchResult:
+    """`accept` is what to ask the server for; it is sent again on every redirect."""
     url = validate_url(raw_url)
     agent = user_agent(contact)
     try:
         async with asyncio.timeout(TIMEOUT_SECONDS):
             async with httpx.AsyncClient(transport=make_transport(), follow_redirects=False) as client:
                 for _ in range(MAX_REDIRECTS + 1):
-                    response = await _send_pinned(client, url, await _checked_ips(url), agent)
+                    response = await _send_pinned(client, url, await _checked_ips(url), agent, accept)
                     try:
                         if response.is_redirect:
                             location = response.headers.get("location")

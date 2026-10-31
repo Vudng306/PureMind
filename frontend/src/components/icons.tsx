@@ -6,6 +6,15 @@ const PATHS = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
+  home: <path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z" />,
+  book: <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6" />,
+  cards: <path d="M8 3h10a2 2 0 0 1 2 2v12M4 8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />,
+  compass: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M15.5 8.5l-2 5-5 2 2-5z" />
+    </>
+  ),
   back: <path d="M15 18l-6-6 6-6" />,
   next: <path d="M9 18l6-6-6-6" />,
   x: <path d="M6 6l12 12M18 6L6 18" />,
@@ -67,8 +76,11 @@ const PATHS = {
   more: <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3" />,
   pencil: <path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />,
   check: <path d="M5 12.5l4.5 4.5L19 7" />,
+  bookmark: <path d="M6.5 4h11v16.5L12 16.5l-5.5 4z" />,
   download: <path d="M12 4v12M7 11l5 5 5-5M4 20h16" />,
+  quote: <path d="M10 7H6a1 1 0 0 0-1 1v4h5V7zm0 5c0 3-1.5 4.5-4 5M19 7h-4a1 1 0 0 0-1 1v4h5V7zm0 5c0 3-1.5 4.5-4 5" />,
   chart: <path d="M4 4v16h16M8 15l4-5 3 3 5-6" />,
+  print: <path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a1 1 0 0 1-1 1h-2M7 14h10v6H7z" />,
   history: (
     <>
       <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />

@@ -220,13 +220,16 @@ async def generate_notebook(
     ordered, sources = _sources(rows)
     language = payload.language or detect_language(" ".join(s.text for s in sources))
     user_id = user.id
+    layout = payload.layout
     await session.commit()  # hold no DB connection while the AI works
 
     if "text/event-stream" not in request.headers.get("accept", ""):
         _running.add(user_id)
         try:
             usage = Usage()
-            content = "".join([d async for d in notebook_writer.write(settings, sources, language, usage)])
+            content = "".join(
+                [d async for d in notebook_writer.write(settings, sources, language, usage, layout)]
+            )
         except AIError:
             raise HTTPException(status.HTTP_502_BAD_GATEWAY, MSG["MSG-26"]) from None
         finally:
@@ -242,7 +245,7 @@ async def generate_notebook(
         try:
             parts: list[str] = []
             usage = Usage()
-            async for delta in notebook_writer.write(settings, sources, language, usage):
+            async for delta in notebook_writer.write(settings, sources, language, usage, layout):
                 parts.append(delta)
                 yield _sse("delta", {"text": delta})
             out = await _save_draft(settings, user_id, title, "".join(parts), ordered)

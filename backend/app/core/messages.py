@@ -27,6 +27,20 @@ VI: dict[str, str] = {
     # MSG-18 when the site answers 401/403/429...: retrying will not help (not in SRS Appendix B).
     "MSG-18-REFUSED": "Trang web này không cho phép PureMind tải nội dung. Bạn có thể lưu trang thành PDF (Ctrl+P) rồi tải lên.",
     "MSG-19": "Không tìm thấy tài liệu.",
+    # Import by DOI and citations (not in SRS Appendix B).
+    "MSG-DOI-INVALID": "Mã DOI không hợp lệ. DOI có dạng 10.1038/nature14539.",
+    "MSG-DOI-NOTFOUND": "Không tìm thấy thông tin cho DOI này. Kiểm tra lại mã hoặc thử lại sau.",
+    "MSG-DOI-NOTEXT": "Đã tìm thấy bài nhưng không tải được nội dung (bài có thể không mở miễn phí). "
+    "Hãy tải tệp PDF lên, rồi điền DOI trong mục Thông tin trích dẫn của tài liệu.",
+    "MSG-DOI-LIMIT": "Bạn đã tra cứu quá nhiều DOI trong một giờ. Vui lòng thử lại sau.",
+    # Explore page: searching arXiv (not in SRS Appendix B).
+    "MSG-PAPERS-LIMIT": "Bạn đã tìm kiếm quá nhiều lần trong một giờ. Vui lòng thử lại sau.",
+    "MSG-PAPERS-UNAVAILABLE": "Chưa tìm được trên arXiv lúc này. Vui lòng thử lại sau ít phút.",
+    # The feed (not in SRS Appendix B). The credit heads the copy of an article in the library.
+    "MSG-FEED-404": "Không tìm thấy bài viết.",
+    "MSG-FEED-CREDIT": "{credit} · Đăng lần đầu trên [{source}]({url}), giấy phép [{license}]({license_url}).",
+    "MSG-FEED-CREDIT-GUIDE": "Bài do PureMind biên soạn bằng AI từ [{title}]({url}) của {credit} ({source}), "
+    "giấy phép [{license}]({license_url}); bài này dùng cùng giấy phép. AI có thể nhầm: khi cần, hãy đối chiếu bài gốc.",
     "MSG-22": "Đoạn chọn quá dài. Hãy chọn tối đa 5.000 ký tự.",
     "MSG-20": "Đã lưu thay đổi.",
     "MSG-23": "Không thể lưu. Kiểm tra kết nối và thử lại.",
@@ -75,6 +89,18 @@ EN: dict[str, str] = {
     "MSG-18": "The page could not be reached. Check the link or try again later.",
     "MSG-18-REFUSED": "This site does not let PureMind fetch its pages. You can save the page as a PDF (Ctrl+P) and upload it.",
     "MSG-19": "Document not found.",
+    "MSG-DOI-INVALID": "That DOI is not valid. A DOI looks like 10.1038/nature14539.",
+    "MSG-DOI-NOTFOUND": "Nothing was found for this DOI. Check it or try again later.",
+    "MSG-DOI-NOTEXT": "The work was found but its text could not be fetched (it may not be open access). "
+    "Upload the PDF, then enter the DOI under the document's Citation details.",
+    "MSG-DOI-LIMIT": "You have looked up too many DOIs in an hour. Please try again later.",
+    "MSG-PAPERS-LIMIT": "You have searched too many times in an hour. Please try again later.",
+    "MSG-PAPERS-UNAVAILABLE": "arXiv cannot be searched right now. Please try again in a few minutes.",
+    "MSG-FEED-404": "Article not found.",
+    "MSG-FEED-CREDIT": "{credit} · First published in [{source}]({url}) under [{license}]({license_url}).",
+    "MSG-FEED-CREDIT-GUIDE": "Written by PureMind with AI from [{title}]({url}) by {credit} ({source}), "
+    "licensed [{license}]({license_url}); this piece uses the same licence. AI can make mistakes: check the "
+    "original when it matters.",
     "MSG-22": "That selection is too long. Please select at most 5,000 characters.",
     "MSG-20": "Changes saved.",
     "MSG-23": "Could not save. Check your connection and try again.",

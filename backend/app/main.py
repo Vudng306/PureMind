@@ -9,11 +9,15 @@ from fastapi.responses import JSONResponse
 from app.api.routes import (
     account,
     admin,
+    catalog,
     chat,
     documents,
+    feed,
     highlights,
     notebooks,
+    papers,
     search,
+    study,
     summaries,
     translate,
 )
@@ -140,3 +144,7 @@ app.include_router(notebooks.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(translate.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(study.router, prefix="/api")
+app.include_router(catalog.router, prefix="/api")
+app.include_router(papers.router, prefix="/api")
+app.include_router(feed.router, prefix="/api")

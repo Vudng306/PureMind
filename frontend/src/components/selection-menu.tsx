@@ -13,6 +13,13 @@ type Selected = { rect: DOMRect };
 const MENU_W = 530;
 const MENU_H = 104;
 
+/** Where the menu sits for a selection at `rect`: above it when there is room, otherwise below. */
+export function selectionMenuBounds(rect: DOMRect): { top: number; bottom: number } {
+  const above = rect.top - MENU_H - 10;
+  const top = above > 12 ? above : Math.min(rect.bottom + 10, window.innerHeight - MENU_H - 12);
+  return { top, bottom: top + MENU_H };
+}
+
 /** Dark floating menu over a selected passage: color by meaning, note, copy, explain, translate. */
 export function SelectionMenu({
   selection,
@@ -60,8 +67,7 @@ export function SelectionMenu({
   const vw = window.innerWidth;
   const width = Math.min(MENU_W, vw - 24);
   const left = Math.min(Math.max(12, rect.left + rect.width / 2 - width / 2), vw - width - 12);
-  const above = rect.top - MENU_H - 10;
-  const top = above > 12 ? above : Math.min(rect.bottom + 10, window.innerHeight - MENU_H - 12);
+  const { top } = selectionMenuBounds(rect);
 
   const item = "flex h-11 items-center gap-1.5 rounded-lg px-2 text-sm hover:bg-menu-fg/10";
 
@@ -69,6 +75,7 @@ export function SelectionMenu({
     <div
       ref={ref}
       role="toolbar"
+      data-selection-menu
       aria-label={t("selection.aria")}
       // Keep the text selection alive while clicking buttons.
       onMouseDown={(e) => e.preventDefault()}

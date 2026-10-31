@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { HighlightPicker } from "@/components/highlight-picker";
 import { Icon } from "@/components/icons";
 import { NotebookMarkdown } from "@/components/notebook-markdown";
+import { HighlightDigest, SourceGroups } from "@/components/notebook-sources";
 import { Alert, ConfirmDialog, Spinner, useModal } from "@/components/ui";
-import { categoryLabel } from "@/lib/annotations";
+import { fromDto } from "@/lib/annotations";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/documents";
+import { downloadText, exportFileName, highlightsMarkdown } from "@/lib/export";
 import { useLang, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import {
@@ -18,6 +20,7 @@ import {
   MAX_NOTEBOOK_TITLE,
   STATUS_LABEL,
   citedPositions,
+  groupSources,
   useDeleteNotebook,
   useNotebook,
   useNotebookVersion,
@@ -27,7 +30,9 @@ import {
   type NotebookPatch,
   type NotebookSource,
   type NotebookVersion,
+  type SourceGroup,
 } from "@/lib/notebooks";
+import { usePreferences } from "@/lib/preferences";
 import { useUi } from "@/lib/ui-store";
 
 const AUTOSAVE_MS = 5000; // FR-NB-03
@@ -35,39 +40,50 @@ const AUTOSAVE_MS = 5000; // FR-NB-03
 const timeOf = (iso: string, lang: string) =>
   new Date(iso).toLocaleTimeString(lang === "en" ? "en-GB" : "vi-VN", { hour: "2-digit", minute: "2-digit" });
 
-function SourceItem({ source, onRemove, busy }: { source: NotebookSource; onRemove: () => void; busy: boolean }) {
+/** What the page shows under the title: the notebook as read, its Markdown, or its highlights by document. */
+const VIEWS = [
+  ["preview", "nb.modePreview"],
+  ["edit", "nb.modeEdit"],
+  ["digest", "nb.modeDigest"],
+] as const;
+type View = (typeof VIEWS)[number][0];
+
+/**
+ * What goes on paper: the notebook as read, then its highlights by document on a new page, so every [n]
+ * can be looked up without the app. On screen it is hidden; the rest of the page is hidden in print.
+ */
+function PrintSheet({
+  title,
+  content,
+  sources,
+  groups,
+}: {
+  title: string;
+  content: string;
+  sources: NotebookSource[];
+  groups: SourceGroup[];
+}) {
   const t = useT();
-  const lang = useLang();
-  const h = source.highlight;
   return (
-    <li id={`source-${source.position}`} className="flex gap-2.5 rounded-xl border border-line bg-surface p-3">
-      <span className="mt-0.5 flex h-6 min-w-6 shrink-0 items-center justify-center rounded bg-accent/15 px-1 font-sans text-xs font-semibold text-accent">
-        {source.position}
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="line-clamp-3 font-serif text-[15px] leading-snug text-ink">
-          <span className={`box-decoration-clone hl-bg-${h.color}`}>{h.selected_text}</span>
-        </span>
-        <span className="truncate text-xs text-muted">
-          {h.category ? `${categoryLabel(h.category, lang)} · ` : ""}
-          {source.document_title}
-          {h.page_number ? ` · ${t("search.pageOf", { page: h.page_number })}` : ""}
-        </span>
-        <Link href={`/reader/${h.document_id}?hl=${h.id}`} className="self-start text-xs font-semibold text-accent hover:underline">
-          {t("nb.openInDocument")}
-        </Link>
-      </div>
-      <button
-        type="button"
-        className="icon-btn -mr-1.5 -mt-1.5 h-8 w-8 text-muted"
-        aria-label={t("nb.dropSource", { n: source.position })}
-        title={t("nb.dropSourceTitle")}
-        onClick={onRemove}
-        disabled={busy}
-      >
-        <Icon name="x" size={16} />
-      </button>
-    </li>
+    <div className="print-sheet hidden print:block">
+      <h1 className="font-serif text-[22pt] font-medium leading-tight text-ink">{title}</h1>
+      <p className="mb-6 mt-2 border-b border-line pb-3 text-[9pt] text-muted">
+        {t("nb.printedFrom", { date: formatDate(new Date().toISOString()) })}
+        {sources.length > 0 && ` · ${t("nb.meta", { n: sources.length, docs: groups.length })}`}
+      </p>
+      <NotebookMarkdown
+        content={content}
+        sources={sources}
+        title={title}
+        className="font-serif text-[11.5pt] leading-[1.6] text-body"
+      />
+      {groups.length > 0 && (
+        <section className="break-before-page">
+          <h2 className="mb-5 font-serif text-[16pt] font-semibold text-ink">{t("nb.modeDigest")}</h2>
+          <HighlightDigest groups={groups} />
+        </section>
+      )}
+    </div>
   );
 }
 
@@ -255,7 +271,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
 
   const [title, setTitle] = useState(notebook.title);
   const [content, setContent] = useState(notebook.content);
-  const [mode, setMode] = useState<"preview" | "edit">("preview");
+  const [view, setView] = useState<View>("preview");
   const [saving, setSaving] = useState<"auto" | "save" | null>(null);
   const [savedAt, setSavedAt] = useState(notebook.updated_at);
   const [autoFailed, setAutoFailed] = useState(false);
@@ -331,6 +347,9 @@ function Editor({ notebook }: { notebook: Notebook }) {
 
   const sources = notebook.sources;
   const sourceIds = useMemo(() => new Set(sources.map((s) => s.highlight.id)), [sources]);
+  const groups = useMemo(() => groupSources(sources), [sources]);
+  const labels = usePreferences((s) => s.colorLabels);
+  const printContent = useDeferredValue(content); // the hidden print sheet never slows typing down
   const missing = useMemo(() => {
     const have = new Set(sources.map((s) => s.position));
     return citedPositions(content)
@@ -347,6 +366,27 @@ function Editor({ notebook }: { notebook: Notebook }) {
       setSaveError(e instanceof ApiError ? e.message : MSG["MSG-99"]);
     }
   }
+
+  const removeSource = (source: NotebookSource) =>
+    void setSources(sources.filter((x) => x !== source).map((x) => x.highlight.id));
+
+  /** The highlights by document, with notes, as a .md file (the same format as the Highlights page). */
+  function exportDigest() {
+    const docs = new Map(groups.map((g) => [g.documentId, { title: g.title, file_type: g.fileType, url: null }]));
+    const all = groups.flatMap((g) => g.sources.map((s) => fromDto(s.highlight)));
+    const now = new Date();
+    downloadText(highlightsMarkdown(all, docs, labels, {}, now, lang), exportFileName(title.trim() || null, now));
+    showToast(t("nb.exported"));
+  }
+
+  // The browser names a printed PDF after the page title.
+  useEffect(() => {
+    const before = document.title;
+    if (title.trim()) document.title = `${title.trim()} · PureMind`;
+    return () => {
+      document.title = before;
+    };
+  }, [title]);
 
   async function doDelete() {
     try {
@@ -370,181 +410,223 @@ function Editor({ notebook }: { notebook: Notebook }) {
         : t("nb.statusSavedAt", { time: timeOf(savedAt, lang) });
 
   return (
-    <div className="mx-auto flex max-w-[1180px] flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <Link href="/notebooks" className="flex items-center gap-1 text-sm text-muted hover:text-ink">
-          <Icon name="back" size={16} />
-          {t("notebooks.title")}
-        </Link>
-        <span
-          className={`flex h-6 items-center rounded-full px-2 text-xs font-semibold ${
-            notebook.status === "saved" ? "bg-success-soft text-success" : "bg-soft text-ink"
-          }`}
-        >
-          {t(STATUS_LABEL[notebook.status])}
-        </span>
-        <span className={`text-xs ${autoFailed ? "text-danger" : "text-muted"}`} role="status">
-          {status}
-        </span>
-        <span className="flex-1" />
-        <div className="flex h-10 gap-0.5 rounded-full bg-soft p-1" role="group" aria-label={t("nb.mode")}>
-          {(
-            [
-              ["preview", "nb.modePreview"],
-              ["edit", "nb.modeEdit"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={mode === value}
-              onClick={() => setMode(value)}
-              className={`rounded-full px-3.5 text-sm ${mode === value ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"}`}
-            >
-              {t(label)}
-            </button>
-          ))}
-        </div>
-        <button
-          type="button"
-          className="icon-btn h-10 w-10"
-          aria-label={t("notebooks.versions")}
-          title={t("notebooks.versions")}
-          onClick={() => setHistory(true)}
-        >
-          <Icon name="history" />
-        </button>
-        <button type="button" className="btn-primary h-10" onClick={() => void send("save")} disabled={!valid || saving !== null}>
-          {t(saving === "save" ? "common.saving" : "common.save")}
-        </button>
-        <button
-          type="button"
-          className="icon-btn h-10 w-10"
-          aria-label={t("nb.deleteNotebook")}
-          title={t("nb.deleteNotebook")}
-          onClick={() => setConfirmDelete(true)}
-        >
-          <Icon name="trash" />
-        </button>
-      </div>
-
-      {saveError && <Alert>{saveError}</Alert>}
-
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-w-0 flex-col gap-4">
-          <label className="flex flex-col gap-1">
-            <span className="sr-only">{t("nb.titleLabel")}</span>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              maxLength={MAX_NOTEBOOK_TITLE}
-              className="w-full rounded-lg border border-transparent bg-transparent px-1 py-1 font-serif text-3xl font-medium leading-tight text-ink outline-none hover:border-line focus:border-accent sm:text-4xl"
-            />
-            {!titleOk && <span className="text-sm text-danger">{t("nb.titleRequired")}</span>}
-          </label>
-
-          {mode === "edit" ? (
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="notebook-content" className="sr-only">
-                {t("nb.markdownContent")}
-              </label>
-              <textarea
-                id="notebook-content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                spellCheck={false}
-                className="min-h-[65vh] w-full resize-y rounded-xl border border-field bg-surface p-4 font-mono text-[13.5px] leading-relaxed text-ink outline-none focus:border-accent"
-              />
-              <span className={`flex flex-wrap gap-x-3 text-xs ${tooLong ? "text-danger" : "text-muted"}`}>
-                <span>
-                  {t("nb.charCount", {
-                    n: content.length.toLocaleString(lang),
-                    max: MAX_NOTEBOOK_CHARS.toLocaleString(lang),
-                  })}
-                  {tooLong ? ` — ${MSG["MSG-29"]}` : ""}
-                </span>
-                <span>{t("nb.markdownHint")}</span>
-              </span>
-            </div>
-          ) : (
-            <article className="rounded-2xl border border-line bg-surface px-5 py-6 sm:px-9 sm:py-8">
-              {content.trim() ? (
-                <NotebookMarkdown content={content} sources={sources} title={title} />
-              ) : (
-                <p className="text-muted">{t("nb.emptyNotebook")}</p>
-              )}
-            </article>
-          )}
-          <span className="text-xs text-muted">
-            {t("nb.madeOn", { date: formatDate(notebook.created_at) })}
-            {notebook.ai_model ? ` · AI: ${notebook.ai_model}` : ""} · {t("nb.aiCaveat")}
+    <>
+      <div className="mx-auto flex max-w-[1180px] flex-col gap-5 print:hidden">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Link href="/notebooks" className="flex items-center gap-1 text-sm text-muted hover:text-ink">
+            <Icon name="back" size={16} />
+            {t("notebooks.title")}
+          </Link>
+          <span
+            className={`flex h-6 items-center rounded-full px-2 text-xs font-semibold ${
+              notebook.status === "saved" ? "bg-success-soft text-success" : "bg-soft text-ink"
+            }`}
+          >
+            {t(STATUS_LABEL[notebook.status])}
           </span>
+          <span className={`text-xs ${autoFailed ? "text-danger" : "text-muted"}`} role="status">
+            {status}
+          </span>
+          <span className="flex-1" />
+          <button
+            type="button"
+            className="icon-btn h-10 w-10"
+            aria-label={t("nb.print")}
+            title={t("nb.print")}
+            onClick={() => window.print()}
+          >
+            <Icon name="print" />
+          </button>
+          <button
+            type="button"
+            className="icon-btn h-10 w-10"
+            aria-label={t("notebooks.versions")}
+            title={t("notebooks.versions")}
+            onClick={() => setHistory(true)}
+          >
+            <Icon name="history" />
+          </button>
+          <button
+            type="button"
+            className="icon-btn h-10 w-10"
+            aria-label={t("nb.deleteNotebook")}
+            title={t("nb.deleteNotebook")}
+            onClick={() => setConfirmDelete(true)}
+          >
+            <Icon name="trash" />
+          </button>
+          <button type="button" className="btn-primary h-10" onClick={() => void send("save")} disabled={!valid || saving !== null}>
+            {t(saving === "save" ? "common.saving" : "common.save")}
+          </button>
         </div>
 
-        <aside className="flex flex-col gap-3 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-120px)] lg:self-start lg:overflow-y-auto" aria-label={t("nb.sourcesAria")}>
-          <div className="flex items-center gap-2">
-            <h2 className="eyebrow flex-1">{t("nb.sourcesCount", { n: sources.length })}</h2>
-            <button type="button" className="btn-ghost h-9 px-3 text-sm" onClick={() => setAdding(true)} disabled={update.isPending}>
-              <Icon name="plus" size={16} />
-              {t("nb.addSources")}
-            </button>
-          </div>
-          {sources.length === 0 && missing.length === 0 && (
-            <p className="text-sm text-muted">{t("nb.noSources")}</p>
-          )}
-          <ul className="flex flex-col gap-2">
-            {sources.map((s) => (
-              <SourceItem
-                key={s.highlight.id}
-                source={s}
-                busy={update.isPending}
-                onRemove={() => void setSources(sources.filter((x) => x !== s).map((x) => x.highlight.id))}
-              />
-            ))}
-            {missing.map((n) => (
-              <li key={`missing-${n}`} className="flex items-center gap-2.5 rounded-xl border border-dashed border-line p-3 text-sm text-muted">
-                <span className="flex h-6 min-w-6 items-center justify-center rounded bg-soft px-1 text-xs font-semibold line-through">
-                  {n}
+        {saveError && <Alert>{saveError}</Alert>}
+
+        <div className={view === "digest" ? "mx-auto w-full max-w-[880px]" : "grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]"}>
+          <div className="flex min-w-0 flex-col gap-3">
+            <div className="rounded-2xl border border-line bg-surface">
+              <div className="flex flex-col gap-2 px-4 pt-5 sm:px-9 sm:pt-8">
+                <label className="flex flex-col gap-1">
+                  <span className="sr-only">{t("nb.titleLabel")}</span>
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    maxLength={MAX_NOTEBOOK_TITLE}
+                    className="w-full rounded-lg border border-transparent bg-transparent px-1 py-1 font-serif text-3xl font-medium leading-tight text-ink outline-none hover:border-line focus:border-accent sm:text-4xl"
+                  />
+                  {!titleOk && <span className="px-1 text-sm text-danger">{t("nb.titleRequired")}</span>}
+                </label>
+                <span className="px-1 text-[13px] text-muted">
+                  {t("nb.madeOn", { date: formatDate(notebook.created_at) })}
+                  {sources.length > 0 && ` · ${t("nb.meta", { n: sources.length, docs: groups.length })}`}
                 </span>
-                {t("nb.removedSource")}
-              </li>
-            ))}
-          </ul>
-        </aside>
+              </div>
+
+              <div className="mt-4 flex gap-1 overflow-x-auto border-b border-line px-3 sm:px-8" role="group" aria-label={t("nb.mode")}>
+                {VIEWS.map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={view === value}
+                    onClick={() => setView(value)}
+                    className={`flex h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 text-sm ${
+                      view === value ? "border-accent font-semibold text-ink" : "border-transparent text-muted hover:text-ink"
+                    }`}
+                  >
+                    {t(label)}
+                    {value === "digest" && sources.length > 0 && (
+                      <span className="rounded-full bg-soft px-1.5 text-xs font-semibold text-ink">{sources.length}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className="px-5 pb-7 pt-6 sm:px-10 sm:pb-10 sm:pt-8">
+                {view === "edit" ? (
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="notebook-content" className="sr-only">
+                      {t("nb.markdownContent")}
+                    </label>
+                    <textarea
+                      id="notebook-content"
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      spellCheck={false}
+                      className="min-h-[60vh] w-full resize-y rounded-xl border border-field bg-bg/40 p-4 font-mono text-[13.5px] leading-relaxed text-ink outline-none focus:border-accent"
+                    />
+                    <span className={`flex flex-wrap gap-x-3 text-xs ${tooLong ? "text-danger" : "text-muted"}`}>
+                      <span>
+                        {t("nb.charCount", {
+                          n: content.length.toLocaleString(lang),
+                          max: MAX_NOTEBOOK_CHARS.toLocaleString(lang),
+                        })}
+                        {tooLong ? ` — ${MSG["MSG-29"]}` : ""}
+                      </span>
+                      <span>{t("nb.markdownHint")}</span>
+                    </span>
+                  </div>
+                ) : view === "digest" ? (
+                  <div className="flex flex-col gap-7">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <p className="min-w-0 flex-1 basis-[260px] text-sm text-muted">
+                        {sources.length > 0 ? t("nb.digestLede", { n: sources.length, docs: groups.length }) : t("nb.noSources")}
+                      </p>
+                      {sources.length > 0 && (
+                        <button type="button" className="btn-outline h-10 px-3.5 text-sm" onClick={exportDigest}>
+                          <Icon name="download" size={16} />
+                          {t("highlights.export")}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-outline h-10 px-3.5 text-sm"
+                        onClick={() => setAdding(true)}
+                        disabled={update.isPending}
+                      >
+                        <Icon name="plus" size={16} />
+                        {t("nb.addSources")}
+                      </button>
+                    </div>
+                    <HighlightDigest groups={groups} onRemove={removeSource} busy={update.isPending} />
+                  </div>
+                ) : content.trim() ? (
+                  <NotebookMarkdown content={content} sources={sources} title={title} />
+                ) : (
+                  <p className="text-muted">{t("nb.emptyNotebook")}</p>
+                )}
+              </div>
+            </div>
+            <span className="px-1 text-xs text-muted">
+              {notebook.ai_model ? `AI: ${notebook.ai_model} · ` : ""}
+              {t("nb.aiCaveat")}
+            </span>
+          </div>
+
+          {view !== "digest" && (
+            <aside
+              className="flex flex-col gap-3 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-120px)] lg:self-start lg:overflow-y-auto"
+              aria-label={t("nb.sourcesAria")}
+            >
+              <div className="flex items-center gap-2">
+                <h2 className="eyebrow flex-1">{t("nb.sourcesCount", { n: sources.length })}</h2>
+                <button type="button" className="btn-ghost h-9 px-3 text-sm" onClick={() => setAdding(true)} disabled={update.isPending}>
+                  <Icon name="plus" size={16} />
+                  {t("nb.addSources")}
+                </button>
+              </div>
+              {sources.length === 0 && missing.length === 0 && <p className="text-sm text-muted">{t("nb.noSources")}</p>}
+              <SourceGroups groups={groups} onRemove={removeSource} busy={update.isPending} />
+              {missing.length > 0 && (
+                <ul className="flex flex-col gap-2">
+                  {missing.map((n) => (
+                    <li key={n} className="flex items-center gap-2.5 rounded-xl border border-dashed border-line p-3 text-sm text-muted">
+                      <span className="flex h-6 min-w-6 items-center justify-center rounded bg-soft px-1 text-xs font-semibold line-through">
+                        {n}
+                      </span>
+                      {t("nb.removedSource")}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </aside>
+          )}
+        </div>
+
+        <AddSourcesDialog
+          open={adding}
+          existing={sourceIds}
+          busy={update.isPending}
+          onClose={() => setAdding(false)}
+          onAdd={(ids) => void setSources([...sources.map((s) => s.highlight.id), ...ids], () => setAdding(false))}
+        />
+
+        <VersionsDialog
+          open={history}
+          notebookId={notebook.id}
+          sources={sources}
+          onClose={() => setHistory(false)}
+          onRestore={(v) => {
+            setTitle(v.title);
+            setContent(v.content);
+            setView("preview");
+            setHistory(false);
+            showToast(t("nb.restored"));
+          }}
+        />
+
+        <ConfirmDialog
+          open={confirmDelete}
+          title={t("notebooks.deleteTitle")}
+          busy={remove.isPending}
+          onConfirm={() => void doDelete()}
+          onCancel={() => setConfirmDelete(false)}
+        >
+          {t("nb.deleteBody", { title: notebook.title })}
+        </ConfirmDialog>
       </div>
 
-      <AddSourcesDialog
-        open={adding}
-        existing={sourceIds}
-        busy={update.isPending}
-        onClose={() => setAdding(false)}
-        onAdd={(ids) => void setSources([...sources.map((s) => s.highlight.id), ...ids], () => setAdding(false))}
-      />
-
-      <VersionsDialog
-        open={history}
-        notebookId={notebook.id}
-        sources={sources}
-        onClose={() => setHistory(false)}
-        onRestore={(v) => {
-          setTitle(v.title);
-          setContent(v.content);
-          setMode("preview");
-          setHistory(false);
-          showToast(t("nb.restored"));
-        }}
-      />
-
-      <ConfirmDialog
-        open={confirmDelete}
-        title={t("notebooks.deleteTitle")}
-        busy={remove.isPending}
-        onConfirm={() => void doDelete()}
-        onCancel={() => setConfirmDelete(false)}
-      >
-        {t("nb.deleteBody", { title: notebook.title })}
-      </ConfirmDialog>
-    </div>
+      <PrintSheet title={title} content={printContent} sources={sources} groups={groups} />
+    </>
   );
 }
 

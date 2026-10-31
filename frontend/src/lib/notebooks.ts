@@ -47,6 +47,8 @@ export interface NotebookListItem {
 }
 
 export type NotebookLanguage = "auto" | "vi" | "en";
+/** How the AI cuts the notebook into sections: one per topic, or one per document. */
+export type NotebookLayout = "topic" | "document";
 
 export const notebooksKey = ["notebooks"] as const;
 const notebookKey = (id: string) => ["notebooks", "one", id] as const;
@@ -157,13 +159,14 @@ export async function* readEvents(body: ReadableStream<Uint8Array>): AsyncGenera
  * Resolves with the saved draft; throws ApiError (MSG-26 etc.) when it fails — nothing is saved then.
  */
 export async function generateNotebook(
-  input: { highlight_ids: string[]; title?: string; language?: NotebookLanguage },
+  input: { highlight_ids: string[]; title?: string; language?: NotebookLanguage; layout?: NotebookLayout },
   onDelta: (text: string) => void,
   signal?: AbortSignal,
 ): Promise<Notebook> {
   const body: Record<string, unknown> = { highlight_ids: input.highlight_ids };
   if (input.title?.trim()) body.title = input.title.trim();
   if (input.language && input.language !== "auto") body.language = input.language;
+  if (input.layout === "document") body.layout = input.layout;
 
   const res = await apiFetch("/notebooks/generate", {
     method: "POST",
@@ -198,4 +201,27 @@ export function citedPositions(content: string): number[] {
   const seen = new Set<number>();
   for (const m of content.matchAll(/\[(\d{1,3})\]/g)) seen.add(Number(m[1]));
   return [...seen];
+}
+
+/** A notebook's sources that come from one document. */
+export interface SourceGroup {
+  documentId: string;
+  title: string;
+  fileType: NotebookSource["file_type"];
+  sources: NotebookSource[];
+}
+
+/**
+ * The sources gathered by document: documents in the order their first [n] appears, passages by number
+ * (the server numbers them by page within a document, and added ones follow).
+ */
+export function groupSources(sources: NotebookSource[]): SourceGroup[] {
+  const groups = new Map<string, SourceGroup>();
+  for (const s of [...sources].sort((a, b) => a.position - b.position)) {
+    const id = s.highlight.document_id;
+    const group = groups.get(id);
+    if (group) group.sources.push(s);
+    else groups.set(id, { documentId: id, title: s.document_title, fileType: s.file_type, sources: [s] });
+  }
+  return [...groups.values()];
 }

@@ -5,7 +5,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
-from app.models import MAX_CHAT_QUESTION, ExtractionStatus, SourceType
+from app.models import MAX_CHAT_MESSAGES, MAX_CHAT_QUESTION, ExtractionStatus, SourceType
+from app.services import doi as doi_service
 
 HighlightColor = Literal["yellow", "green", "blue", "pink", "purple"]
 HighlightCategory = Literal["important", "concept", "question", "example", "review"]
@@ -51,8 +52,16 @@ class UserOut(BaseModel):
     ai_quota_remaining: int
     chat_quota_remaining: int
     role: Literal["user", "admin"]
+    # False until the user accepts the current terms of use (models.TERMS_VERSION).
+    terms_accepted: bool
     created_at: datetime
     updated_at: datetime
+
+
+class TermsAccept(BaseModel):
+    """The terms are accepted as a whole; sending content to OpenAI is a choice of its own."""
+
+    ai_consent: bool
 
 
 class AccountUpdate(BaseModel):
@@ -79,6 +88,49 @@ def file_type_of(source_type: SourceType, original_filename: str | None) -> Lite
     return "pdf"
 
 
+class CitationAuthor(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    family: str = Field(min_length=1, max_length=200)  # or the whole name of an organisation
+    given: str = Field(default="", max_length=200)
+
+
+class Citation(BaseModel):
+    """How a document is cited: what a reference manager needs, and what the BibTeX export writes."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["article", "book", "chapter", "conference", "thesis", "report", "misc"] = "article"
+    authors: list[CitationAuthor] = Field(default_factory=list, max_length=100)
+    container: str = Field(default="", max_length=500)  # the journal, the book or the proceedings
+    publisher: str = Field(default="", max_length=300)
+    year: int | None = Field(default=None, ge=1000, le=2100)
+    volume: str = Field(default="", max_length=50)
+    issue: str = Field(default="", max_length=50)
+    pages: str = Field(default="", max_length=50)
+    doi: str = Field(default="", max_length=300)
+
+    @field_validator("container", "publisher", "volume", "issue", "pages", mode="before")
+    @classmethod
+    def one_line(cls, v):
+        return " ".join(v.split()) if isinstance(v, str) else v
+
+    @field_validator("doi", mode="before")
+    @classmethod
+    def bare_doi(cls, v):
+        if not isinstance(v, str) or not v.strip():
+            return ""
+        try:
+            return doi_service.parse(v)
+        except doi_service.InvalidDoi:
+            raise ValueError("invalid DOI") from None
+
+
+class DoiLookup(BaseModel):
+    title: str
+    citation: Citation
+
+
 class DocumentListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -95,6 +147,7 @@ class DocumentListItem(BaseModel):
     last_read_page: int | None
     read_fraction: float | None
     is_read: bool
+    citation: Citation | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -120,6 +173,7 @@ class DocumentUpdate(BaseModel):
     read_fraction: float | None = Field(default=None, ge=0, le=1)
     is_read: bool | None = None
     note: str | None = Field(default=None, max_length=20000)
+    citation: Citation | None = None
 
 
 MAX_RECTS = 200
@@ -280,6 +334,8 @@ class NotebookGenerate(BaseModel):
     highlight_ids: list[uuid.UUID] = Field(max_length=1000)
     title: str | None = Field(default=None, max_length=1000)
     language: Literal["vi", "en"] | None = None
+    # "document": one section per document instead of one per topic
+    layout: Literal["topic", "document"] = "topic"
 
 
 class NotebookUpdate(BaseModel):
@@ -341,6 +397,29 @@ class ChatAsk(BaseModel):
     quote: str | None = Field(default=None, max_length=MAX_SELECTION)
     # A figure in the document, as written in its clean text: `pm-image:<name>` or the image's URL.
     image: str | None = Field(default=None, max_length=2048)
+
+    @field_validator("content")
+    @classmethod
+    def check_content(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("MSG-CHAT-EMPTY")
+        if len(v) > MAX_CHAT_QUESTION:
+            raise ValueError("MSG-CHAT-LONG")
+        return v
+
+
+class ExploreTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(max_length=8000)
+
+
+class ExploreAsk(BaseModel):
+    """A message to the feed's chat, with the earlier turns of the conversation, which the page keeps."""
+
+    content: str
+    history: list[ExploreTurn] = Field(default_factory=list, max_length=MAX_CHAT_MESSAGES)
+    language: Literal["vi", "en"] = "vi"
 
     @field_validator("content")
     @classmethod

@@ -34,6 +34,8 @@ import {
   type HighlightColor,
   type LineHeight,
 } from "@/lib/preferences";
+import { useAccount } from "@/lib/queries";
+import { looksEnglish } from "@/lib/translate";
 import type { Theme } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
 
@@ -86,6 +88,12 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   const qc = useQueryClient();
   const { data: highlights, isPending: highlightsPending } = useHighlights(id);
   const { addHighlight, updateHighlight } = useHighlightActions();
+  const { data: account } = useAccount();
+  const accountLoaded = Boolean(account);
+  const consented = Boolean(account?.reading_preferences.ai_consent);
+  // Without consent, the first English selection asks for it once; turning that down stops asking until
+  // the reader is opened again (the Translate button still asks).
+  const askedConsent = useRef(false);
 
   const [viewerError, setViewerError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -212,8 +220,15 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
         return setSelection(null);
       }
       setSelection(s);
+      // An English selection is translated as soon as it is made, like a dictionary pop-up.
+      if (!s || !accountLoaded || !looksEnglish(s.text)) return;
+      if (!consented) {
+        if (askedConsent.current) return;
+        askedConsent.current = true;
+      }
+      setTranslating({ text: s.text, rect: s.rect });
     },
-    [showToast],
+    [showToast, accountLoaded, consented],
   );
 
   function chooseMode(next: Mode) {

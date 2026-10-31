@@ -78,11 +78,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-line bg-bg">
+    <div className="app-backdrop min-h-screen">
+      <header className="glass sticky top-0 z-20 border-b">
         <div className="flex h-[64px] items-center gap-3 px-4 sm:gap-6 sm:px-10">
           <Link href="/admin/users" className="flex items-baseline gap-2">
-            <span className="font-serif text-[22px] font-semibold">PureMind</span>
+            <span className="font-serif font-semibold text-[22px]">PureMind</span>
             <span className="eyebrow">{t("admin.title").toUpperCase()}</span>
           </Link>
           <nav className="hidden gap-1 sm:flex" aria-label={t("admin.tabsAria")}>

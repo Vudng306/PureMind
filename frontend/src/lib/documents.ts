@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { highlightsKey } from "./annotations";
 import { api, apiUpload } from "./api";
 import { currentLang } from "./preferences";
-import type { DocumentDetail, DocumentListItem, Lang } from "./types";
+import type { Citation, DocumentDetail, DocumentListItem, Lang } from "./types";
 
 export type LibrarySort = "created_desc" | "created_asc" | "title";
 
@@ -55,6 +55,21 @@ export function useSaveUrl() {
   });
 }
 
+/** Add a work by its DOI: the citation from doi.org, the text from the publisher's page or PDF. */
+export function useImportDoi() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (doi: string) =>
+      api<DocumentDetail>("/documents/import-doi", { method: "POST", body: JSON.stringify({ doi }) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: documentsKey }),
+  });
+}
+
+/** What a DOI names, to fill in the citation of a document already in the library. */
+export function lookupDoi(doi: string) {
+  return api<{ title: string; citation: Citation }>(`/documents/doi-lookup?doi=${encodeURIComponent(doi)}`);
+}
+
 export function sourceDomain(url: string | null): string | null {
   if (!url) return null;
   try {
@@ -75,17 +90,20 @@ export function useDeleteDocument() {
   });
 }
 
-export function updateDocument(id: string, patch: Partial<Pick<DocumentDetail, "title" | "last_read_page" | "read_fraction" | "is_read" | "note">>) {
+export function updateDocument(
+  id: string,
+  patch: Partial<Pick<DocumentDetail, "title" | "last_read_page" | "read_fraction" | "is_read" | "note">> & { citation?: Citation },
+) {
   return api<DocumentDetail>(`/documents/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
 }
 
 export const MAX_DOCUMENT_TITLE = 500;
 
-/** F-16: rename, mark read / unread from the library. */
+/** F-16: rename, mark read / unread, say how the document is cited, from the library. */
 export function useUpdateDocument() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: Partial<Pick<DocumentDetail, "title" | "is_read">> }) =>
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<Pick<DocumentDetail, "title" | "is_read">> & { citation?: Citation } }) =>
       updateDocument(id, patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: documentsKey }),
   });

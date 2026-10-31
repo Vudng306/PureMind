@@ -112,7 +112,7 @@ export function Toast() {
     <div
       key={toast.id}
       role="status"
-      className="fixed left-1/2 top-5 z-[60] -translate-x-1/2 rounded-full bg-menu px-5 py-3 text-sm font-medium text-menu-fg shadow-float"
+      className="fixed left-1/2 top-5 z-[60] -translate-x-1/2 rounded-full bg-menu px-5 py-3 text-sm font-medium text-menu-fg shadow-float print:hidden"
     >
       {toast.text}
     </div>

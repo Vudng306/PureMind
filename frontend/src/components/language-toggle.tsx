@@ -20,7 +20,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
       onClick={() => set({ language: other })}
       title={LANG_LABEL[other]}
       aria-label={`${t("nav.language")}: ${LANG_LABEL[other]}`}
-      className={`flex h-11 items-center rounded-[10px] border border-field px-3 text-[13px] font-semibold tracking-wide text-muted transition-colors hover:border-accent hover:text-ink ${className}`}
+      className={`flex h-11 items-center rounded-full border border-field px-3.5 text-[13px] font-semibold tracking-wide text-muted transition-colors hover:border-accent hover:text-ink ${className}`}
     >
       <span aria-hidden>{LANG_SHORT[other]}</span>
     </button>

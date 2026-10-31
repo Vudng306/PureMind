@@ -7,6 +7,7 @@ same number as the source's `position`, so the reader can jump from [n] back to 
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import Literal
 
 from app.core.config import Settings
 from app.services.openai_client import Usage, chat_stream
@@ -45,6 +46,15 @@ HEADINGS = {
 }
 LANGUAGE_NAME = {"vi": "Vietnamese", "en": "English"}
 
+# How the body is cut into sections: by what the highlights are about, or one section per document.
+Layout = Literal["topic", "document"]
+SECTIONS = {
+    "topic": "Several `## ` sections, one per topic. Group highlights by meaning, not by their order or document.",
+    "document": "One `## ` section per document, headed with that document's title exactly as given, in the "
+    "order the documents first appear. In each, sum up what the reader marked in that document, following its "
+    "page order; never move a highlight into another document's section.",
+}
+
 
 @dataclass
 class Source:
@@ -57,7 +67,9 @@ class Source:
     page: int | None
 
 
-def system_prompt(language: Language, has_concepts: bool, has_questions: bool) -> str:
+def system_prompt(
+    language: Language, has_concepts: bool, has_questions: bool, layout: Layout = "topic"
+) -> str:
     h = HEADINGS[language]
     parts = [
         "You write study notebooks from a reader's highlights.",
@@ -68,7 +80,7 @@ def system_prompt(language: Language, has_concepts: bool, has_questions: bool) -
         "Structure:",
         "1. First line: `# ` followed by a short title for the notebook.",
         f"2. `## {h['overview']}`: 2–4 sentences on what the highlights cover.",
-        "3. Several `## ` sections, one per topic. Group highlights by meaning, not by their order or document. "
+        f"3. {SECTIONS[layout]} "
         "Use short paragraphs and bullet points; quote a phrase only when the wording matters.",
     ]
     step = 4
@@ -111,7 +123,7 @@ def user_prompt(sources: list[Source]) -> str:
 
 
 async def write(
-    settings: Settings, sources: list[Source], language: Language, usage: Usage
+    settings: Settings, sources: list[Source], language: Language, usage: Usage, layout: Layout = "topic"
 ) -> AsyncIterator[str]:
     """Stream the notebook's Markdown (FR-NB-02 steps 3–4)."""
     categories = {s.category for s in sources}
@@ -119,7 +131,7 @@ async def write(
         {
             "role": "system",
             "content": system_prompt(
-                language, "concept" in categories, bool(categories & {"question", "review"})
+                language, "concept" in categories, bool(categories & {"question", "review"}), layout
             ),
         },
         {"role": "user", "content": user_prompt(sources)},

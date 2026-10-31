@@ -349,3 +349,26 @@ def test_writer_helpers():
     )
     assert '[1] from "T", page 4 — marked as question' in prompt and "Text: a b" in prompt
     assert "n" * 2000 + "…" in prompt and "n" * 2001 not in prompt
+    assert "one per topic" in notebook_writer.system_prompt("vi", False, False)
+    by_document = notebook_writer.system_prompt("vi", False, False, "document")
+    assert "One `## ` section per document" in by_document and "one per topic" not in by_document
+
+
+async def test_generate_by_document(client, auth, ai):
+    """`layout: document` asks the AI for one section per document; anything else is refused."""
+    h = auth()
+    await consent(client, h)
+    ids = await highlights(client, h, await new_doc(client, h))
+    fake = ai()
+
+    r = await client.post(
+        "/api/notebooks/generate", headers=h, json={"highlight_ids": ids, "layout": "document"}
+    )
+    assert r.status_code == 201, r.text
+    assert "One `## ` section per document" in fake.calls[0][0]["content"]
+
+    r = await client.post("/api/notebooks/generate", headers=h, json={"highlight_ids": ids})
+    assert "one per topic" in fake.calls[1][0]["content"]
+
+    r = await client.post("/api/notebooks/generate", headers=h, json={"highlight_ids": ids, "layout": "page"})
+    assert r.status_code == 422

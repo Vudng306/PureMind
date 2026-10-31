@@ -8,7 +8,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import CurrentUser, SessionDep, SettingsDep
 from app.core.messages import MSG
-from app.schemas import AccountUpdate, UserOut
+from app.schemas import AccountUpdate, TermsAccept, UserOut
 from app.services import storage
 from app.services.accounts import purge_user
 from app.services.supabase_admin import SupabaseAdminError, delete_auth_user
@@ -32,6 +32,15 @@ async def update_account(payload: AccountUpdate, user: CurrentUser, session: Ses
         prefs = dict(user.reading_preferences or {})
         prefs.update(payload.reading_preferences.model_dump(exclude_unset=True))
         user.reading_preferences = prefs
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+@router.post("/terms", response_model=UserOut)
+async def accept_terms(payload: TermsAccept, user: CurrentUser, session: SessionDep):
+    """The current terms of use, accepted on sign-up or on the welcome screen; `ai_consent` is NFR-PRV-01."""
+    user.accept_terms(payload.ai_consent)
     await session.commit()
     await session.refresh(user)
     return user

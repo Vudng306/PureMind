@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -12,6 +13,7 @@ import { api } from "@/lib/api";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { accountKey, useAccount } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
+import { useSetAiConsent } from "@/lib/terms";
 import type { User } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
 
@@ -78,6 +80,8 @@ export function AccountSettings() {
     },
     onError: onFailed,
   });
+
+  const aiConsent = useSetAiConsent();
 
   const deleteAccount = useMutation({
     mutationFn: () => api<void>("/account", { method: "DELETE" }),
@@ -222,6 +226,32 @@ export function AccountSettings() {
             </button>
           </form>
         </div>
+      </section>
+
+      <section className="card flex flex-col gap-3 p-6 sm:p-7">
+        <h2 className="font-serif text-[22px] font-medium">{t("account.aiTitle")}</h2>
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            role="switch"
+            className="mt-1 h-4 w-4 shrink-0 accent-[rgb(var(--accent))]"
+            checked={Boolean(user.reading_preferences.ai_consent)}
+            disabled={aiConsent.isPending}
+            onChange={(e) =>
+              aiConsent.mutate(e.target.checked, {
+                onSuccess: (u) => onSaved(u, t(u.reading_preferences.ai_consent ? "account.aiOn" : "account.aiOff")),
+                onError: onFailed,
+              })
+            }
+          />
+          <span className="flex flex-col gap-1">
+            <span className="text-[15px] font-medium">{t("account.aiToggle")}</span>
+            <span className="text-sm leading-relaxed text-muted">{t("account.aiHint")}</span>
+          </span>
+        </label>
+        <Link href="/terms" target="_blank" className="self-start text-sm text-accent underline underline-offset-2">
+          {t("account.readTerms")}
+        </Link>
       </section>
 
       <section className="flex flex-col gap-3 rounded-[14px] border border-danger/30 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">

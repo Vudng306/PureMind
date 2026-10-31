@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { CitationDialog } from "@/components/citation-dialog";
 import { Icon } from "@/components/icons";
 import { Alert, ConfirmDialog, Spinner, useModal } from "@/components/ui";
 import { useHighlights } from "@/lib/annotations";
+import { BIBTEX_MIME, bibFileName, bibtex } from "@/lib/citation";
 import {
   KIND_CLASS,
   KIND_LABEL,
@@ -18,6 +20,7 @@ import {
   type ReadState,
 } from "@/lib/doc-view";
 import { MAX_DOCUMENT_TITLE, useDeleteDocument, useDocuments, useUpdateDocument } from "@/lib/documents";
+import { downloadText } from "@/lib/export";
 import { normalize } from "@/lib/find";
 import { useLang, useMsg, useT, type Key, type T } from "@/lib/i18n";
 import { MSG, messageFor } from "@/lib/messages";
@@ -44,11 +47,13 @@ const READ_LABEL: Record<ReadState | "all", Key> = {
 function CardMenu({
   doc,
   onRename,
+  onCite,
   onToggleRead,
   onDelete,
 }: {
   doc: DocumentListItem;
   onRename: () => void;
+  onCite: () => void;
   onToggleRead: () => void;
   onDelete: () => void;
 }) {
@@ -107,6 +112,10 @@ function CardMenu({
           <button type="button" role="menuitem" className={item} onClick={choose(onRename)}>
             <Icon name="pencil" size={16} />
             {t("common.rename")}
+          </button>
+          <button type="button" role="menuitem" className={item} onClick={choose(onCite)}>
+            <Icon name="quote" size={16} />
+            {t("library.cite")}
           </button>
           <button type="button" role="menuitem" className={item} onClick={choose(onToggleRead)}>
             <Icon name={doc.is_read ? "minus" : "check"} size={16} />
@@ -193,8 +202,8 @@ function DocumentCard({ doc, pct, menu }: { doc: DocumentListItem; pct: number; 
   const initial = doc.title.trim().charAt(0).toUpperCase() || "?";
 
   return (
-    <article className="group relative flex flex-col rounded-xl border border-line bg-surface transition-shadow hover:shadow-float">
-      <div className={`relative flex h-[150px] items-center justify-center rounded-t-xl ${KIND_CLASS[doc.file_type]}`}>
+    <article className="card group relative flex flex-col transition-shadow hover:shadow-float">
+      <div className={`relative flex h-[150px] items-center justify-center rounded-t-[17px] ${KIND_CLASS[doc.file_type]}`}>
         <span aria-hidden className="font-serif text-[72px] leading-none">
           {initial}
         </span>
@@ -256,6 +265,7 @@ export default function LibraryPage() {
   const update = useUpdateDocument();
   const [toRename, setToRename] = useState<DocumentListItem | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [toCite, setToCite] = useState<DocumentListItem | null>(null);
   const { setAddOpen, showToast } = useUi();
   const { data: highlights } = useHighlights();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -338,6 +348,13 @@ export default function LibraryPage() {
 
   const filtered = source !== "all" || readState !== "all" || Boolean(q);
 
+  /** The documents on screen as a .bib file, for a reference manager or LaTeX. */
+  function exportBibtex() {
+    downloadText(bibtex(view), bibFileName(), BIBTEX_MIME);
+    const bare = view.filter((d) => !d.citation).length;
+    showToast(bare ? t("library.bibExportedBare", { n: view.length, bare }) : t("library.bibExported", { n: view.length }));
+  }
+
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col gap-8">
       <div className="flex flex-col gap-2">
@@ -416,6 +433,12 @@ export default function LibraryPage() {
           <Icon name="sort" size={16} />
           {t(SORT_LABEL[sort])}
         </button>
+        {view.length > 0 && (
+          <button type="button" className="chip" onClick={exportBibtex} title={t("library.exportBibHint", { n: view.length })}>
+            <Icon name="download" size={16} />
+            {t("library.exportBib")}
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -450,10 +473,15 @@ export default function LibraryPage() {
             <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
               {t("nav.addDocument")}
             </button>
+            {!filtered && (
+              <Link href="/explore" className="btn-outline">
+                {t("explore.tabPapers")}
+              </Link>
+            )}
           </div>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {view.map((doc) => (
             <DocumentCard
               key={doc.id}
@@ -466,6 +494,7 @@ export default function LibraryPage() {
                     setRenameError(null);
                     setToRename(doc);
                   }}
+                  onCite={() => setToCite(doc)}
                   onToggleRead={() => void toggleRead(doc)}
                   onDelete={() => setToDelete(doc)}
                 />
@@ -482,6 +511,8 @@ export default function LibraryPage() {
         onSave={(title) => void rename(title)}
         onClose={() => setToRename(null)}
       />
+
+      <CitationDialog doc={toCite} onClose={() => setToCite(null)} />
 
       <ConfirmDialog
         open={toDelete !== null}

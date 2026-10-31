@@ -1,4 +1,4 @@
-"""ORM models (SRS section 5): users, documents, highlights, summaries, notebooks, document chat."""
+"""ORM models (SRS section 5): users, documents, highlights, summaries, notebooks, document chat, feed."""
 
 import enum
 import uuid
@@ -43,6 +43,8 @@ class TimestampMixin:
 
 
 USER_ROLES = ("user", "admin")
+# The version of the terms of use (frontend /terms). Bump it when they change: everyone is asked again.
+TERMS_VERSION = "2026-10-19"
 
 
 class User(TimestampMixin, Base):
@@ -67,10 +69,23 @@ class User(TimestampMixin, Base):
     disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Refreshed at most once an hour (api/deps.py), for the admin's user list.
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The terms of use the user accepted, and when; until it is TERMS_VERSION the app asks first.
+    terms_version: Mapped[str | None] = mapped_column(String(16))
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     documents: Mapped[list["Document"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )
+
+    @property
+    def terms_accepted(self) -> bool:
+        return self.terms_version == TERMS_VERSION
+
+    def accept_terms(self, ai_consent: bool) -> None:
+        """Record the current terms, with the separate choice about sending content to OpenAI."""
+        self.terms_version = TERMS_VERSION
+        self.terms_accepted_at = utcnow()
+        self.reading_preferences = {**(self.reading_preferences or {}), "ai_consent": ai_consent}
 
     @property
     def avatar_url(self) -> str | None:
@@ -151,6 +166,8 @@ class Document(TimestampMixin, Base):
     # {image name: chart} of the charts drawn as vector paths, their data read from the drawing at
     # extraction (services/chart_data): for the reader's data table and the AI. Loaded on demand.
     chart_data: Mapped[dict | None] = mapped_column(JsonType, deferred=True)
+    # How to cite the document (schemas.Citation): filled from its DOI or by the user, for BibTeX export.
+    citation: Mapped[dict | None] = mapped_column(JsonType)
 
     user: Mapped[User] = relationship(back_populates="documents")
 
@@ -382,6 +399,31 @@ class ChatMessage(Base):
 ADMIN_ACTIONS = ("user.disable", "user.enable", "user.reset_quota", "user.delete")
 
 
+class StudySet(TimestampMixin, Base):
+    """An immutable generated set; answers stay on the server until submission."""
+
+    __tablename__ = "study_sets"
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    document_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("documents.id", ondelete="CASCADE"))
+    title: Mapped[str] = mapped_column(String(500))
+    kind: Mapped[str] = mapped_column(String(12))
+    items: Mapped[list] = mapped_column(JsonType)
+    # Per-card interval and due date; replaced as a whole so JSON changes are persisted.
+    progress: Mapped[dict] = mapped_column(JsonType, default=dict)
+
+
+class StudyAttempt(Base):
+    __tablename__ = "study_attempts"
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    set_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("study_sets.id", ondelete="CASCADE"), index=True
+    )
+    answers: Mapped[list] = mapped_column(JsonType)
+    score: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class AdminAuditLog(Base):
     """FR-ADM-05: every change an admin makes, kept after the admin or the target account is gone.
 
@@ -400,3 +442,102 @@ class AdminAuditLog(Base):
     target_email: Mapped[str | None] = mapped_column(String(255))
     detail: Mapped[dict] = mapped_column(JsonType, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+# The feed's topics (frontend lib/feed.ts names them); an article has one or more.
+TOPICS = (
+    "science",
+    "technology",
+    "health",
+    "mind",
+    "philosophy",
+    "environment",
+    "economy",
+    "law",
+    "society",
+    "education",
+    "family",
+    "history",
+    "culture",
+    "arts",
+    "travel",
+    "sports",
+)
+
+
+class Article(Base):
+    """An openly licensed article for everyone to discover in the feed (scripts/sync_articles).
+
+    Shared, not owned: reading one copies it into the user's library as a Document, where the reader,
+    highlights and the AI work on it like on anything else. `credit` is the line the licence asks to keep
+    with the text: who wrote it, where it was first published and under which licence.
+    """
+
+    __tablename__ = "articles"
+    __table_args__ = (Index("ix_articles_rank", "rank"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    url: Mapped[str] = mapped_column(String(2048), unique=True, nullable=False)
+    # Folded title, so the same work reached from two sources is kept once.
+    title_key: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    authors: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    language: Mapped[str] = mapped_column(String(8), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)  # explainer, research, data, guide
+    license: Mapped[str] = mapped_column(String(32), nullable=False)
+    license_url: Mapped[str] = mapped_column(String(255), nullable=False)
+    credit: Mapped[str] = mapped_column(String(1000), nullable=False)
+    summary: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False, deferred=True)
+    image_url: Mapped[str | None] = mapped_column(String(2048))
+    word_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    doi: Mapped[str | None] = mapped_column(String(300))
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    # The feed's order: fresh news first, the rest mixed so no source fills a page (services/articles).
+    rank: Mapped[float] = mapped_column(Float, default=0, nullable=False)
+    # A guide (services/guides) is written from another article: the work it adapts, whose credit it carries.
+    based_on_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("articles.id", ondelete="CASCADE"), index=True
+    )
+    # The feed's chat finds articles by meaning (services/explore_chat): the embedding of the title, topics
+    # and summary as a JSON array of floats, and the model that made it.
+    embedding: Mapped[str | None] = mapped_column(Text, deferred=True)
+    embedding_model: Mapped[str | None] = mapped_column(String(100))
+
+    topics: Mapped[list["ArticleTopic"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
+    )
+    # join_depth: an eager loader stops at the first self-reference without one.
+    based_on: Mapped["Article | None"] = relationship(remote_side=[id], lazy="selectin", join_depth=1)
+
+
+class ArticleTopic(Base):
+    __tablename__ = "article_topics"
+    __table_args__ = (Index("ix_article_topics_topic", "topic"),)
+
+    article_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("articles.id", ondelete="CASCADE"), primary_key=True
+    )
+    topic: Mapped[str] = mapped_column(String(16), primary_key=True)
+
+
+class Short(Base):
+    """A one-minute read the AI wrote from an openly licensed article (services/shorts), shown in the feed's
+    stream of short posts. It belongs to its article: the topics, order and credit are the article's, and
+    "read on" opens the article, or the guide written from it."""
+
+    __tablename__ = "shorts"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    article_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("articles.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    hook: Mapped[str] = mapped_column(Text, nullable=False)
+    points: Mapped[list] = mapped_column(JsonType, nullable=False)
+    takeaway: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    article: Mapped[Article] = relationship(lazy="selectin")
