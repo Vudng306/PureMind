@@ -17,6 +17,10 @@ export default {
         soft: withVar("soft"),
         page: withVar("page"),
         accent: withVar("accent"),
+        "accent-soft": withVar("accent-soft"),
+        tone: withVar("tone"),
+        "tone-bg": withVar("tone-bg"),
+        "tone-fg": withVar("tone-fg"),
         "on-accent": withVar("on-accent"),
         menu: withVar("menu"),
         "menu-fg": withVar("menu-fg"),
@@ -28,9 +32,11 @@ export default {
       fontFamily: {
         serif: ["var(--font-serif)", "Georgia", "serif"],
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-serif)", "Georgia", "serif"],
       },
       maxWidth: { reading: "760px" },
       boxShadow: {
+        card: "0 1px 2px rgb(var(--shadow) / calc(var(--shadow-alpha) * 0.5)), 0 6px 18px -8px rgb(var(--shadow) / var(--shadow-alpha))",
         float: "0 12px 32px rgb(var(--shadow) / var(--shadow-alpha))",
         pop: "0 28px 70px rgb(0 0 0 / 0.30)",
       },

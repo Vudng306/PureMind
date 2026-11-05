@@ -1,7 +1,9 @@
 """Collect a bounded, reusable starter catalog from public content APIs.
 
 Run from backend/: python -m app.scripts.collect_catalog
-Only explicitly CC BY / CC0 research full text is retained. No user account is used.
+Only explicitly CC BY / CC0 research full text is retained, with its tables and the captions of its figures; an
+article that leans on its figures and tables more than on its words is left out. No user account is used.
+Each run starts the catalog over, so it holds what is on the sources now and nothing from an earlier run.
 """
 
 import asyncio
@@ -17,20 +19,146 @@ from xml.etree import ElementTree
 import httpx
 from bs4 import BeautifulSoup
 
+from app.services.html_markdown import word_count
+from app.services.sources.europepmc import body_markdown, leans_on_visuals
+
 OUTPUT = Path(__file__).resolve().parents[1] / "data" / "catalog.json"
 EXCLUDED_TITLES = re.compile(
-    r"^(correction\b|erratum\b|retraction\b|retracted\b|expression of concern\b)", re.I
+    r"^(correction\b|erratum\b|retraction\b|retracted\b|expression of concern\b|editorial\b)", re.I
 )
+SINCE = "2024-01-01"
+MIN_WORDS = 600
+PER_TOPIC = 4
+CANDIDATES = 100
+# What a title must say to belong to a topic. A bare search also reads the full text, where "migration" can be
+# of cells and any article may mention social media in passing, so a topic is matched on the title alone.
 TOPICS = {
-    "Công nghệ và AI": "artificial intelligence",
-    "Sức khỏe": "public health",
-    "Tâm lý học": "psychology cognition",
-    "Môi trường": "climate change biodiversity",
-    "Giáo dục": "education learning",
-    "Sinh học": "genetics evolution",
-    "Kinh tế và xã hội": "health economics",
-    "Khoa học tự nhiên": "biophysics",
+    "Tâm lý và các mối quan hệ": (
+        "loneliness",
+        "lonely",
+        "social isolation",
+        "social connectedness",
+        "friendship",
+        "friendships",
+        "romantic relationship",
+        "romantic relationships",
+    ),
+    "Mạng xã hội và công nghệ": (
+        "social media",
+        "social networking",
+        "smartphone",
+        "smartphones",
+        "screen time",
+        "digital wellbeing",
+        "digital well-being",
+    ),
+    "Di cư và hòa nhập": (
+        "migrant",
+        "migrants",
+        "immigrant",
+        "immigrants",
+        "immigration",
+        "refugee",
+        "refugees",
+        "asylum seekers",
+        "asylum-seekers",
+        "resettlement",
+        "acculturation",
+        "labour migration",
+        "labor migration",
+        "forced migration",
+        "international migration",
+        "late-life migration",
+    ),
+    "Gia đình và nuôi dạy con": ("parenting", "parent-child", "fatherhood", "motherhood", "grandparents"),
+    "Công việc và kinh tế": (
+        "labour market",
+        "labor market",
+        "unemployment",
+        "minimum wage",
+        "gig workers",
+        "gig economy",
+        "remote work",
+        "workplace",
+        "job satisfaction",
+        "job burnout",
+        "occupational burnout",
+        "occupational stress",
+        "work stress",
+    ),
+    "Đô thị và cộng đồng": (
+        "neighbourhood",
+        "neighbourhoods",
+        "neighborhood",
+        "neighborhoods",
+        "urban planning",
+        "urban renewal",
+        "urban regeneration",
+        "urban revitalization",
+        "urban green space",
+        "urban parks",
+        "gentrification",
+        "liveability",
+        "walkability",
+        "public space",
+        "public spaces",
+    ),
+    "Giáo dục": (
+        "higher education",
+        "primary school",
+        "secondary school",
+        "high school",
+        "classroom",
+        "classrooms",
+        "teachers",
+        "teaching",
+        "online learning",
+        "learning outcomes",
+        "pedagogy",
+    ),
+    "Sức khỏe cộng đồng": (
+        "public health",
+        "health promotion",
+        "health inequalities",
+        "health equity",
+        "population health",
+        "tobacco control",
+    ),
+    "Môi trường": (
+        "biodiversity",
+        "climate change",
+        "deforestation",
+        "plastic pollution",
+        "ecosystem services",
+    ),
 }
+# Lab and clinical work can name a topic's words without being about the topic for a general reader, and a
+# study protocol or a special issue's foreword has no findings to read.
+OFF_TOPIC = re.compile(
+    r"\b(cells?|stem|neural|neuro\w*|molecular|genes?|genetic|proteins?|metaboli\w*|inflammat\w*|mice|mouse|rats?"
+    r"|in vitro|cancers?|tumou?rs?|oncolog\w*|patients?|\w*clinical|hospitals?|surg\w+|therap\w+|treatments?"
+    r"|diseases?|disorders?|syndromes?|infections?|dementia|stroke|diabetes|hypertension|atherosclerosis"
+    r"|fibrillation|cardio\w*|obesity|adiposity|mortality|autism|protocol|special issue)\b",
+    re.I,
+)
+# Words a topic's own terms often come with when the article is about something else.
+OFF_TOPIC_FOR = {
+    "Giáo dục": re.compile(r"\b(job satisfaction|burnout|anxiety)\b", re.I),
+    "Môi trường": re.compile(r"\b(health|medicines?)\b", re.I),
+}
+
+
+def search_query(topic):
+    terms = " OR ".join(f'"{term}"' for term in TOPICS[topic])
+    return f"TITLE:({terms}) AND OPEN_ACCESS:Y AND IN_EPMC:Y AND LICENSE:cc-by"
+
+
+def fits_topic(topic, title):
+    terms = "|".join(re.escape(term) for term in TOPICS[topic])
+    if not re.search(rf"\b({terms})\b", title, re.I) or OFF_TOPIC.search(title):
+        return False
+    other = OFF_TOPIC_FOR.get(topic)
+    return not (other and other.search(title))
 
 
 def text(node):
@@ -47,8 +175,7 @@ def record(url, **fields):
 
 
 async def collect():
-    existing = json.loads(OUTPUT.read_text(encoding="utf-8")) if OUTPUT.exists() else {"articles": []}
-    articles = {a["id"]: a for a in existing["articles"] if not EXCLUDED_TITLES.match(a["title"])}
+    articles: dict[str, dict] = {}
     errors = []
     with httpx.Client(
         timeout=20,
@@ -67,18 +194,19 @@ async def collect():
                 return response
             raise RuntimeError("Retry limit")
 
-        for topic, query in TOPICS.items():
+        for topic in TOPICS:
             try:
                 response = await get(
                     "https://www.ebi.ac.uk/europepmc/webservices/rest/search",
-                    query=f"({query}) AND OPEN_ACCESS:Y AND IN_EPMC:Y AND LICENSE:cc-by",
+                    query=f"{search_query(topic)} AND FIRST_PDATE:[{SINCE} TO 2100-12-31]",
                     format="json",
                     resultType="core",
-                    pageSize=12,
+                    pageSize=CANDIDATES,
                 )
                 saved = 0
                 for work in response.json().get("resultList", {}).get("result", []):
-                    if EXCLUDED_TITLES.match(work.get("title", "")):
+                    title = work.get("title", "")
+                    if EXCLUDED_TITLES.match(title) or not fits_topic(topic, title):
                         continue
                     pmcid = work.get("pmcid")
                     if not pmcid or not re.fullmatch(r"PMC\d+", pmcid):
@@ -114,16 +242,9 @@ async def collect():
                         body = root.find("body")
                         if body is None:
                             continue
-                        for parent in body.iter():
-                            for child in list(parent):
-                                if child.tag in {"fig", "table-wrap", "supplementary-material"}:
-                                    parent.remove(child)
-                        content = "\n\n".join(
-                            " ".join("".join(n.itertext()).split())
-                            for n in body.iter()
-                            if n.tag in {"title", "p"}
-                        )
-                        if len(content) < 1000:
+                        content = body_markdown(root)
+                        words = word_count(content)
+                        if words < MIN_WORDS or leans_on_visuals(body, words):
                             continue
                         abstract = BeautifulSoup(work.get("abstractText", ""), "html.parser").get_text(
                             " ", strip=True
@@ -145,17 +266,19 @@ async def collect():
                             license_url=license_url,
                             license_statement=license_text,
                             attribution_url=url,
-                            content_note="Văn bản thân bài; hình, bảng và tài liệu bổ sung được lược bỏ. Xem bản gốc để đọc đầy đủ.",
+                            content_note="Văn bản thân bài kèm bảng và chú thích hình; ảnh, công thức và tài liệu bổ sung được lược bỏ. Xem bản gốc để đọc đầy đủ.",
                         )
                         articles[item["id"]] = item
                         saved += 1
                         print(f"Saved [{topic}] {pmcid}: {work['title'][:90]}", flush=True)
                         await asyncio.sleep(1)
-                        if saved >= 4:
+                        if saved >= PER_TOPIC:
                             break
                     except Exception as exc:
                         print(f"Article error {pmcid}: {exc!r}", flush=True)
                         errors.append({"url": url, "error": str(exc)[:300]})
+                if saved < PER_TOPIC:
+                    errors.append({"topic": topic, "error": f"only {saved} of {PER_TOPIC} articles fit"})
             except Exception as exc:
                 errors.append({"topic": topic, "source": "Europe PMC", "error": str(exc)[:300]})
             payload = {"updated_at": datetime.now(UTC).isoformat(), "articles": list(articles.values())}

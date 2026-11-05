@@ -27,7 +27,7 @@ function LoginForm() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && session) router.replace("/library");
+    if (!loading && session) router.replace("/explore");
   }, [loading, session, router]);
 
   async function onSubmit(e: React.FormEvent) {
@@ -45,7 +45,7 @@ function LoginForm() {
       });
       if (authError) return setError(authErrorMessage(authError));
       await api("/account").catch(() => undefined); // FR-AUTH-02 step 3: load / provision profile
-      router.replace("/library");
+      router.replace("/explore");
     } catch (err) {
       setError(authErrorMessage(err instanceof Error ? err : new Error()));
     } finally {
@@ -71,7 +71,7 @@ function LoginForm() {
 
   return (
     <>
-      <h2 className="font-serif text-[40px] font-medium leading-tight">{t("auth.welcomeBack")}</h2>
+      <h2 className="font-display text-[40px] font-semibold leading-tight tracking-[-0.02em]">{t("auth.welcomeBack")}</h2>
       <AuthTabs active="login" />
       {!isSupabaseConfigured && <SupabaseConfigNotice />}
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>

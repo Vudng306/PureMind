@@ -396,32 +396,22 @@ class ChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
-ADMIN_ACTIONS = ("user.disable", "user.enable", "user.reset_quota", "user.delete")
-
-
-class StudySet(TimestampMixin, Base):
-    """An immutable generated set; answers stay on the server until submission."""
-
-    __tablename__ = "study_sets"
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    document_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("documents.id", ondelete="CASCADE"))
-    title: Mapped[str] = mapped_column(String(500))
-    kind: Mapped[str] = mapped_column(String(12))
-    items: Mapped[list] = mapped_column(JsonType)
-    # Per-card interval and due date; replaced as a whole so JSON changes are persisted.
-    progress: Mapped[dict] = mapped_column(JsonType, default=dict)
-
-
-class StudyAttempt(Base):
-    __tablename__ = "study_attempts"
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    set_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid, ForeignKey("study_sets.id", ondelete="CASCADE"), index=True
-    )
-    answers: Mapped[list] = mapped_column(JsonType)
-    score: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+ADMIN_ACTIONS = (
+    "user.disable",
+    "user.enable",
+    "user.reset_quota",
+    "user.delete",
+    "article.hide",
+    "article.show",
+    "article.delete",
+    "article.add",
+    "crawl.run",
+    "crawl.settings",
+    "crawl.source",
+    "channel.add",
+    "channel.update",
+    "channel.delete",
+)
 
 
 class AdminAuditLog(Base):
@@ -443,6 +433,9 @@ class AdminAuditLog(Base):
     detail: Mapped[dict] = mapped_column(JsonType, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
+
+# What an article is (the five kinds of the library, and the AI's own guides); frontend lib/feed.ts names them.
+KINDS = ("explainer", "research", "report", "book", "essay", "guide")
 
 # The feed's topics (frontend lib/feed.ts names them); an article has one or more.
 TOPICS = (
@@ -484,7 +477,8 @@ class Article(Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     authors: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
     language: Mapped[str] = mapped_column(String(8), nullable=False)
-    kind: Mapped[str] = mapped_column(String(16), nullable=False)  # explainer, research, data, guide
+    # What it is (see KINDS): the feed filters by it.
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     license: Mapped[str] = mapped_column(String(32), nullable=False)
     license_url: Mapped[str] = mapped_column(String(255), nullable=False)
     credit: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -505,8 +499,13 @@ class Article(Base):
     # and summary as a JSON array of floats, and the model that made it.
     embedding: Mapped[str | None] = mapped_column(Text, deferred=True)
     embedding_model: Mapped[str | None] = mapped_column(String(100))
+    # Hidden by an admin: kept, but out of the feed, its chat and its short posts until shown again.
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     topics: Mapped[list["ArticleTopic"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
+    )
+    tags: Mapped[list["ArticleTag"]] = relationship(
         cascade="all, delete-orphan", passive_deletes=True, lazy="selectin"
     )
     # join_depth: an eager loader stops at the first self-reference without one.
@@ -521,6 +520,18 @@ class ArticleTopic(Base):
         Uuid, ForeignKey("articles.id", ondelete="CASCADE"), primary_key=True
     )
     topic: Mapped[str] = mapped_column(String(16), primary_key=True)
+
+
+class ArticleTag(Base):
+    """A free-form label from the source (a keyword, a field of study), lowercase: narrower than a topic."""
+
+    __tablename__ = "article_tags"
+    __table_args__ = (Index("ix_article_tags_tag", "tag"),)
+
+    article_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("articles.id", ondelete="CASCADE"), primary_key=True
+    )
+    tag: Mapped[str] = mapped_column(String(48), primary_key=True)
 
 
 class Short(Base):
@@ -541,3 +552,130 @@ class Short(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     article: Mapped[Article] = relationship(lazy="selectin")
+
+
+class ShortState(Base):
+    """One user's place in a short: the card they stopped at, whether they reached the last one, and whether they
+    said they are not interested, which keeps it out of their feed."""
+
+    __tablename__ = "short_states"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    short_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("shorts.id", ondelete="CASCADE"), primary_key=True
+    )
+    card_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    dismissed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class ContentTranslation(Base):
+    """A translation that may be kept and shown to anyone (services/article_translation). The catalog is a file,
+    so `content_id` is its id there. Only a finished, checked one is stored. `source_version` says which text it
+    translates, and CC BY-ND articles have no row at all."""
+
+    __tablename__ = "content_translations"
+
+    content_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    language: Mapped[str] = mapped_column(String(8), primary_key=True)
+    content_type: Mapped[str] = mapped_column(String(16), primary_key=True)
+    source_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    translated_text: Mapped[str] = mapped_column(Text, nullable=False)
+    translation_model: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class QuickReadReport(Base):
+    """A reader saying a catalog article's Quick Read (services/quick_reads) is wrong: one per reader and
+    article, the latest reason standing. The catalog is a file, so `article_id` is its id there. A fixed
+    reason and no free text, as admins see no words a user wrote."""
+
+    __tablename__ = "quick_read_reports"
+
+    article_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    reason: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class BlockedArticle(Base):
+    """An article an admin deleted: the crawler skips its address and its title from then on, or the next
+    run would bring it back."""
+
+    __tablename__ = "blocked_articles"
+
+    url: Mapped[str] = mapped_column(String(2048), primary_key=True)
+    title_key: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
+    blocked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class CrawlChannel(Base):
+    """One place a source is read from, and the feed's topics for what comes from there: a section of The
+    Conversation, a PLOS or eLife subject, a Europe PMC search. Seeded from the sources' own lists
+    (services/crawler); admins add, switch off and remove them."""
+
+    __tablename__ = "crawl_channels"
+    __table_args__ = (UniqueConstraint("source", "key", name="uq_crawl_channels_source_key"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    key: Mapped[str] = mapped_column(String(300), nullable=False)
+    topics: Mapped[list] = mapped_column(JsonType, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class CrawlRun(Base):
+    """One run of the crawler, on schedule or started by an admin, and what each source brought."""
+
+    __tablename__ = "crawl_runs"
+    __table_args__ = (Index("ix_crawl_runs_started", "started_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    trigger: Mapped[str] = mapped_column(String(16), nullable=False)  # schedule, manual, link
+    sources: Mapped[list] = mapped_column(JsonType, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), default="running", nullable=False
+    )  # running, done, failed
+    admin_email: Mapped[str | None] = mapped_column(String(255))
+    # {source: {fetched, added, updated, duplicates, too_old, blocked, errors}}
+    stats: Mapped[dict] = mapped_column(JsonType, default=dict, nullable=False)
+    error: Mapped[str | None] = mapped_column(String(500))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AppSetting(Base):
+    """Settings admins change at run time (the crawl's schedule, the sources switched off), by key."""
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[dict] = mapped_column(JsonType, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class TrafficDaily(Base):
+    """Requests per day (Vietnam time) and part of the app: counts only, never who or what (services/traffic)."""
+
+    __tablename__ = "traffic_daily"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    area: Mapped[str] = mapped_column(String(24), primary_key=True)
+    requests: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    errors: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    ai_calls: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class UserActivityDaily(Base):
+    """That an account made a request on a day, to count the day's active users; kept 90 days."""
+
+    __tablename__ = "user_activity_daily"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)

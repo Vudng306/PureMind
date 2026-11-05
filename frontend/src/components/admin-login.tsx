@@ -20,7 +20,7 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
       <div className="card flex w-full max-w-[420px] flex-col gap-[22px] p-7 shadow-float sm:p-8">
         <div className="flex items-center justify-between">
           <span className="flex items-baseline gap-2">
-            <span className="font-serif text-[26px] font-semibold">PureMind</span>
+            <span className="font-display text-[26px] font-semibold">PureMind</span>
             <span className="eyebrow">{t("admin.title").toUpperCase()}</span>
           </span>
           <LanguageToggle />
@@ -67,7 +67,7 @@ export function AdminLogin({ initialError = null }: { initialError?: string | nu
   return (
     <AdminGate>
       <div className="flex flex-col gap-1.5">
-        <h1 className="font-serif text-[32px] font-medium leading-tight">{t("admin.loginTitle")}</h1>
+        <h1 className="font-display text-[32px] font-semibold leading-tight tracking-[-0.01em]">{t("admin.loginTitle")}</h1>
         <p className="text-sm text-muted">{t("admin.loginSubtitle")}</p>
       </div>
       {!isSupabaseConfigured && <SupabaseConfigNotice />}
@@ -100,7 +100,7 @@ export function AdminLogin({ initialError = null }: { initialError?: string | nu
           {t(busy ? "auth.signingIn" : "auth.signIn")}
         </button>
       </form>
-      <GoogleSignIn onError={setError} redirectPath="/admin/users" />
+      <GoogleSignIn onError={setError} redirectPath="/admin" />
     </AdminGate>
   );
 }

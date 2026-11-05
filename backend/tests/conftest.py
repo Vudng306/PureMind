@@ -64,6 +64,7 @@ def _reset_rate_limits():
     from app.core.ratelimit import (
         doi_limiter,
         papers_search_limiter,
+        translate_article_day_limiter,
         translate_day_limiter,
         translate_minute_limiter,
         upload_limiter,
@@ -74,6 +75,7 @@ def _reset_rate_limits():
     papers_search_limiter.reset()
     translate_minute_limiter.reset()
     translate_day_limiter.reset()
+    translate_article_day_limiter.reset()
 
 
 @pytest.fixture

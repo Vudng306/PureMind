@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { Alert, Spinner } from "@/components/ui";
+import { Alert, PageHeader, Spinner } from "@/components/ui";
 import { relativeTime } from "@/lib/doc-view";
 import { useLang, useMsg, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { STATUS_LABEL, useNotebooks, type NotebookStatus } from "@/lib/notebooks";
+import { toneOf } from "@/lib/tone";
 
 const FILTERS = [
   ["", "common.all"],
@@ -29,20 +30,16 @@ export default function NotebooksPage() {
 
   return (
     <div className="mx-auto flex max-w-[1040px] flex-col gap-7">
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="flex min-w-0 flex-1 basis-60 flex-col gap-2">
-          <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">{t("notebooks.title")}</h1>
-          <p className="text-base text-muted">
-            {query.isSuccess && items.length
-              ? t("notebooks.count", { n: items.length })
-              : t("notebooks.lede")}
-          </p>
-        </div>
-        <Link href="/notebooks/new" className="btn-primary">
-          <Icon name="spark" size={16} />
-          {t("notebooks.generate")}
-        </Link>
-      </div>
+      <PageHeader
+        title={t("notebooks.title")}
+        lead={query.isSuccess && items.length ? t("notebooks.count", { n: items.length }) : t("notebooks.lede")}
+        actions={
+          <Link href="/notebooks/new" className="btn-primary">
+            <Icon name="spark" size={16} />
+            {t("notebooks.generate")}
+          </Link>
+        }
+      />
 
       {query.isPending ? (
         <Spinner />
@@ -54,8 +51,11 @@ export default function NotebooksPage() {
           </button>
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3.5 rounded-[14px] border border-dashed border-field px-6 py-16 text-center">
-          <span className="font-serif text-[28px]">{msg("MSG-35")}</span>
+        <div className="flex flex-col items-center gap-3.5 rounded-[22px] border-2 border-dashed border-field bg-surface/60 px-6 py-16 text-center">
+          <span aria-hidden className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent">
+            <Icon name="note" size={26} />
+          </span>
+          <span className="font-display text-[28px] font-semibold">{msg("MSG-35")}</span>
           <span className="max-w-md text-[15px] text-muted">
             {t("notebooks.emptyLong")}
           </span>
@@ -66,12 +66,11 @@ export default function NotebooksPage() {
       ) : (
         <>
           {mixed && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="segmented self-start">
               {FILTERS.map(([value, label]) => (
                 <button
                   key={value}
                   type="button"
-                  className="chip h-9 px-3.5 text-[13px]"
                   aria-pressed={status === value}
                   onClick={() => setStatus(value)}
                 >
@@ -80,13 +79,14 @@ export default function NotebooksPage() {
               ))}
             </div>
           )}
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {shown.map((nb) => (
               <li key={nb.id}>
                 <Link
                   href={`/notebooks/${nb.id}`}
-                  className="group flex h-full min-h-[190px] flex-col gap-3.5 rounded-2xl border border-line bg-surface p-5 transition-shadow hover:shadow-float"
+                  className={`card group relative flex h-full min-h-[200px] flex-col gap-3.5 overflow-hidden p-5 pt-6 transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-float ${toneOf(nb.title)}`}
                 >
+                  <span aria-hidden className="absolute inset-x-0 top-0 h-1.5 bg-tone" />
                   <span
                     className={`flex h-6 items-center self-start rounded-full px-2 text-xs font-semibold ${
                       nb.status === "saved" ? "bg-success-soft text-success" : "bg-soft text-ink"
@@ -94,7 +94,7 @@ export default function NotebooksPage() {
                   >
                     {t(STATUS_LABEL[nb.status])}
                   </span>
-                  <span className="line-clamp-3 font-serif text-[21px] font-medium leading-snug text-ink">{nb.title}</span>
+                  <span className="line-clamp-3 font-display text-[21px] font-semibold leading-snug text-ink">{nb.title}</span>
                   <span className="mt-auto flex items-center gap-2 border-t border-line pt-3.5 text-[13px] text-muted">
                     <Icon name="highlighter" size={16} className="shrink-0" />
                     <span className="min-w-0 flex-1 truncate">

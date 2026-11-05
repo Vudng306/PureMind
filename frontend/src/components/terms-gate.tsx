@@ -44,10 +44,10 @@ export function TermsGate({ user }: { user: User }) {
     <main className="app-backdrop flex min-h-screen items-center justify-center px-4 py-12">
       <form onSubmit={submit} className="card flex w-full max-w-[520px] flex-col gap-5 p-6 sm:p-8" noValidate>
         <div className="flex items-center justify-between">
-          <span className="font-serif text-[24px] font-semibold">PureMind</span>
+          <span className="font-display text-[24px] font-semibold">PureMind</span>
           <LanguageToggle />
         </div>
-        <h1 className="font-serif text-[32px] font-medium leading-tight">{t("terms.gateTitle")}</h1>
+        <h1 className="font-display text-[32px] font-semibold leading-tight tracking-[-0.01em]">{t("terms.gateTitle")}</h1>
         <p className="text-[15px] leading-relaxed text-body">{t("terms.gateBody")}</p>
         <TermsChoices terms={terms} ai={ai} onTerms={setTerms} onAi={setAi} />
         {error && <Alert>{error}</Alert>}

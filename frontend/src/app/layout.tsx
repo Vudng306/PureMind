@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, Source_Serif_4 } from "next/font/google";
+import { Be_Vietnam_Pro, Fraunces, Source_Serif_4 } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 
 import "./globals.css";
 
+// Source Serif is for reading; Fraunces only for titles (page titles, covers, the name).
 const serif = Source_Serif_4({ subsets: ["latin", "vietnamese"], variable: "--font-serif", display: "swap" });
-const sans = IBM_Plex_Sans({
+const display = Fraunces({ subsets: ["latin", "vietnamese"], variable: "--font-display", display: "swap" });
+const sans = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
@@ -23,7 +25,7 @@ const themeScript = `try{var p=(JSON.parse(localStorage.getItem("puremind-prefer
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" suppressHydrationWarning className={`${serif.variable} ${sans.variable}`}>
+    <html lang="vi" suppressHydrationWarning className={`${serif.variable} ${display.variable} ${sans.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

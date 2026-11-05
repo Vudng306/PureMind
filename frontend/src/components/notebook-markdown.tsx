@@ -13,6 +13,10 @@ type Sources = Map<number, NotebookSource>;
 /** How a [n] citation is drawn; the Markdown itself does not know what it points at. */
 export type RefRenderer = (n: number) => React.ReactNode;
 
+/** How an image is drawn. Without one it is left out: the model writes chats and notebooks, and an image it was
+ * talked into linking would tell that address who is reading. */
+export type ImageRenderer = (src: string, alt: string) => React.ReactNode;
+
 /** A [n] citation: opens the source highlight in the reader, or says the source is gone (FR-NB-05). */
 function NotebookRef({ n, sources }: { n: number; sources: Sources | null }) {
   const t = useT();
@@ -91,8 +95,10 @@ function Inlines({ nodes, renderRef }: { nodes: Inline[]; renderRef: RefRenderer
   );
 }
 
-function BlockView({ block, renderRef }: { block: Block; renderRef: RefRenderer }) {
+function BlockView({ block, renderRef, renderImage }: { block: Block; renderRef: RefRenderer; renderImage?: ImageRenderer }) {
   switch (block.t) {
+    case "image":
+      return renderImage?.(block.src, block.alt) ?? null;
     case "heading": {
       const Tag = `h${block.level + 1}` as "h2" | "h3" | "h4"; // h1 is the page title
       const cls = {
@@ -168,16 +174,18 @@ const plain = (nodes: Inline[]): string =>
 export function MarkdownView({
   blocks,
   renderRef,
+  renderImage,
   className = "font-serif text-[17px] leading-[1.7] text-body",
 }: {
   blocks: Block[];
   renderRef: RefRenderer;
+  renderImage?: ImageRenderer;
   className?: string;
 }) {
   return (
     <div className={`${className} [&>*:first-child]:mt-0`}>
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} renderRef={renderRef} />
+        <BlockView key={b.id} block={b} renderRef={renderRef} renderImage={renderImage} />
       ))}
     </div>
   );

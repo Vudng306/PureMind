@@ -1,10 +1,10 @@
 """Removing an account's data, shared by self-service deletion (FR-ACC-05) and the admin page (FR-ADM-04)."""
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.models import Document, User
+from app.models import Document, User, UserActivityDaily
 from app.services import storage
 
 
@@ -23,6 +23,7 @@ async def purge_user(session: AsyncSession, settings: Settings, user: User) -> N
     document_ids = (await session.scalars(select(Document.id).where(Document.user_id == user.id))).all()
     avatar = user.avatar_path
 
+    await session.execute(delete(UserActivityDaily).where(UserActivityDaily.user_id == user.id))
     await session.delete(user)
     await session.commit()
     for p in [*paths, avatar]:

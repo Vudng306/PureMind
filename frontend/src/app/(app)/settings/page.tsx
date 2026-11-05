@@ -83,7 +83,7 @@ function Settings() {
 
   return (
     <div className="mx-auto flex max-w-[1080px] flex-col gap-7">
-      <h1 className="font-serif text-4xl font-medium sm:text-5xl">{t("settings.title")}</h1>
+      <h1 className="page-title">{t("settings.title")}</h1>
 
       <div className="flex gap-1" role="tablist" aria-label={t("settings.title")}>
         {TABS.map(([id, label]) => (

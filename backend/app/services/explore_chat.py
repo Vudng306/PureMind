@@ -99,7 +99,7 @@ async def closest(vector: list[float], limit: int) -> list[uuid.UUID]:
                 return list(
                     await session.scalars(
                         select(Article.id)
-                        .where(Article.embedding.is_not(None))
+                        .where(Article.embedding.is_not(None), Article.hidden_at.is_(None))
                         .order_by(text("embedding::vector <=> cast(:query as vector)"))
                         .limit(limit),
                         {"query": embeddings.encode(vector)},
@@ -109,7 +109,11 @@ async def closest(vector: list[float], limit: int) -> list[uuid.UUID]:
                 log.warning("pgvector unavailable, ranking articles in Python: %s", e)
                 await session.rollback()
         rows = (
-            await session.execute(select(Article.id, Article.embedding).where(Article.embedding.is_not(None)))
+            await session.execute(
+                select(Article.id, Article.embedding).where(
+                    Article.embedding.is_not(None), Article.hidden_at.is_(None)
+                )
+            )
         ).all()
     scored = sorted(rows, key=lambda r: -embeddings.cosine(vector, embeddings.decode(r.embedding)))
     return [r.id for r in scored[:limit]]

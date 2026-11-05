@@ -46,7 +46,7 @@ export default function AdminAuditPage() {
                       {e.target_email}
                     </Link>
                   ) : (
-                    <span className="text-body">{e.target_email}</span>
+                    <span className="text-body">{e.target_email ?? (e.target_user_id ? "" : t("admin.systemTarget"))}</span>
                   )}
                 </td>
                 <td className={`${td} text-body`}>{e.admin_email}</td>

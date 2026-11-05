@@ -12,13 +12,25 @@ from starlette.concurrency import run_in_threadpool
 
 from app.services import web
 from app.services.html_markdown import word_count
-from app.services.sources import ACCEPT_JSON, CC_BY, Item, cut_before, fetch, first_paragraph, log, plain
+from app.services.sources import (
+    ACCEPT_JSON,
+    CC_BY,
+    Item,
+    cut_before,
+    doi_in,
+    fetch,
+    first_paragraph,
+    log,
+    plain,
+    reason,
+)
 
 SOURCE = "frym"
 NAME = "Frontiers for Young Minds"
 CROSSREF = "https://api.crossref.org/journals/2296-6846/works"
 PAGE = "https://kids.frontiersin.org/articles/{doi}"
 MIN_WORDS = 300
+SINCE = "2023-01-01"
 # The journal's notes after the article.
 TAIL_SECTIONS = (
     "Conflict of Interest",
@@ -51,6 +63,7 @@ def works_url(rows: int, offset: int = 0) -> str:
         "sort": "published",
         "order": "desc",
         "select": "DOI,title,license,author,published,abstract",
+        "filter": f"from-pub-date:{SINCE}",
     }
     return f"{CROSSREF}?{urlencode(params)}"
 
@@ -113,11 +126,11 @@ def page_item(html: bytes, url: str, work: dict) -> Item | None:
     )
 
 
-async def collect(contact: str, limit: int = 60) -> list[Item]:
+async def collect(contact: str, channels: dict | None = None, limit: int = 60) -> list[Item]:
     try:
         works = open_works(await fetch(works_url(limit), contact, ACCEPT_JSON))
     except Exception as e:
-        log.warning("Frontiers for Young Minds: %s", e)
+        log.warning("Frontiers for Young Minds: %s", reason(e))
         return []
     found = []
     for work in works:
@@ -125,8 +138,23 @@ async def collect(contact: str, limit: int = 60) -> list[Item]:
         try:
             item = await run_in_threadpool(page_item, await fetch(url, contact), url, work)
         except Exception as e:
-            log.warning("Frontiers for Young Minds %s: %s", work["DOI"], e)
+            log.warning("Frontiers for Young Minds %s: %s", work["DOI"], reason(e))
             continue
         if item:
             found.append(item)
     return found
+
+
+async def from_link(url: str, contact: str, topics: list[str]) -> Item | None:
+    """kids.frontiersin.org/articles/10.3389/frym.…"""
+    doi = doi_in(url)
+    if not doi or not doi.startswith("10.3389/frym"):
+        return None
+    work = json.loads(await fetch(f"https://api.crossref.org/works/{doi}", contact, ACCEPT_JSON))["message"]
+    if not open_works(json.dumps({"message": {"items": [work]}}).encode()):
+        return None
+    page = PAGE.format(doi=work["DOI"].lower())
+    item = await run_in_threadpool(page_item, await fetch(page, contact), page, work)
+    if item and topics:
+        item.topics = list(topics)
+    return item

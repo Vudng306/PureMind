@@ -8,7 +8,6 @@ const PATHS = {
   plus: <path d="M12 5v14M5 12h14" />,
   home: <path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z" />,
   book: <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7h6" />,
-  cards: <path d="M8 3h10a2 2 0 0 1 2 2v12M4 8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />,
   compass: (
     <>
       <circle cx="12" cy="12" r="9" />

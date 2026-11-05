@@ -1,58 +1,18 @@
 {
-  "total": 38,
+  "total": 36,
   "by_topic": {
-    "Công nghệ và AI": 5,
-    "Sức khỏe": 5,
-    "Tâm lý học": 5,
-    "Môi trường": 5,
-    "Giáo dục": 5,
-    "Sinh học": 5,
-    "Kinh tế và xã hội": 5,
-    "Khoa học tự nhiên": 3
+    "Tâm lý và các mối quan hệ": 4,
+    "Mạng xã hội và công nghệ": 4,
+    "Di cư và hòa nhập": 4,
+    "Gia đình và nuôi dạy con": 4,
+    "Công việc và kinh tế": 4,
+    "Đô thị và cộng đồng": 4,
+    "Giáo dục": 4,
+    "Sức khỏe cộng đồng": 4,
+    "Môi trường": 4
   },
   "by_kind": {
-    "research": 38
+    "research": 36
   },
-  "errors": [
-    {
-      "topic": "Công nghệ và AI",
-      "source": "Wikipedia",
-      "error": "Client error '403 Forbidden' for url 'https://vi.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cinfo%7Crevisions&titles=Tr%C3%AD+tu%E1%BB%87+nh%C3%A2n+t%E1%BA%A1o%7CH%E1%BB%8Dc+m%C3%A1y%7CKhoa+h%E1%BB%8Dc+m%C3%A1y+t%C3%ADnh&explaintext=1&exlimit=max&inprop=url&rvprop=ids%7Ctimestam"
-    },
-    {
-      "topic": "Sức khỏe",
-      "source": "Wikipedia",
-      "error": "Client error '403 Forbidden' for url 'https://vi.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cinfo%7Crevisions&titles=Y+t%E1%BA%BF+c%C3%B4ng+c%E1%BB%99ng%7CDinh+d%C6%B0%E1%BB%A1ng%7CGi%E1%BA%A5c+ng%E1%BB%A7&explaintext=1&exlimit=max&inprop=url&rvprop=ids%7Ctimestamp&redirects=1'\n"
-    },
-    {
-      "topic": "Tâm lý học",
-      "source": "Wikipedia",
-      "error": "Client error '403 Forbidden' for url 'https://vi.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cinfo%7Crevisions&titles=T%C3%A2m+l%C3%BD+h%E1%BB%8Dc%7CTr%C3%AD+nh%E1%BB%9B%7CC%E1%BA%A3m+x%C3%BAc&explaintext=1&exlimit=max&inprop=url&rvprop=ids%7Ctimestamp&redirects=1'\nFor more infor"
-    },
-    {
-      "topic": "Môi trường",
-      "source": "Wikipedia",
-      "error": "Client error '403 Forbidden' for url 'https://vi.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cinfo%7Crevisions&titles=Bi%E1%BA%BFn+%C4%91%E1%BB%95i+kh%C3%AD+h%E1%BA%ADu%7C%C4%90a+d%E1%BA%A1ng+sinh+h%E1%BB%8Dc%7CN%C4%83ng+l%C6%B0%E1%BB%A3ng+t%C3%A1i+t%E1%BA%A1o&explaintext=1&exlim"
-    },
-    {
-      "topic": "Giáo dục",
-      "source": "Wikipedia",
-      "error": "Client error '403 Forbidden' for url 'https://vi.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cinfo%7Crevisions&titles=Gi%C3%A1o+d%E1%BB%A5c%7CT%C6%B0+duy+ph%E1%BA%A3n+bi%E1%BB%87n%7CPh%C6%B0%C6%A1ng+ph%C3%A1p+khoa+h%E1%BB%8Dc&explaintext=1&exlimit=max&inprop=url&rvprop=ids%7Ctime"
-    },
-    {
-      "topic": "Sinh học",
-      "source": "Wikipedia",
-      "error": "Client error '403 Forbidden' for url 'https://vi.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cinfo%7Crevisions&titles=Di+truy%E1%BB%81n+h%E1%BB%8Dc%7CTi%E1%BA%BFn+h%C3%B3a%7CH%E1%BB%87+sinh+th%C3%A1i&explaintext=1&exlimit=max&inprop=url&rvprop=ids%7Ctimestamp&redirects=1'\nFor mor"
-    },
-    {
-      "topic": "Kinh tế và xã hội",
-      "source": "Wikipedia",
-      "error": "Client error '403 Forbidden' for url 'https://vi.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cinfo%7Crevisions&titles=Kinh+t%E1%BA%BF+h%E1%BB%8Dc%7CX%C3%A3+h%E1%BB%99i+h%E1%BB%8Dc%7CKinh+t%E1%BA%BF+h%E1%BB%8Dc+h%C3%A0nh+vi&explaintext=1&exlimit=max&inprop=url&rvprop=ids%7Ctimesta"
-    },
-    {
-      "topic": "Khoa học tự nhiên",
-      "source": "Wikipedia",
-      "error": "Client error '403 Forbidden' for url 'https://vi.wikipedia.org/w/api.php?action=query&format=json&prop=extracts%7Cinfo%7Crevisions&titles=V%E1%BA%ADt+l%C3%BD+h%E1%BB%8Dc%7CH%C3%B3a+h%E1%BB%8Dc%7CThi%C3%AAn+v%C4%83n+h%E1%BB%8Dc&explaintext=1&exlimit=max&inprop=url&rvprop=ids%7Ctimestamp&redirects=1'\n"
-    }
-  ]
+  "errors": []
 }

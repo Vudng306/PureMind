@@ -8,11 +8,13 @@ import logging
 import uuid
 from collections.abc import AsyncIterator
 from datetime import datetime
+from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import case, exists, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, undefer
 
@@ -21,10 +23,25 @@ from app.api.routes.chat import IN_PROGRESS, _sse
 from app.api.routes.documents import _commit_new_link
 from app.api.routes.summaries import CONSENT_REQUIRED, NOT_CONFIGURED
 from app.core.messages import MSG
+from app.core.ratelimit import translate_article_day_limiter
 from app.db.session import SessionLocal
-from app.models import TOPICS, Article, ArticleTopic, Document, ExtractionStatus, Short, SourceType, User
+from app.models import (
+    KINDS,
+    TOPICS,
+    Article,
+    ArticleTag,
+    ArticleTopic,
+    ContentTranslation,
+    Document,
+    ExtractionStatus,
+    Short,
+    ShortState,
+    SourceType,
+    User,
+    utcnow,
+)
 from app.schemas import Citation, DocumentOut, ExploreAsk
-from app.services import ai_quota, embeddings, explore_chat
+from app.services import ai_quota, embeddings, explore_chat, shorts
 from app.services.articles import source_names
 from app.services.html_markdown import word_count
 from app.services.openai_client import AIError, Usage
@@ -33,6 +50,10 @@ router = APIRouter(prefix="/feed", tags=["feed"])
 log = logging.getLogger("app.feed")
 
 PAGE_SIZE = 20
+TOP_TAGS = 30
+READING_NOW = 3  # shorts offered to pick up again
+SHORT_LANGUAGE = "en"  # the shorts are written in Vietnamese
+SHORT_CONTENT = "short"
 
 
 class BasedOn(BaseModel):
@@ -55,6 +76,7 @@ class ArticleCard(BaseModel):
     kind: str
     license: str
     topics: list[str]
+    tags: list[str] = []
     word_count: int
     image_url: str | None
     published_at: datetime | None
@@ -91,6 +113,25 @@ class ShortCard(BaseModel):
     read_words: int
     # The user's copy of it, once they have opened it.
     document_id: uuid.UUID | None = None
+    # What the viewer needs: how many cards it reads as, and the user's place among them.
+    total_cards: int
+    card_index: int = 0
+    completed: bool = False
+    # The same cards in English, once someone has asked for them.
+    en: shorts.Draft | None = None
+
+
+class ProgressIn(BaseModel):
+    card_index: int = Field(ge=0)
+
+
+class ProgressOut(BaseModel):
+    card_index: int
+    completed: bool
+
+
+class InterestIn(BaseModel):
+    interested: bool
 
 
 class ShortsPage(BaseModel):
@@ -133,15 +174,22 @@ async def list_feed(
     user: CurrentUser,
     session: SessionDep,
     topic: str | None = None,
+    kind: str | None = None,
+    tag: str | None = Query(None, max_length=48),
     offset: int = Query(0, ge=0, le=10_000),
     limit: int = Query(PAGE_SIZE, ge=1, le=50),
 ):
-    """The articles of one topic, or of every topic the user follows (all of them before they choose)."""
-    if topic is not None and topic not in TOPICS:
+    """The articles of one topic, or of every topic the user follows (all of them before they choose);
+    narrowed to one kind (research, report, book...) or one tag."""
+    if (topic is not None and topic not in TOPICS) or (kind is not None and kind not in KINDS):
         raise HTTPException(422, MSG["MSG-INVALID"])
     following = _following(user)
     wanted = [topic] if topic else following
-    stmt = select(Article)
+    stmt = select(Article).where(Article.hidden_at.is_(None))
+    if kind:
+        stmt = stmt.where(Article.kind == kind)
+    if tag:
+        stmt = stmt.where(Article.id.in_(select(ArticleTag.article_id).where(ArticleTag.tag == tag.lower())))
     if wanted:
         stmt = stmt.where(
             Article.id.in_(select(ArticleTopic.article_id).where(ArticleTopic.topic.in_(wanted)))
@@ -178,6 +226,7 @@ async def _cards(session: AsyncSession, user_id: uuid.UUID, found: list[Article]
             kind=a.kind,
             license=a.license,
             topics=sorted(t.topic for t in a.topics),
+            tags=sorted(t.tag for t in a.tags),
             word_count=a.word_count,
             image_url=a.image_url,
             published_at=a.published_at,
@@ -194,63 +243,234 @@ async def _cards(session: AsyncSession, user_id: uuid.UUID, found: list[Article]
     ]
 
 
+def _shorts_query():
+    """Each short still to be seen, with its article and the guide written from that article, if any."""
+    guide = aliased(Article)
+    return (
+        select(Short, Article, guide)
+        .join(Article, Short.article_id == Article.id)
+        .outerjoin(guide, (guide.based_on_id == Article.id) & guide.hidden_at.is_(None))
+        .where(Article.hidden_at.is_(None))
+    )
+
+
+async def _short_cards(session: AsyncSession, user_id: uuid.UUID, rows) -> list[ShortCard]:
+    """The shorts as the viewer shows them, with the user's copy of what each opens and their place in it."""
+    reads = [g or a for _, a, g in rows]
+    ids = [short.id for short, _, _ in rows]
+    copies, states, kept = {}, {}, {}
+    if rows:
+        found = await session.execute(
+            select(Document.url, Document.id).where(
+                Document.user_id == user_id, Document.url.in_([r.url for r in reads])
+            )
+        )
+        copies = dict(found.all())
+        states = {
+            s.short_id: s
+            for s in await session.scalars(
+                select(ShortState).where(ShortState.user_id == user_id, ShortState.short_id.in_(ids))
+            )
+        }
+        kept = {
+            k.content_id: k
+            for k in await session.scalars(
+                select(ContentTranslation).where(
+                    ContentTranslation.content_id.in_([str(i) for i in ids]),
+                    ContentTranslation.language == SHORT_LANGUAGE,
+                    ContentTranslation.content_type == SHORT_CONTENT,
+                )
+            )
+        }
+    names = source_names()
+    cards = []
+    for (short, article, _), read in zip(rows, reads, strict=True):
+        state = states.get(short.id)
+        translation = kept.get(str(short.id))
+        cards.append(
+            ShortCard(
+                id=short.id,
+                title=short.title,
+                hook=short.hook,
+                points=shorts.usable(short.points),
+                takeaway=short.takeaway,
+                topics=sorted(t.topic for t in article.topics),
+                source_name=names.get(article.source, article.source),
+                original_title=article.title,
+                original_url=article.url,
+                license=article.license,
+                license_url=article.license_url,
+                read_id=read.id,
+                read_kind=read.kind,
+                read_words=read.word_count,
+                document_id=copies.get(read.url),
+                total_cards=shorts.cards_in(short),
+                card_index=state.card_index if state else 0,
+                completed=state.completed if state else False,
+                en=shorts.Draft.model_validate_json(translation.translated_text)
+                if translation and translation.source_version == shorts.version(shorts.text_of(short))
+                else None,
+            )
+        )
+    return cards
+
+
 @router.get("/shorts", response_model=ShortsPage)
 async def list_shorts(
     user: CurrentUser,
     session: SessionDep,
     topic: str | None = None,
+    mode: Literal["following", "for_you"] = "following",
     offset: int = Query(0, ge=0, le=10_000),
     limit: int = Query(PAGE_SIZE, ge=1, le=50),
 ):
-    """Short posts in the feed's order, of one topic or of the topics the user follows."""
+    """Short posts in the feed's order, of one topic or of the topics the user follows. "for_you" goes on past
+    those into the other topics, so a reader following little still has something to discover. The ones the user
+    said they are not interested in stay out."""
     if topic is not None and topic not in TOPICS:
         raise HTTPException(422, MSG["MSG-INVALID"])
     wanted = [topic] if topic else _following(user)
-    guide = aliased(Article)
-    stmt = (
-        select(Short, Article, guide)
-        .join(Article, Short.article_id == Article.id)
-        .outerjoin(guide, guide.based_on_id == Article.id)
+    stmt = _shorts_query().where(
+        ~exists().where(
+            ShortState.short_id == Short.id, ShortState.user_id == user.id, ShortState.dismissed.is_(True)
+        )
     )
+    order = [Article.rank.desc(), Short.id]
     if wanted:
-        stmt = stmt.where(
-            Article.id.in_(select(ArticleTopic.article_id).where(ArticleTopic.topic.in_(wanted)))
-        )
+        chosen = Article.id.in_(select(ArticleTopic.article_id).where(ArticleTopic.topic.in_(wanted)))
+        if mode == "for_you" and not topic:
+            order.insert(0, case((chosen, 0), else_=1))
+        else:
+            stmt = stmt.where(chosen)
     total = await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
-    rows = (
-        await session.execute(stmt.order_by(Article.rank.desc(), Short.id).offset(offset).limit(limit))
-    ).all()
-    reads = [g or a for _, a, g in rows]
-    copies = {}
-    if reads:
-        found = await session.execute(
-            select(Document.url, Document.id).where(
-                Document.user_id == user.id, Document.url.in_([r.url for r in reads])
-            )
-        )
-        copies = dict(found.all())
-    names = source_names()
-    cards = [
-        ShortCard(
-            id=short.id,
-            title=short.title,
-            hook=short.hook,
-            points=short.points,
-            takeaway=short.takeaway,
-            topics=sorted(t.topic for t in article.topics),
-            source_name=names.get(article.source, article.source),
-            original_title=article.title,
-            original_url=article.url,
-            license=article.license,
-            license_url=article.license_url,
-            read_id=read.id,
-            read_kind=read.kind,
-            read_words=read.word_count,
-            document_id=copies.get(read.url),
-        )
-        for (short, article, _), read in zip(rows, reads, strict=True)
-    ]
+    rows = (await session.execute(stmt.order_by(*order).offset(offset).limit(limit))).all()
+    cards = await _short_cards(session, user.id, rows)
     return ShortsPage(shorts=cards, total=total, has_more=offset + len(cards) < total)
+
+
+@router.get("/shorts/reading", response_model=list[ShortCard])
+async def reading_shorts(user: CurrentUser, session: SessionDep):
+    """The shorts the user left partway through, the latest first."""
+    rows = (
+        await session.execute(
+            _shorts_query()
+            .join(ShortState, ShortState.short_id == Short.id)
+            .where(
+                ShortState.user_id == user.id,
+                ShortState.card_index > 0,
+                ShortState.completed.is_(False),
+                ShortState.dismissed.is_(False),
+            )
+            .order_by(ShortState.updated_at.desc())
+            .limit(READING_NOW)
+        )
+    ).all()
+    return await _short_cards(session, user.id, rows)
+
+
+async def _short_row(session: AsyncSession, short_id: uuid.UUID):
+    row = (await session.execute(_shorts_query().where(Short.id == short_id))).first()
+    if row is None:
+        raise HTTPException(404, MSG["MSG-FEED-404"])
+    return row
+
+
+@router.get("/shorts/{short_id}", response_model=ShortCard)
+async def get_short(short_id: uuid.UUID, user: CurrentUser, session: SessionDep):
+    """One short, as a shared link or "continue reading" opens it, whether or not it is in the list."""
+    [card] = await _short_cards(session, user.id, [await _short_row(session, short_id)])
+    return card
+
+
+async def _change_state(session: AsyncSession, user_id: uuid.UUID, short_id: uuid.UUID, change) -> ShortState:
+    """Applies `change` to the user's state of the short, made if it is their first. Two tabs may both make it."""
+    for attempt in (1, 2):
+        state = await session.get(ShortState, (user_id, short_id))
+        if state is None:
+            state = ShortState(
+                user_id=user_id, short_id=short_id, card_index=0, completed=False, dismissed=False
+            )
+            session.add(state)
+        change(state)
+        state.updated_at = utcnow()
+        try:
+            await session.commit()
+            break
+        except IntegrityError:
+            await session.rollback()
+            if attempt == 2:
+                raise
+    return state
+
+
+@router.put("/shorts/{short_id}/progress", response_model=ProgressOut)
+async def save_short_progress(
+    short_id: uuid.UUID, payload: ProgressIn, user: CurrentUser, session: SessionDep
+):
+    """Where the user stopped. Reaching the last card completes the short for good; going back over it does not
+    undo that."""
+    short, _, _ = await _short_row(session, short_id)
+    last = shorts.cards_in(short) - 1
+    if payload.card_index > last:
+        raise HTTPException(422, MSG["MSG-INVALID"])
+
+    def change(state: ShortState) -> None:
+        state.card_index = payload.card_index
+        state.completed = state.completed or payload.card_index == last
+
+    state = await _change_state(session, user.id, short_id, change)
+    return ProgressOut(card_index=state.card_index, completed=state.completed)
+
+
+@router.put("/shorts/{short_id}/interest", status_code=204)
+async def set_short_interest(
+    short_id: uuid.UUID, payload: InterestIn, user: CurrentUser, session: SessionDep
+):
+    """ "Not interested" keeps the short out of the user's feed; taking it back returns it."""
+    await _short_row(session, short_id)
+
+    def change(state: ShortState) -> None:
+        state.dismissed = not payload.interested
+
+    await _change_state(session, user.id, short_id, change)
+    return Response(status_code=204)
+
+
+@router.post("/shorts/{short_id}/translation", response_model=shorts.Draft)
+async def translate_short(short_id: uuid.UUID, user: CurrentUser, session: SessionDep, settings: SettingsDep):
+    """The short in English: written on the first request and kept for everyone, as shorts only come from articles
+    whose licence allows adapting them."""
+    short, article, _ = await _short_row(session, short_id)
+    if "ND" in article.license:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, MSG["MSG-26"])
+    source = shorts.text_of(short)
+    source_version = shorts.version(source)
+    kept = await session.get(ContentTranslation, (str(short_id), SHORT_LANGUAGE, SHORT_CONTENT))
+    if kept is not None and kept.source_version == source_version:
+        return shorts.Draft.model_validate_json(kept.translated_text)
+    if not (user.reading_preferences or {}).get("ai_consent"):  # NFR-PRV, as for every AI feature
+        raise HTTPException(status.HTTP_403_FORBIDDEN, CONSENT_REQUIRED)
+    if not settings.openai_api_key:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, NOT_CONFIGURED)
+    if not translate_article_day_limiter.hit(str(user.id)):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, MSG["MSG-TR-RATE"])
+    await session.commit()  # no connection held while the model writes
+    try:
+        translation = await shorts.translate(settings, source)
+    except AIError:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, MSG["MSG-26"]) from None
+    await session.merge(
+        ContentTranslation(
+            content_id=str(short_id),
+            language=SHORT_LANGUAGE,
+            content_type=SHORT_CONTENT,
+            source_version=source_version,
+            translated_text=translation.model_dump_json(),
+            translation_model=settings.openai_model,
+        )
+    )
+    await session.commit()
+    return translation
 
 
 # Users with a message being answered by this process, so a double click does not spend two questions.
@@ -355,10 +575,70 @@ async def chat(payload: ExploreAsk, request: Request, user: CurrentUser, setting
 @router.get("/topics", response_model=Topics)
 async def list_topics(user: CurrentUser, session: SessionDep):
     """Every topic with how many articles it has, and the ones the user follows."""
-    rows = await session.execute(select(ArticleTopic.topic, func.count()).group_by(ArticleTopic.topic))
+    rows = await session.execute(
+        select(ArticleTopic.topic, func.count())
+        .join(Article, Article.id == ArticleTopic.article_id)
+        .where(Article.hidden_at.is_(None))
+        .group_by(ArticleTopic.topic)
+    )
     counts = dict(rows.all())
     return Topics(
         topics=[TopicCount(id=t, count=counts.get(t, 0)) for t in TOPICS], following=_following(user)
+    )
+
+
+class KindCount(BaseModel):
+    id: str
+    count: int
+
+
+class TagCount(BaseModel):
+    tag: str
+    count: int
+
+
+class Facets(BaseModel):
+    kinds: list[KindCount]
+    tags: list[TagCount]
+
+
+@router.get("/facets", response_model=Facets)
+async def list_facets(
+    user: CurrentUser,
+    session: SessionDep,
+    topic: str | None = None,
+    kind: str | None = None,
+):
+    """What the feed can be narrowed by: each kind with its articles, and the most used tags, among the
+    articles of `topic` (or of the topics the user follows) and of `kind` for the tags."""
+    if (topic is not None and topic not in TOPICS) or (kind is not None and kind not in KINDS):
+        raise HTTPException(422, MSG["MSG-INVALID"])
+    wanted = [topic] if topic else _following(user)
+    visible = select(Article.id).where(Article.hidden_at.is_(None))
+    if wanted:
+        visible = visible.where(
+            Article.id.in_(select(ArticleTopic.article_id).where(ArticleTopic.topic.in_(wanted)))
+        )
+    kinds = dict(
+        (
+            await session.execute(
+                select(Article.kind, func.count()).where(Article.id.in_(visible)).group_by(Article.kind)
+            )
+        ).all()
+    )
+    tagged = visible.where(Article.kind == kind) if kind else visible
+    tags = (
+        await session.execute(
+            select(ArticleTag.tag, func.count().label("n"))
+            .where(ArticleTag.article_id.in_(tagged))
+            .group_by(ArticleTag.tag)
+            .order_by(func.count().desc(), ArticleTag.tag)
+            .limit(TOP_TAGS)
+        )
+    ).all()
+    return Facets(
+        kinds=[KindCount(id=k, count=kinds[k]) for k in KINDS if kinds.get(k)],
+        tags=[TagCount(tag=t, count=n) for t, n in tags],
     )
 
 
@@ -404,7 +684,7 @@ async def open_article(article_id: uuid.UUID, user: CurrentUser, session: Sessio
     article = await session.scalar(
         select(Article).where(Article.id == article_id).options(undefer(Article.content))
     )
-    if article is None:
+    if article is None or article.hidden_at is not None:
         raise HTTPException(404, MSG["MSG-FEED-404"])
     existing = await session.scalar(
         select(Document).where(Document.user_id == user.id, Document.url == article.url)

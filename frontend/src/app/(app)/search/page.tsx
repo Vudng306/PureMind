@@ -205,7 +205,7 @@ function SearchView() {
 
   return (
     <div className="mx-auto flex max-w-[880px] flex-col gap-6">
-      <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">{t("search.title")}</h1>
+      <h1 className="page-title">{t("search.title")}</h1>
 
       <label className="flex h-14 items-center gap-3 rounded-xl border border-field bg-surface px-4 text-muted focus-within:border-accent">
         <Icon name="search" size={20} />

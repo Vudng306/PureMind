@@ -16,7 +16,10 @@ import { useAccount } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 
 const TABS = [
+  { href: "/admin/traffic", label: "admin.tabTraffic" },
   { href: "/admin/users", label: "admin.tabUsers" },
+  { href: "/admin/articles", label: "admin.tabArticles" },
+  { href: "/admin/crawl", label: "admin.tabCrawl" },
   { href: "/admin/audit", label: "admin.tabAudit" },
 ] as const;
 
@@ -81,11 +84,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="app-backdrop min-h-screen">
       <header className="glass sticky top-0 z-20 border-b">
         <div className="flex h-[64px] items-center gap-3 px-4 sm:gap-6 sm:px-10">
-          <Link href="/admin/users" className="flex items-baseline gap-2">
-            <span className="font-serif font-semibold text-[22px]">PureMind</span>
+          <Link href="/admin/traffic" className="flex items-baseline gap-2">
+            <span className="font-display font-semibold text-[23px]">PureMind</span>
             <span className="eyebrow">{t("admin.title").toUpperCase()}</span>
           </Link>
-          <nav className="hidden gap-1 sm:flex" aria-label={t("admin.tabsAria")}>
+          <nav className="hidden gap-1 md:flex" aria-label={t("admin.tabsAria")}>
             {TABS.map((tab) => {
               const active = pathname.startsWith(tab.href);
               return (
@@ -118,9 +121,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Icon name="logout" />
           </button>
         </div>
-        <nav className="flex gap-1 px-4 pb-3 sm:hidden" aria-label={t("admin.tabsAria")}>
+        <nav className="flex gap-1 overflow-x-auto px-4 pb-3 [scrollbar-width:none] md:hidden" aria-label={t("admin.tabsAria")}>
           {TABS.map((tab) => (
-            <Link key={tab.href} href={tab.href} className="chip h-9" aria-pressed={pathname.startsWith(tab.href)}>
+            <Link key={tab.href} href={tab.href} className="chip h-9 shrink-0" aria-pressed={pathname.startsWith(tab.href)}>
               {t(tab.label)}
             </Link>
           ))}

@@ -33,8 +33,10 @@ export const TOPICS = [
 ] as const;
 export type Topic = (typeof TOPICS)[number];
 
-/** "guide": a Vietnamese piece the AI wrote from `based_on`, an openly licensed article in the feed. */
-export type ArticleKind = "explainer" | "research" | "data" | "guide";
+/** What an article is, in the order the feed lists them. "guide": a Vietnamese piece the AI wrote from
+ * `based_on`, an openly licensed article in the feed. */
+export const KINDS = ["explainer", "research", "report", "book", "essay", "guide"] as const;
+export type ArticleKind = (typeof KINDS)[number];
 
 /** An openly licensed article; `document_id` is the user's copy, once they have opened it. */
 export type ArticleCard = {
@@ -49,6 +51,7 @@ export type ArticleCard = {
   kind: ArticleKind;
   license: string;
   topics: Topic[];
+  tags: string[];
   word_count: number;
   image_url: string | null;
   published_at: string | null;
@@ -57,10 +60,16 @@ export type ArticleCard = {
 };
 
 export type FeedPage = { articles: ArticleCard[]; total: number; has_more: boolean; following: Topic[] | null };
+/** What the feed can be narrowed by: the kinds with their articles, and the most used tags. */
+export type Facets = { kinds: { id: ArticleKind; count: number }[]; tags: { tag: string; count: number }[] };
 export type Topics = { topics: { id: Topic; count: number }[]; following: Topic[] | null };
 
+/** What a short says, in one language. */
+export type ShortText = { title: string; hook: string; points: string[]; takeaway: string };
+
 /** A one-minute post the AI wrote from an openly licensed article; "read on" opens `read_id`, the guide
- * written from that article when there is one, else the article itself. */
+ * written from that article when there is one, else the article itself. `card_index` and `completed` are the
+ * user's place in its cards; `en` the same cards in English, once someone has asked for them. */
 export type ShortCard = {
   id: string;
   title: string;
@@ -77,6 +86,10 @@ export type ShortCard = {
   read_kind: ArticleKind;
   read_words: number;
   document_id: string | null;
+  total_cards: number;
+  card_index: number;
+  completed: boolean;
+  en: ShortText | null;
 };
 
 export type ShortsPage = { shorts: ShortCard[]; total: number; has_more: boolean };
@@ -84,13 +97,16 @@ export type ShortsPage = { shorts: ShortCard[]; total: number; has_more: boolean
 export const feedKey = ["feed"] as const;
 const PAGE = 20;
 
-/** The articles of `topic`, or of every topic the user follows when it is null; page by page. */
-export function useFeed(topic: Topic | null) {
+/** The articles of `topic`, or of every topic the user follows when it is null, narrowed to a kind and a tag
+ * when given; page by page. */
+export function useFeed(topic: Topic | null, kind: ArticleKind | null = null, tag: string | null = null) {
   return useInfiniteQuery({
-    queryKey: [...feedKey, "list", topic],
+    queryKey: [...feedKey, "list", topic, kind, tag],
     queryFn: ({ pageParam }) => {
       const params = new URLSearchParams({ offset: String(pageParam), limit: String(PAGE) });
       if (topic) params.set("topic", topic);
+      if (kind) params.set("kind", kind);
+      if (tag) params.set("tag", tag);
       return api<FeedPage>(`/feed?${params}`);
     },
     initialPageParam: 0,
@@ -99,12 +115,27 @@ export function useFeed(topic: Topic | null) {
   });
 }
 
-/** The short posts of `topic`, or of every topic the user follows when it is null; page by page. */
-export function useShorts(topic: Topic | null) {
+/** The kinds of article in `topic`, and the tags most used among them (or among those of `kind`). */
+export function useFacets(topic: Topic | null, kind: ArticleKind | null) {
+  return useQuery({
+    queryKey: [...feedKey, "facets", topic, kind],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (topic) params.set("topic", topic);
+      if (kind) params.set("kind", kind);
+      return api<Facets>(`/feed/facets?${params}`);
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** The short posts of `topic`, or of every topic the user follows when it is null; "for_you" goes on past those
+ * into the other topics. Page by page. */
+export function useShorts(topic: Topic | null, mode: "following" | "for_you" = "following") {
   return useInfiniteQuery({
-    queryKey: [...feedKey, "list", "shorts", topic],
+    queryKey: [...feedKey, "list", "shorts", topic, mode],
     queryFn: ({ pageParam }) => {
-      const params = new URLSearchParams({ offset: String(pageParam), limit: String(PAGE) });
+      const params = new URLSearchParams({ offset: String(pageParam), limit: String(PAGE), mode });
       if (topic) params.set("topic", topic);
       return api<ShortsPage>(`/feed/shorts?${params}`);
     },
@@ -112,6 +143,67 @@ export function useShorts(topic: Topic | null) {
     getNextPageParam: (last, pages) => (last.has_more ? pages.reduce((n, p) => n + p.shorts.length, 0) : undefined),
     staleTime: 5 * 60_000,
   });
+}
+
+/** One short, wherever it stands in the list: a shared link or "keep reading" may lead past what is loaded. */
+export function useShort(id: string | null) {
+  return useQuery({
+    queryKey: [...feedKey, "list", "short", id],
+    queryFn: () => api<ShortCard>(`/feed/shorts/${id}`),
+    enabled: id !== null,
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export const readingKey = [...feedKey, "reading"] as const;
+
+/** The shorts the user left partway through. */
+export function useReadingShorts() {
+  return useQuery({ queryKey: readingKey, queryFn: () => api<ShortCard[]>("/feed/shorts/reading"), staleTime: 60_000 });
+}
+
+export function saveShortProgress(id: string, cardIndex: number) {
+  return api<{ card_index: number; completed: boolean }>(`/feed/shorts/${id}/progress`, {
+    method: "PUT",
+    body: JSON.stringify({ card_index: cardIndex }),
+  });
+}
+
+export function setShortInterest(id: string, interested: boolean) {
+  return api<void>(`/feed/shorts/${id}/interest`, { method: "PUT", body: JSON.stringify({ interested }) });
+}
+
+/** The short in English: written on the first request and kept for everyone after. */
+export function translateShort(id: string) {
+  return api<ShortText>(`/feed/shorts/${id}/translation`, { method: "POST" });
+}
+
+/** One card of a short. Its number of cards follows what it says: nothing here assumes how many. */
+export type Card =
+  | { role: "hook"; title: string; body: string }
+  | { role: "insight"; point: number; body: string }
+  | { role: "takeaway"; point?: undefined; body: string };
+
+/** The short as cards: the question with its opening, one idea on each, and the thing to keep. */
+export function shortCards(text: ShortText): Card[] {
+  return [
+    { role: "hook", title: text.title, body: text.hook },
+    ...text.points.map((body, i): Card => ({ role: "insight", point: i + 1, body })),
+    { role: "takeaway", body: text.takeaway },
+  ];
+}
+
+/** Minutes the cards take, never under one. */
+export function shortMinutes(text: ShortText): number {
+  const words = [text.title, text.hook, ...text.points, text.takeaway].join(" ").split(/\s+/).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
+/** The card to open a short on: where the reader stopped, or the start of one they finished. */
+export function resumeAt(short: Pick<ShortCard, "card_index" | "completed" | "total_cards">): number {
+  if (short.completed) return 0;
+  return Math.min(Math.max(short.card_index, 0), short.total_cards - 1);
 }
 
 export function useTopics() {
@@ -153,12 +245,13 @@ export function useRead(id: string, documentId: string | null) {
   const [error, setError] = useState<string | null>(null);
   const href = documentId ? `/reader/${documentId}` : null;
 
-  async function read() {
-    if (href) return router.push(href);
+  /** `query`: what the reader should open with, as `?panel=chat`. */
+  async function read(query = "") {
+    if (href) return router.push(`${href}${query}`);
     setError(null);
     try {
       const doc = await open.mutateAsync(id);
-      router.push(`/reader/${doc.id}`);
+      router.push(`/reader/${doc.id}${query}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : MSG["MSG-99"]);
     }

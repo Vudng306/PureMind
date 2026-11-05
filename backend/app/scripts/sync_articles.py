@@ -1,11 +1,10 @@
 """Fetch new articles for the feed from the open sources, and store each once.
 
-    python -m app.scripts.sync_articles                      # every source
+    python -m app.scripts.sync_articles                      # every source switched on
     python -m app.scripts.sync_articles conversation owid    # some of them
 
-Run it daily (cron, or Railway's scheduled job): The Conversation and Our World in Data publish every day,
-PLOS, eLife and Frontiers for Young Minds change slowly. Articles already stored are refreshed; a work reached again through
-another source (the same title) is not added twice.
+The API runs this every day by itself (services/crawler, at the hour set on the admin page), and an admin
+can start it from there; this is the same run from a shell. Only what was published from 2023 on is kept.
 """
 
 import argparse
@@ -13,62 +12,39 @@ import asyncio
 import logging
 import sys
 
-from app.core.config import get_settings
 from app.db.session import SessionLocal, engine
-from app.services import articles, explore_chat
-from app.services.openai_client import AIError, Usage
-from app.services.sources import Item, conversation, elife, europepmc, frym, owid, plos
-
-# The sources ask a crawler for a way to reach whoever runs it; a local run has only localhost to give.
-PROJECT_URL = "https://github.com/Vudng306/PureMind"
+from app.models import CrawlRun
+from app.services import crawler
 
 
-async def europepmc_items(contact: str) -> list[Item]:
-    return europepmc.items()
-
-
-SOURCES = {
-    "conversation": conversation.collect,
-    "owid": owid.collect,
-    "plos": plos.collect,
-    "europepmc": europepmc_items,
-    "elife": elife.collect,
-    "frym": frym.collect,
-}
-
-
-def contact() -> str:
-    own = get_settings().web_contact
-    return own if own and "localhost" not in own and "127.0.0.1" not in own else PROJECT_URL
-
-
-async def sync(names: list[str]) -> None:
-    for name in names:
-        items = await SOURCES[name](contact())
-        async with SessionLocal() as session:
-            stored = await articles.store(session, items)
-        print(
-            f"{name}: {len(items)} fetched, {stored.added} new, {stored.updated} refreshed, "
-            f"{stored.duplicates} already in the feed from another source"
-        )
-    # The feed's chat searches the articles by meaning; embedding the new ones now spares its first reader.
-    settings = get_settings()
-    if settings.openai_api_key:
+async def sync(names: list[str] | None) -> None:
+    async with SessionLocal() as session:
         try:
-            print(f"chat index: {await explore_chat.index(settings, Usage())} articles embedded")
-        except AIError as e:
-            print(f"chat index: skipped ({e}); the chat embeds them on its first message")
+            run = await crawler.start(session, "manual", names, None)
+        except crawler.CrawlBusy:
+            print("a crawl is running already; try again when it is done")
+            return
+    await crawler.execute(run.id)
+    async with SessionLocal() as session:
+        run = await session.get(CrawlRun, run.id)
+    for name, s in run.stats.items():
+        print(
+            f"{name}: {s['fetched']} fetched, {s['added']} new, {s['updated']} refreshed, "
+            f"{s['duplicates']} already in the feed from another source, {s['too_old']} from before 2023, "
+            f"{s['blocked']} deleted by an admin, {s['errors']} errors"
+        )
+    print(f"run {run.status}" + (f": {run.error}" if run.error else ""))
 
 
 async def main(argv: list[str]) -> None:
     parser = argparse.ArgumentParser(description="Fetch new articles for the PureMind feed.")
-    parser.add_argument("sources", nargs="*", help=f"any of {', '.join(SOURCES)} (default: all)")
+    parser.add_argument("sources", nargs="*", help=f"any of {', '.join(crawler.SOURCES)} (default: all)")
     args = parser.parse_args(argv)
-    if unknown := set(args.sources) - set(SOURCES):
+    if unknown := set(args.sources) - set(crawler.SOURCES):
         parser.error(f"unknown source: {', '.join(sorted(unknown))}")
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(message)s")
     try:
-        await sync(args.sources or list(SOURCES))
+        await sync(args.sources or None)
     finally:
         await engine.dispose()
 

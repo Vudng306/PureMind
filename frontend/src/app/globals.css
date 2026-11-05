@@ -2,48 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-/* "Trang giấy" palette; three reading themes (PRD 6.1, SRS FR-RDR-05). Values are "r g b". */
+/* "Giấy ấm, đậm nét": warm paper, near-black ink and a terracotta accent; three reading themes (PRD 6.1,
+   SRS FR-RDR-05). Values are "r g b". The accent keeps 4.5:1 with white text and with the paper. */
 :root,
 [data-theme="light"] {
-  --bg: 244 239 228;
-  --surface: 255 252 245;
-  --ink: 43 38 32;
-  --body: 62 56 47;
-  --muted: 107 100 90;
-  --line: 226 217 200;
-  --field: 213 203 184;
-  --soft: 234 226 210;
+  --bg: 250 246 238;
+  --surface: 255 253 249;
+  --ink: 26 23 18;
+  --body: 55 49 41;
+  --muted: 110 101 89;
+  --line: 232 223 206;
+  --field: 214 202 180;
+  --soft: 242 235 221;
   --page: 255 255 255;
-  --accent: 47 75 124;
+  --accent: 196 70 31;
+  --accent-soft: 251 228 216;
   --on-accent: 255 255 255;
-  --menu: 43 38 32;
-  --menu-fg: 244 239 228;
-  --danger: 138 46 34;
-  --danger-soft: 246 227 224;
-  --success: 47 90 63;
-  --success-soft: 225 234 223;
-  --shadow: 43 38 32;
-  --shadow-alpha: 0.14;
+  --menu: 26 23 18;
+  --menu-fg: 250 246 238;
+  --danger: 168 40 30;
+  --danger-soft: 250 226 222;
+  --success: 32 104 74;
+  --success-soft: 220 238 228;
+  --shadow: 60 40 20;
+  --shadow-alpha: 0.12;
   color-scheme: light;
 }
 
 [data-theme="sepia"] {
   --bg: 235 221 195;
   --surface: 245 234 213;
-  --ink: 58 46 30;
-  --body: 74 60 41;
-  --muted: 107 91 68;
+  --ink: 50 38 24;
+  --body: 70 56 38;
+  --muted: 104 88 66;
   --line: 217 198 164;
-  --field: 205 185 150;
+  --field: 202 181 146;
   --soft: 226 209 178;
   --page: 247 238 221;
-  --accent: 122 74 30;
+  --accent: 160 66 26;
+  --accent-soft: 240 210 186;
   --on-accent: 255 255 255;
-  --menu: 58 46 30;
+  --menu: 50 38 24;
   --menu-fg: 245 234 213;
-  --danger: 138 46 34;
+  --danger: 150 40 28;
   --danger-soft: 240 214 200;
-  --success: 64 90 47;
+  --success: 56 90 40;
   --success-soft: 222 226 196;
   --shadow: 58 46 30;
   --shadow-alpha: 0.18;
@@ -51,27 +54,53 @@
 }
 
 [data-theme="dark"] {
-  --bg: 27 26 23;
-  --surface: 36 34 30;
-  --ink: 237 230 216;
-  --body: 214 206 191;
-  --muted: 166 158 144;
-  --line: 55 52 46;
-  --field: 72 68 60;
-  --soft: 46 43 38;
-  --page: 36 34 30;
-  --accent: 157 182 223;
-  --on-accent: 20 20 20;
-  --menu: 237 230 216;
-  --menu-fg: 27 26 23;
-  --danger: 242 179 166;
-  --danger-soft: 58 35 32;
-  --success: 160 206 160;
-  --success-soft: 36 52 38;
+  --bg: 21 19 17;
+  --surface: 32 29 26;
+  --ink: 244 238 228;
+  --body: 218 210 197;
+  --muted: 163 154 141;
+  --line: 54 50 45;
+  --field: 76 70 62;
+  --soft: 44 40 36;
+  --page: 32 29 26;
+  --accent: 246 136 96;
+  --accent-soft: 66 38 28;
+  --on-accent: 28 16 10;
+  --menu: 244 238 228;
+  --menu-fg: 21 19 17;
+  --danger: 245 170 155;
+  --danger-soft: 62 32 28;
+  --success: 140 210 170;
+  --success-soft: 30 52 42;
   --shadow: 0 0 0;
   --shadow-alpha: 0.5;
   color-scheme: dark;
 }
+
+/* Six tones for covers and topics, picked by a hash of the title or topic (lib/tone.ts): a pale ground
+   (--tone-bg), readable text on it (--tone-fg) and the tone itself for shapes (--tone). */
+.tone-1 { --tone: 217 83 43; --tone-bg: 248 218 202; --tone-fg: 128 40 14; }
+.tone-2 { --tone: 47 111 94; --tone-bg: 210 232 222; --tone-fg: 28 80 64; }
+.tone-3 { --tone: 222 160 40; --tone-bg: 248 228 176; --tone-fg: 112 76 6; }
+.tone-4 { --tone: 91 75 183; --tone-bg: 226 221 246; --tone-fg: 60 48 140; }
+.tone-5 { --tone: 47 104 168; --tone-bg: 211 226 243; --tone-fg: 28 70 120; }
+.tone-6 { --tone: 181 68 110; --tone-bg: 245 214 224; --tone-fg: 128 34 70; }
+[data-theme="dark"] .tone-1 { --tone: 240 120 80; --tone-bg: 72 36 24; --tone-fg: 250 196 172; }
+[data-theme="dark"] .tone-2 { --tone: 96 180 150; --tone-bg: 28 58 48; --tone-fg: 172 228 206; }
+[data-theme="dark"] .tone-3 { --tone: 236 186 80; --tone-bg: 70 54 20; --tone-fg: 246 220 150; }
+[data-theme="dark"] .tone-4 { --tone: 150 134 236; --tone-bg: 46 40 82; --tone-fg: 206 198 250; }
+[data-theme="dark"] .tone-5 { --tone: 110 164 226; --tone-bg: 26 46 72; --tone-fg: 180 210 246; }
+[data-theme="dark"] .tone-6 { --tone: 230 120 160; --tone-bg: 70 30 46; --tone-fg: 246 190 210; }
+
+/* Four more for tags and topics, so ten of them rarely share a colour. */
+.tone-7 { --tone: 104 133 38; --tone-bg: 226 236 200; --tone-fg: 62 84 14; }
+.tone-8 { --tone: 24 138 150; --tone-bg: 202 234 238; --tone-fg: 10 84 94; }
+.tone-9 { --tone: 140 96 62; --tone-bg: 238 224 210; --tone-fg: 94 58 30; }
+.tone-10 { --tone: 84 98 118; --tone-bg: 220 226 234; --tone-fg: 46 58 78; }
+[data-theme="dark"] .tone-7 { --tone: 170 200 90; --tone-bg: 44 56 22; --tone-fg: 214 232 160; }
+[data-theme="dark"] .tone-8 { --tone: 80 190 204; --tone-bg: 20 56 62; --tone-fg: 170 226 234; }
+[data-theme="dark"] .tone-9 { --tone: 206 160 120; --tone-bg: 62 46 32; --tone-fg: 236 208 180; }
+[data-theme="dark"] .tone-10 { --tone: 148 164 190; --tone-bg: 36 42 56; --tone-fg: 200 210 228; }
 
 html,
 body {
@@ -79,15 +108,23 @@ body {
   color: rgb(var(--ink));
 }
 
-/* The app's pages (not the reader): a faint wash of light at the top of the paper. */
+/* The app's pages (not the reader): a warm glow of the accent in the corner of the paper. */
 .app-backdrop {
   background:
-    radial-gradient(
-      70% 320px at 50% -80px,
-      rgb(var(--surface) / 0.9),
-      transparent
-    ),
+    radial-gradient(60% 420px at 100% -120px, rgb(var(--accent-soft) / 0.9), transparent),
+    radial-gradient(50% 360px at 0% -80px, rgb(var(--surface)), transparent),
     rgb(var(--bg));
+  background-attachment: fixed;
+}
+
+/* A cover drawn from the tone: two discs of the tone over its pale ground. --ax/--ay and --bx/--by move the
+ * discs, so two covers of one tone do not look alike. */
+.cover-art {
+  background:
+    radial-gradient(circle at var(--ax, 88%) var(--ay, 12%), rgb(var(--tone) / 0.42) 0 24%, transparent 24.5%),
+    radial-gradient(circle at var(--bx, 8%) var(--by, 118%), rgb(var(--tone) / 0.28) 0 40%, transparent 40.5%),
+    rgb(var(--tone-bg));
+  color: rgb(var(--tone-fg));
 }
 
 :focus-visible {
@@ -104,7 +141,7 @@ body {
     @apply inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 text-[15px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-accent font-semibold text-on-accent hover:bg-accent/90;
+    @apply btn bg-accent font-semibold text-on-accent shadow-[0_6px_16px_-6px_rgb(var(--accent)/0.7)] hover:brightness-[0.94];
   }
   .btn-dark {
     @apply btn bg-ink font-semibold text-bg hover:bg-ink/90;
@@ -128,17 +165,17 @@ body {
     @apply flex flex-col gap-1.5 text-sm font-medium;
   }
   .card {
-    @apply rounded-[18px] border border-line bg-surface;
+    @apply rounded-[18px] border border-line bg-surface shadow-card;
   }
   /* Bars that float over the page (header, dock, sticky toolbars): see-through paper. */
   .glass {
-    background-color: rgb(var(--surface) / 0.82);
+    background-color: rgb(var(--surface) / 0.88);
     border-color: rgb(var(--line));
-    -webkit-backdrop-filter: blur(14px);
-    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(16px) saturate(1.3);
+    backdrop-filter: blur(16px) saturate(1.3);
   }
   .chip {
-    @apply inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-field bg-transparent px-4 text-sm text-body transition-colors hover:bg-soft;
+    @apply inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface px-4 text-sm font-medium text-body transition-colors hover:border-field hover:bg-soft;
   }
   .chip[aria-pressed="true"],
   .chip[aria-selected="true"],
@@ -146,7 +183,49 @@ body {
     @apply border-ink bg-ink font-semibold text-bg hover:bg-ink;
   }
   .eyebrow {
-    @apply text-xs font-semibold tracking-[0.1em] text-muted;
+    @apply text-xs font-bold tracking-[0.1em] text-accent;
+  }
+  /* A page's own title: the display face, large and tight. */
+  .page-title {
+    @apply font-display text-[40px] font-semibold leading-[1.02] tracking-[-0.02em] sm:text-[56px];
+  }
+  /* A segmented control: the choices sit in a sunken track, the chosen one raised on paper. */
+  .segmented {
+    @apply inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-soft p-1 [scrollbar-width:none];
+  }
+  .segmented > [role="tab"],
+  .segmented > button {
+    @apply inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-3 text-[13px] font-medium text-muted transition-colors hover:text-ink sm:px-4 sm:text-sm;
+  }
+  .segmented > [aria-selected="true"],
+  .segmented > [aria-pressed="true"] {
+    @apply bg-surface font-semibold text-ink shadow-card;
+  }
+  .segmented > [aria-selected="true"] svg,
+  .segmented > [aria-pressed="true"] svg {
+    @apply text-accent;
+  }
+  /* The feed's card fills what is left of the screen, down to where its text would no longer fit: under it are the
+     action bar and, below lg, the app's dock. --feed-chips: the row of topics, when it takes a line of its own. */
+  .feed-card {
+    height: max(430px, min(760px, calc(100dvh - 300px - var(--feed-chips, 0px))));
+  }
+  @media (min-width: 1024px) {
+    .feed-card {
+      height: max(480px, min(760px, calc(100dvh - 228px)));
+    }
+  }
+  @media (min-width: 1200px) {
+    .feed-card {
+      height: max(500px, min(76vh, 760px, calc(100dvh - 164px)));
+    }
+  }
+  /* Centred while it fits; once it does not, it scrolls from its top instead of losing its top. */
+  .safe-center > :first-child {
+    margin-top: auto;
+  }
+  .safe-center > :last-child {
+    margin-bottom: auto;
   }
   .dialog {
     @apply m-auto max-h-[calc(100vh-32px)] w-[min(calc(100vw-32px),580px)] rounded-[26px] border border-line bg-surface p-0 text-ink shadow-pop backdrop:bg-[rgb(43_38_32/0.4)];

@@ -154,9 +154,9 @@ async def fetch_url(raw_url: str, contact: str = "", accept: str = ACCEPT_PAGE) 
                             url = validate_url(str(url.join(location)))
                             continue
                         if response.status_code in REFUSED_STATUSES:
-                            raise FetchRefused
+                            raise FetchRefused(f"HTTP {response.status_code}")
                         if response.status_code >= 400:
-                            raise FetchFailed
+                            raise FetchFailed(f"HTTP {response.status_code}")
                         declared = int(response.headers.get("content-length") or 0)
                         if declared > MAX_BYTES:
                             raise FetchFailed

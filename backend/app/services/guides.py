@@ -197,6 +197,7 @@ async def adaptable(
                 Article.license.in_(ADAPTABLE),
                 Article.kind != KIND,
                 Article.word_count >= MIN_WORDS,
+                Article.hidden_at.is_(None),
                 Article.id.in_(select(ArticleTopic.article_id).where(ArticleTopic.topic == topic)),
                 ~without,
             )

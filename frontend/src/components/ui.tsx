@@ -1,9 +1,40 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 import { useT } from "@/lib/i18n";
 import { useUi } from "@/lib/ui-store";
+
+/** The name with its mark: a terracotta tile with the P, then the word in the display face. */
+export function Logo({ href = "/explore", className = "", word = "" }: { href?: string; className?: string; word?: string }) {
+  return (
+    <Link href={href} aria-label="PureMind" className={`flex shrink-0 items-center gap-2.5 ${className}`}>
+      <span
+        aria-hidden
+        className="grid h-9 w-9 place-items-center rounded-[11px] bg-accent font-display text-[22px] font-semibold leading-none text-on-accent shadow-[0_6px_14px_-6px_rgb(var(--accent)/0.8)]"
+      >
+        P
+      </span>
+      {/* `word`: where the name shows beside the mark, when a narrow bar has only room for the mark. */}
+      <span className={`font-display text-[23px] font-semibold tracking-[-0.01em] ${word}`}>PureMind</span>
+    </Link>
+  );
+}
+
+/** A page's head: a short accent rule, the title, a line under it, and the page's actions on the right. */
+export function PageHeader({ title, lead, actions }: { title: React.ReactNode; lead?: React.ReactNode; actions?: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
+      <div className="flex min-w-0 flex-1 basis-72 flex-col gap-3">
+        <span aria-hidden className="h-1.5 w-14 rounded-full bg-accent" />
+        <h1 className="page-title">{title}</h1>
+        {lead && <p className="max-w-3xl text-base leading-relaxed text-muted sm:text-[17px]">{lead}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap gap-2.5">{actions}</div>}
+    </div>
+  );
+}
 
 export function Spinner({ label }: { label?: string }) {
   const t = useT();

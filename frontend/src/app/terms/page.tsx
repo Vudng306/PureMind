@@ -24,8 +24,8 @@ export default function TermsPage() {
         <LanguageToggle />
       </div>
       <header className="flex flex-col gap-3">
-        <span className="font-serif text-[22px] font-semibold">PureMind</span>
-        <h1 className="font-serif text-[36px] font-medium leading-tight sm:text-[44px]">{t("terms.title")}</h1>
+        <span className="font-display text-[23px] font-semibold">PureMind</span>
+        <h1 className="font-display text-[36px] font-semibold leading-tight tracking-[-0.01em] sm:text-[44px]">{t("terms.title")}</h1>
         <p className="text-sm text-muted">{terms.updated}</p>
         <p className="text-[16px] leading-relaxed text-body">{terms.intro}</p>
       </header>

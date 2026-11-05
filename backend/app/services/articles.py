@@ -11,12 +11,12 @@ from datetime import datetime
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import TOPICS, Article, ArticleTopic, utcnow
+from app.models import TOPICS, Article, ArticleTag, ArticleTopic, utcnow
 from app.services.html_markdown import word_count
 from app.services.sources import Item, plain
 
 # Sources whose articles are news: their newest come first. The others are evergreen and mixed.
-NEWS_KINDS = ("explainer", "data")
+NEWS_KINDS = ("explainer", "report")
 
 
 def title_key(title: str) -> str:
@@ -24,6 +24,20 @@ def title_key(title: str) -> str:
     folded = unicodedata.normalize("NFD", title.replace("đ", "d").replace("Đ", "D"))
     folded = "".join(c for c in folded if not unicodedata.combining(c)).lower()
     return " ".join(re.findall(r"[a-z0-9]+", folded))[:500]
+
+
+MAX_TAGS = 8
+TAG_LENGTH = 48
+
+
+def clean_tags(raw: list[str]) -> list[str]:
+    """The labels a source gives, as the feed keeps them: lowercase, one line, no repeats, a few of them."""
+    seen: dict[str, None] = {}
+    for tag in raw:
+        tag = " ".join(tag.replace("#", " ").split()).strip(" .,;:-").lower()
+        if 2 <= len(tag) <= TAG_LENGTH and not tag.isdigit():
+            seen.setdefault(tag)
+    return list(seen)[:MAX_TAGS]
 
 
 def shuffle(url: str) -> float:
@@ -94,6 +108,7 @@ async def store(session: AsyncSession, items: list[Item]) -> Stored:
             if article is not None:
                 result.duplicates += 1
                 _add_topics(article, topics)
+                _set_tags(article, clean_tags([*(t.tag for t in article.tags), *item.tags]))
                 continue
             article = Article(url=item.url, collected_at=utcnow())
             _fill(article, item)
@@ -111,9 +126,19 @@ async def store(session: AsyncSession, items: list[Item]) -> Stored:
         if based_on:
             article.based_on_id = based_on
         _add_topics(article, topics)
+        _set_tags(article, clean_tags(item.tags))
         await session.flush()
     await rerank(session)
     return result
+
+
+def _set_tags(article: Article, tags: list[str]) -> None:
+    """The source's labels replace the old ones; a source that gives none leaves what an earlier run found."""
+    if not tags:
+        return
+    article.tags = [t for t in article.tags if t.tag in tags]
+    have = {t.tag for t in article.tags}
+    article.tags.extend(ArticleTag(tag=t) for t in tags if t not in have)
 
 
 def _add_topics(article: Article, topics: set[str]) -> None:
@@ -134,6 +159,19 @@ async def rerank(session: AsyncSession) -> None:
 
 def source_names() -> dict[str, str]:
     from app.services import guides
-    from app.services.sources import conversation, elife, europepmc, frym, owid, plos
+    from app.services.sources import (
+        arxiv,
+        conversation,
+        elife,
+        europepmc,
+        frym,
+        globalvoices,
+        openalex,
+        owid,
+        plos,
+    )
 
-    return {m.SOURCE: m.NAME for m in (conversation, owid, plos, europepmc, elife, frym, guides)}
+    return {
+        m.SOURCE: m.NAME
+        for m in (conversation, globalvoices, owid, plos, europepmc, elife, frym, arxiv, openalex, guides)
+    }

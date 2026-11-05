@@ -4,13 +4,16 @@ licence asks for; images are kept only where they share the text's licence.
 """
 
 import asyncio
+import json
 import logging
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from urllib.parse import unquote
 
 from bs4 import BeautifulSoup
 
+from app.services import doi as dois
 from app.services import web
 from app.services.html_markdown import clean_soup, html_to_markdown
 
@@ -31,13 +34,15 @@ class Item:
     title: str
     content: str  # Markdown, as the reader shows it
     language: str
-    kind: str  # explainer, research, data, guide
+    kind: str  # one of models.KINDS
     license: str
     license_url: str
     credit: str
     topics: list[str]
     authors: str = ""
     summary: str = ""
+    # The source's own labels (keywords, fields of study), kept as tags.
+    tags: list[str] = field(default_factory=list)
     image_url: str | None = None
     doi: str | None = None
     published_at: datetime | None = field(default=None)
@@ -45,16 +50,28 @@ class Item:
     based_on: str | None = None
 
 
-async def fetch(url: str, contact: str, accept: str = web.ACCEPT_PAGE) -> bytes:
-    """The body at `url`, through the same guarded client as saving a link; a busy source gets a second try."""
+async def fetch_page(url: str, contact: str, accept: str = web.ACCEPT_PAGE) -> web.FetchResult:
+    """The page at `url`, through the same guarded client as saving a link. A busy source or a dropped
+    connection gets a second try; a page that is not there does not."""
     for attempt in range(3):
         try:
-            return (await web.fetch_url(url, contact, accept)).body
-        except web.FetchRefused:
-            if attempt == 2:
+            return await web.fetch_url(url, contact, accept)
+        except web.FetchFailed as e:
+            passing = isinstance(e, web.FetchRefused) or e.__cause__ is not None
+            if attempt == 2 or not passing:
                 raise
             await asyncio.sleep(2 * (attempt + 1))
     raise AssertionError  # unreachable
+
+
+async def fetch(url: str, contact: str, accept: str = web.ACCEPT_PAGE) -> bytes:
+    return (await fetch_page(url, contact, accept)).body
+
+
+def reason(e: Exception) -> str:
+    """What went wrong, for the run's record: a timeout has no message of its own."""
+    cause = e.__cause__ or e
+    return str(e) or str(cause) or type(cause).__name__
 
 
 def markdown_of(html: str | bytes, *, drop: tuple[str, ...] = ()) -> str:
@@ -100,3 +117,24 @@ def parse_date(raw: str | None) -> datetime | None:
     except ValueError:
         return None
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)  # a bare date is taken as UTC
+
+
+def linked_data(html: bytes | str) -> dict:
+    """The page's schema.org article (JSON-LD): headline, authors, dates. Empty when it has none."""
+    soup = BeautifulSoup(html, "html.parser")
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string or "")
+        except ValueError:
+            continue
+        for node in data if isinstance(data, list) else data.get("@graph", [data]):
+            if isinstance(node, dict) and "Article" in str(node.get("@type", "")):
+                authors = node.get("author") or []
+                return {**node, "author": authors if isinstance(authors, list) else [authors]}
+    return {}
+
+
+def doi_in(url: str) -> str | None:
+    """The DOI in an article's address (doi.org/…, …/article?id=10.…, …/articles/10.…), lowercased."""
+    found = dois.DOI.search(unquote(url))
+    return re.split(r"[?&#]", found.group(0))[0].rstrip(".,;)/").lower() if found else None

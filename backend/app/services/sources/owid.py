@@ -16,9 +16,11 @@ from app.services.sources import (
     cut_before,
     fetch,
     first_paragraph,
+    linked_data,
     log,
     markdown_of,
     parse_date,
+    reason,
 )
 
 SOURCE = "owid"
@@ -78,7 +80,7 @@ def page_item(html: bytes, url: str, title: str, summary: str, published: str | 
         title=title,
         content=content,
         language="en",
-        kind="data",
+        kind="report",
         license=CC_BY[0],
         license_url=CC_BY[1],
         credit=(authors.get("content") if authors else None) or NAME,
@@ -90,14 +92,30 @@ def page_item(html: bytes, url: str, title: str, summary: str, published: str | 
     )
 
 
-async def collect(contact: str) -> list[Item]:
+async def collect(contact: str, channels: dict | None = None) -> list[Item]:
     items = []
     for url, title, summary, published in parse_feed(await fetch(FEED, contact, ACCEPT_FEED)):
         try:
             html = await fetch(url, contact)
         except Exception as e:
-            log.warning("Our World in Data %s: %s", url, e)
+            log.warning("Our World in Data %s: %s", url, reason(e))
             continue
         if item := await run_in_threadpool(page_item, html, url, title, summary, published):
             items.append(item)
     return items
+
+
+async def from_link(url: str, contact: str, topics: list[str]) -> Item | None:
+    html = await fetch(url, contact)
+    soup = BeautifulSoup(html, "html.parser")
+
+    def meta(prop: str) -> str:
+        tag = soup.find("meta", property=prop) or soup.find("meta", attrs={"name": prop})
+        return (tag.get("content") or "").strip() if tag else ""
+
+    title = meta("og:title") or (soup.title.get_text(strip=True) if soup.title else "")
+    published = linked_data(html).get("datePublished") or meta("article:published_time") or None
+    item = await run_in_threadpool(page_item, html, url, title, meta("og:description"), published)
+    if item and topics:
+        item.topics = list(topics)
+    return item

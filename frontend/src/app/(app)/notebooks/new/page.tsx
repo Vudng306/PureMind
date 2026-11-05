@@ -144,7 +144,7 @@ function NewNotebook() {
           <Icon name="back" size={16} />
           {t("notebooks.title")}
         </Link>
-        <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">{t("notebooks.generate")}</h1>
+        <h1 className="page-title">{t("notebooks.generate")}</h1>
         <p className="text-base text-muted">
           {t("notebooks.newLede", { max: MAX_NOTEBOOK_SOURCES })}
         </p>

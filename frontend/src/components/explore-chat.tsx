@@ -167,7 +167,7 @@ export function ExploreChat() {
         <div ref={bottom} />
       </div>
 
-      <div className="sticky bottom-4 z-10 flex flex-col gap-1.5">
+      <div className="sticky bottom-24 z-10 flex flex-col gap-1.5 lg:bottom-4">
         {error && <p className="glass rounded-lg px-3 py-2 text-sm text-danger">{error}</p>}
         <label className="sr-only" htmlFor="explore-message">
           {t("feedChat.inputLabel")}

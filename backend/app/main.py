@@ -1,5 +1,8 @@
+import asyncio
+import contextlib
 import logging
 import time
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -9,6 +12,7 @@ from fastapi.responses import JSONResponse
 from app.api.routes import (
     account,
     admin,
+    admin_content,
     catalog,
     chat,
     documents,
@@ -17,7 +21,6 @@ from app.api.routes import (
     notebooks,
     papers,
     search,
-    study,
     summaries,
     translate,
 )
@@ -25,12 +28,32 @@ from app.core import logging as applog
 from app.core import messages
 from app.core.config import get_settings
 from app.core.messages import MSG
+from app.services import crawler, traffic
 
 settings = get_settings()
 applog.configure(settings.log_level)
 log = logging.getLogger("app.request")
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """The background loop: traffic counts written every minute, the daily crawl. Not in the tests."""
+    if settings.environment == "test":
+        yield
+        return
+    await crawler.recover()
+    task = asyncio.create_task(crawler.loop())
+    try:
+        yield
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+        await traffic.flush()
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="PureMind API",
     version="0.1.0",
     # NFR-SEC-08: no interactive docs in production
@@ -105,9 +128,18 @@ async def access_log(request: Request, call_next):
     except Exception:
         # The traceback is logged by unhandled_handler, which runs after this middleware.
         log.error("request failed", extra=record(500))
+        traffic.record(
+            request.method, endpoint_template(request), 500, request.scope.get(applog.USER_ID_SCOPE_KEY)
+        )
         raise
     response.headers["X-Request-ID"] = request_id
     log.info("request", extra=record(response.status_code))
+    traffic.record(
+        request.method,
+        endpoint_template(request),
+        response.status_code,
+        request.scope.get(applog.USER_ID_SCOPE_KEY),
+    )
     return response
 
 
@@ -144,7 +176,7 @@ app.include_router(notebooks.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(translate.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
-app.include_router(study.router, prefix="/api")
+app.include_router(admin_content.router, prefix="/api")
 app.include_router(catalog.router, prefix="/api")
 app.include_router(papers.router, prefix="/api")
 app.include_router(feed.router, prefix="/api")

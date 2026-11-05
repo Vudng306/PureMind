@@ -68,6 +68,11 @@ VI: dict[str, str] = {
     "MSG-ADM-FORBIDDEN": "Bạn không có quyền truy cập trang quản trị.",
     "MSG-ADM-NOT-FOUND": "Không tìm thấy người dùng.",
     "MSG-ADM-PROTECTED": "Không thể khóa hoặc xóa tài khoản quản trị.",
+    "MSG-ADM-CRAWL-BUSY": "Đang có một lượt crawl chạy. Hãy đợi lượt này xong.",
+    "MSG-ADM-LINK-UNSUPPORTED": "Link này không thuộc nguồn nào được hỗ trợ (The Conversation, Our World in Data, PLOS, Europe PMC, eLife, Frontiers for Young Minds).",
+    "MSG-ADM-LINK-FAILED": "Không đọc được bài từ link này. Kiểm tra lại địa chỉ.",
+    "MSG-ADM-CHANNEL-EXISTS": "Nguồn này đã có kênh đó.",
+    "MSG-ADM-CHANNEL-NONE": "Nguồn này tự phân loại chủ đề, không có kênh để thêm.",
     "MSG-99": "Đã có lỗi xảy ra. Vui lòng thử lại.",
     # Body that fails validation before a route sees it (SRS 3.4).
     "MSG-INVALID": "Dữ liệu không hợp lệ.",
@@ -126,6 +131,11 @@ EN: dict[str, str] = {
     "MSG-ADM-FORBIDDEN": "You do not have access to the admin pages.",
     "MSG-ADM-NOT-FOUND": "User not found.",
     "MSG-ADM-PROTECTED": "Admin accounts cannot be locked or deleted.",
+    "MSG-ADM-CRAWL-BUSY": "A crawl is running already. Wait for it to finish.",
+    "MSG-ADM-LINK-UNSUPPORTED": "This link is not on a supported source (The Conversation, Our World in Data, PLOS, Europe PMC, eLife, Frontiers for Young Minds).",
+    "MSG-ADM-LINK-FAILED": "Could not read an article from this link. Check the address.",
+    "MSG-ADM-CHANNEL-EXISTS": "This source has that channel already.",
+    "MSG-ADM-CHANNEL-NONE": "This source sorts its own articles into topics; it has no channels to add.",
     "MSG-99": "Something went wrong. Please try again.",
     "MSG-INVALID": "That data is not valid.",
 }

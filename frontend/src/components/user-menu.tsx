@@ -104,7 +104,7 @@ export function UserMenu({ user }: { user?: User }) {
             {t("settings.readingOptions")}
           </Link>
           {user?.role === "admin" && (
-            <Link href="/admin/users" role="menuitem" className={item} onClick={() => setOpen(false)}>
+            <Link href="/admin" role="menuitem" className={item} onClick={() => setOpen(false)}>
               <Icon name="shield" />
               {t("admin.menu")}
             </Link>

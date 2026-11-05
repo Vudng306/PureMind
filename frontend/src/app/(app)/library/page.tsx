@@ -5,11 +5,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { CitationDialog } from "@/components/citation-dialog";
 import { Icon } from "@/components/icons";
-import { Alert, ConfirmDialog, Spinner, useModal } from "@/components/ui";
+import { Alert, ConfirmDialog, PageHeader, Spinner, useModal } from "@/components/ui";
 import { useHighlights } from "@/lib/annotations";
 import { BIBTEX_MIME, bibFileName, bibtex } from "@/lib/citation";
 import {
-  KIND_CLASS,
   KIND_LABEL,
   isProcessing,
   origin,
@@ -24,6 +23,7 @@ import { downloadText } from "@/lib/export";
 import { normalize } from "@/lib/find";
 import { useLang, useMsg, useT, type Key, type T } from "@/lib/i18n";
 import { MSG, messageFor } from "@/lib/messages";
+import { toneOf } from "@/lib/tone";
 import type { DocumentListItem } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
 
@@ -202,12 +202,12 @@ function DocumentCard({ doc, pct, menu }: { doc: DocumentListItem; pct: number; 
   const initial = doc.title.trim().charAt(0).toUpperCase() || "?";
 
   return (
-    <article className="card group relative flex flex-col transition-shadow hover:shadow-float">
-      <div className={`relative flex h-[150px] items-center justify-center rounded-t-[17px] ${KIND_CLASS[doc.file_type]}`}>
-        <span aria-hidden className="font-serif text-[72px] leading-none">
+    <article className={`card group relative flex flex-col transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-float ${toneOf(doc.title)}`}>
+      <div className="cover-art relative flex h-[150px] items-end rounded-t-[17px] px-5 pb-3">
+        <span aria-hidden className="font-display text-[84px] font-semibold leading-none">
           {initial}
         </span>
-        <span className="absolute left-3 top-3 flex h-6 items-center rounded bg-surface px-2 text-xs font-semibold">
+        <span className="absolute left-3 top-3 flex h-6 items-center rounded-full bg-surface px-2.5 text-xs font-bold text-ink">
           {KIND_LABEL[doc.file_type]}
         </span>
         {menu}
@@ -215,7 +215,7 @@ function DocumentCard({ doc, pct, menu }: { doc: DocumentListItem; pct: number; 
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <Link
           href={`/reader/${doc.id}`}
-          className="line-clamp-2 font-serif text-[19px] font-medium leading-[1.3] after:absolute after:inset-0 hover:underline"
+          className="line-clamp-2 font-display text-[19px] font-semibold leading-[1.3] after:absolute after:inset-0 hover:underline"
         >
           {doc.title}
         </Link>
@@ -246,7 +246,7 @@ function DocumentCard({ doc, pct, menu }: { doc: DocumentListItem; pct: number; 
             )}
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-[13px] text-muted">{failed ? "" : progressLabel(doc, pct)}</span>
-              <span className="btn-outline pointer-events-none px-4 text-sm font-semibold">{t(failed ? "library.viewOriginal" : "library.readAction")}</span>
+              <span className="btn-outline pointer-events-none h-10 px-4 text-sm font-semibold group-hover:border-accent group-hover:text-accent">{t(failed ? "library.viewOriginal" : "library.readAction")}</span>
             </div>
           </div>
         )}
@@ -357,29 +357,33 @@ export default function LibraryPage() {
 
   return (
     <div className="mx-auto flex max-w-[1200px] flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-serif text-4xl font-medium leading-[1.1] sm:text-5xl">{t("library.title")}</h1>
-        {docs.length > 0 && (
-          <p className="text-base text-muted">
-            {t("library.stats", { docs: docs.length, reading: readingCount, hl: hlCount })}
-          </p>
-        )}
-      </div>
+      <PageHeader
+        title={t("library.title")}
+        lead={docs.length > 0 ? t("library.stats", { docs: docs.length, reading: readingCount, hl: hlCount }) : undefined}
+        actions={
+          <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
+            <Icon name="plus" />
+            {t("nav.addDocument")}
+          </button>
+        }
+      />
 
       {actionError && <Alert>{actionError}</Alert>}
 
       {cont && (
-        <section className="overflow-hidden rounded-[14px] border border-line bg-surface">
-          <div className="flex flex-col gap-3.5 px-6 py-7 sm:px-9 sm:py-8">
-            <span className="eyebrow">{t("library.continue")}</span>
-            <span className="line-clamp-3 font-serif text-3xl font-medium leading-[1.15] sm:text-4xl">{cont.title}</span>
-            <span className="text-[15px] text-muted">
+        <section className="relative overflow-hidden rounded-[22px] bg-ink text-bg shadow-float">
+          <span aria-hidden className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-accent/90" />
+          <span aria-hidden className="absolute -bottom-28 right-40 h-56 w-56 rounded-full bg-accent/30" />
+          <div className="relative flex flex-col gap-3.5 px-6 py-8 sm:max-w-[68%] sm:px-10 sm:py-10">
+            <span className="text-xs font-bold tracking-[0.1em] text-accent">{t("library.continue")}</span>
+            <span className="line-clamp-3 font-display text-3xl font-semibold leading-[1.1] tracking-[-0.01em] sm:text-[42px]">{cont.title}</span>
+            <span className="text-[15px] text-bg/70">
               {KIND_LABEL[cont.file_type]} · {origin(cont)} · {progressLabel(cont, contPct)}
             </span>
-            <span className="h-1.5 w-full max-w-[360px] rounded-[3px] bg-soft">
-              <span className="block h-1.5 rounded-[3px] bg-accent" style={{ width: `${contPct}%` }} />
+            <span className="h-1.5 w-full max-w-[360px] rounded-full bg-bg/20">
+              <span className="block h-1.5 rounded-full bg-accent" style={{ width: `${contPct}%` }} />
             </span>
-            <Link href={`/reader/${cont.id}`} className="btn-dark mt-1.5 h-12 self-start px-[22px]">
+            <Link href={`/reader/${cont.id}`} className="btn-primary mt-2 h-12 self-start px-[22px]">
               {t(contPct > 0 ? "library.continueRead" : "library.startReading")}
               <Icon name="arrow" />
             </Link>
@@ -400,7 +404,7 @@ export default function LibraryPage() {
           </button>
         ))}
         <span className="hidden flex-1 sm:block" />
-        <label className="flex h-10 w-full items-center gap-2 rounded-full border border-field bg-surface px-3 text-muted focus-within:border-accent sm:w-[280px]">
+        <label className="flex h-10 w-full items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-muted shadow-card focus-within:border-accent sm:w-[280px]">
           <Icon name="search" size={16} />
           <span className="sr-only">{t("library.filterName")}</span>
           <input
@@ -415,7 +419,7 @@ export default function LibraryPage() {
           <select
             value={readState}
             onChange={(e) => setReadState(e.target.value as ReadState | "all")}
-            className="h-10 rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-accent"
+            className="h-10 rounded-full border border-line bg-surface pl-3.5 pr-8 text-sm font-medium text-ink shadow-card outline-none focus:border-accent"
           >
             {(Object.keys(READ_LABEL) as (ReadState | "all")[]).map((value) => (
               <option key={value} value={value}>
@@ -451,8 +455,11 @@ export default function LibraryPage() {
           </button>
         </div>
       ) : view.length === 0 ? (
-        <div className="flex flex-col items-center gap-3.5 rounded-[14px] border border-dashed border-field px-6 py-16 text-center">
-          <span className="font-serif text-[28px]">{filtered ? t("library.noMatch") : msg("MSG-30")}</span>
+        <div className="flex flex-col items-center gap-3.5 rounded-[22px] border-2 border-dashed border-field bg-surface/60 px-6 py-16 text-center">
+          <span aria-hidden className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent">
+            <Icon name="book" size={26} />
+          </span>
+          <span className="font-display text-[28px] font-semibold">{filtered ? t("library.noMatch") : msg("MSG-30")}</span>
           <span className="max-w-md text-[15px] text-muted">
             {t(filtered ? "library.noMatchHint" : "library.emptyHintLong")}
           </span>

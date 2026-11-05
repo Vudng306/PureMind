@@ -13,7 +13,21 @@ import type { ExtractionStatus, Lang } from "./types";
 
 export type AdminUserStatus = "all" | "active" | "disabled" | "admin";
 export type AdminUserSort = "newest" | "oldest" | "last_seen" | "email" | "documents" | "storage";
-export type AdminAction = "user.disable" | "user.enable" | "user.reset_quota" | "user.delete";
+export type AdminAction =
+  | "user.disable"
+  | "user.enable"
+  | "user.reset_quota"
+  | "user.delete"
+  | "article.hide"
+  | "article.show"
+  | "article.delete"
+  | "article.add"
+  | "crawl.run"
+  | "crawl.settings"
+  | "crawl.source"
+  | "channel.add"
+  | "channel.update"
+  | "channel.delete";
 
 export interface AdminUserItem {
   id: string;
@@ -35,7 +49,7 @@ export interface AdminAuditEntry {
   action: AdminAction;
   target_user_id: string | null;
   target_email: string | null;
-  detail: Record<string, number>;
+  detail: Record<string, string | number | boolean | string[] | null>;
   created_at: string;
 }
 

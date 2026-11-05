@@ -195,6 +195,11 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
       setPanelOpen(true);
       setPanelTab("ai");
     }
+    // "Ask AI" on a quick read goes on here, with the article itself to answer from.
+    if (params.get("panel") === "chat") {
+      setPanelOpen(true);
+      setPanelTab("chat");
+    }
     // A link from search results opens in-document find with the same words.
     const q = params.get("q")?.trim();
     if (q) {

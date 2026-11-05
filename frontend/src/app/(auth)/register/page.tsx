@@ -29,7 +29,7 @@ export default function RegisterPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && session) router.replace("/library");
+    if (!loading && session) router.replace("/explore");
   }, [loading, session, router]);
 
   const update = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -58,7 +58,7 @@ export default function RegisterPage() {
           data: { display_name: displayName, terms_version: TERMS_VERSION, ai_consent: aiConsent },
           // This also makes confirmation work outside localhost when Supabase email
           // confirmation is enabled.
-          emailRedirectTo: `${window.location.origin}/library`,
+          emailRedirectTo: `${window.location.origin}/explore`,
         },
       });
       if (authError) return setError(authErrorMessage(authError));
@@ -69,7 +69,7 @@ export default function RegisterPage() {
         return;
       }
       await api("/account").catch(() => undefined); // FR-AUTH-01 step 4: provision profile
-      router.replace("/library");
+      router.replace("/explore");
     } catch (err) {
       setError(authErrorMessage(err instanceof Error ? err : new Error()));
     } finally {
@@ -94,7 +94,7 @@ export default function RegisterPage() {
 
   return (
     <>
-      <h2 className="font-serif text-[40px] font-medium leading-tight">{t("auth.createAccount")}</h2>
+      <h2 className="font-display text-[40px] font-semibold leading-tight tracking-[-0.02em]">{t("auth.createAccount")}</h2>
       <AuthTabs active="register" />
       {!isSupabaseConfigured && <SupabaseConfigNotice />}
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
