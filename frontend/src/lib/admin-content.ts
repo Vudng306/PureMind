@@ -305,3 +305,77 @@ export function niceMax(values: number[]): number {
   const step = 10 ** Math.floor(Math.log10(max));
   return ([1, 2, 5, 10].map((m) => m * step).find((n) => n >= max) ?? max) as number;
 }
+
+// --- Published posts --------------------------------------------------------------------------------
+
+export type PostState = "all" | "reported" | "hidden";
+
+export interface AdminPost {
+  id: string;
+  kind: string;
+  title: string;
+  cards: { heading: string; body: string }[];
+  body: string;
+  topic: string | null;
+  ai_assisted: boolean;
+  author: { name: string };
+  sources: { title: string; url: string | null; credit: string; license: string | null }[];
+  published_at: string | null;
+  hidden: boolean;
+  reports: Record<string, number>;
+}
+
+export interface AdminComment {
+  id: string;
+  post_id: string;
+  body: string;
+  author: { name: string };
+  created_at: string;
+  hidden: boolean;
+  reports: Record<string, number>;
+}
+
+const postsKey = [...key, "posts"] as const;
+
+export function useAdminPosts(state: PostState, page: number) {
+  return useQuery({
+    queryKey: [...postsKey, "list", state, page],
+    queryFn: () => api<Page<AdminPost>>(`/admin/posts?state=${state}&page=${page}`),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useAdminComments(state: "reported" | "hidden") {
+  return useQuery({
+    queryKey: [...postsKey, "comments", state],
+    queryFn: () => api<AdminComment[]>(`/admin/comments?state=${state}`),
+  });
+}
+
+function useInvalidatePosts() {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: postsKey });
+    void qc.invalidateQueries({ queryKey: [...key, "audit"] });
+  };
+}
+
+export function usePostAction() {
+  const done = useInvalidatePosts();
+  return useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "hide" | "show" | "delete" }): Promise<unknown> =>
+      action === "delete"
+        ? api<void>(`/admin/posts/${id}`, { method: "DELETE" })
+        : api<AdminPost>(`/admin/posts/${id}/${action}`, { method: "POST" }),
+    onSuccess: done,
+  });
+}
+
+export function useCommentAction() {
+  const done = useInvalidatePosts();
+  return useMutation({
+    mutationFn: ({ id, action }: { id: string; action: "hide" | "show" }) =>
+      api<AdminComment>(`/admin/comments/${id}/${action}`, { method: "POST" }),
+    onSuccess: done,
+  });
+}

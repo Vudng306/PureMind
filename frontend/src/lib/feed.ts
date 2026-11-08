@@ -4,11 +4,14 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { ApiError, api, apiFetch } from "./api";
+import { useAuth } from "@/components/auth-provider";
+
+import { ApiError, api, apiFetch, publicApi } from "./api";
 import { documentsKey } from "./documents";
 import { useT } from "./i18n";
 import { MSG } from "./messages";
 import { readEvents } from "./notebooks";
+import { useSignIn } from "./sign-in";
 import type { DocumentDetail, Lang } from "./types";
 import { useUi } from "./ui-store";
 
@@ -107,7 +110,7 @@ export function useFeed(topic: Topic | null, kind: ArticleKind | null = null, ta
       if (topic) params.set("topic", topic);
       if (kind) params.set("kind", kind);
       if (tag) params.set("tag", tag);
-      return api<FeedPage>(`/feed?${params}`);
+      return publicApi<FeedPage>(`/feed?${params}`);
     },
     initialPageParam: 0,
     getNextPageParam: (last, pages) => (last.has_more ? pages.reduce((n, p) => n + p.articles.length, 0) : undefined),
@@ -123,7 +126,7 @@ export function useFacets(topic: Topic | null, kind: ArticleKind | null) {
       const params = new URLSearchParams();
       if (topic) params.set("topic", topic);
       if (kind) params.set("kind", kind);
-      return api<Facets>(`/feed/facets?${params}`);
+      return publicApi<Facets>(`/feed/facets?${params}`);
     },
     staleTime: 5 * 60_000,
   });
@@ -137,7 +140,7 @@ export function useShorts(topic: Topic | null, mode: "following" | "for_you" = "
     queryFn: ({ pageParam }) => {
       const params = new URLSearchParams({ offset: String(pageParam), limit: String(PAGE), mode });
       if (topic) params.set("topic", topic);
-      return api<ShortsPage>(`/feed/shorts?${params}`);
+      return publicApi<ShortsPage>(`/feed/shorts?${params}`);
     },
     initialPageParam: 0,
     getNextPageParam: (last, pages) => (last.has_more ? pages.reduce((n, p) => n + p.shorts.length, 0) : undefined),
@@ -149,7 +152,7 @@ export function useShorts(topic: Topic | null, mode: "following" | "for_you" = "
 export function useShort(id: string | null) {
   return useQuery({
     queryKey: [...feedKey, "list", "short", id],
-    queryFn: () => api<ShortCard>(`/feed/shorts/${id}`),
+    queryFn: () => publicApi<ShortCard>(`/feed/shorts/${id}`),
     enabled: id !== null,
     retry: false,
     staleTime: 5 * 60_000,
@@ -158,9 +161,15 @@ export function useShort(id: string | null) {
 
 export const readingKey = [...feedKey, "reading"] as const;
 
-/** The shorts the user left partway through. */
+/** The shorts the user left partway through; a visitor's are not kept. */
 export function useReadingShorts() {
-  return useQuery({ queryKey: readingKey, queryFn: () => api<ShortCard[]>("/feed/shorts/reading"), staleTime: 60_000 });
+  const { session } = useAuth();
+  return useQuery({
+    queryKey: readingKey,
+    queryFn: () => api<ShortCard[]>("/feed/shorts/reading"),
+    staleTime: 60_000,
+    enabled: Boolean(session),
+  });
 }
 
 export function saveShortProgress(id: string, cardIndex: number) {
@@ -207,7 +216,7 @@ export function resumeAt(short: Pick<ShortCard, "card_index" | "completed" | "to
 }
 
 export function useTopics() {
-  return useQuery({ queryKey: [...feedKey, "topics"], queryFn: () => api<Topics>("/feed/topics"), staleTime: 5 * 60_000 });
+  return useQuery({ queryKey: [...feedKey, "topics"], queryFn: () => publicApi<Topics>("/feed/topics"), staleTime: 5 * 60_000 });
 }
 
 export function useFollowTopics() {
@@ -238,15 +247,19 @@ export function readingMinutes(words: number): number {
   return Math.max(1, Math.round(words / 220));
 }
 
-/** Opens `id` in the reader, making the user's copy first when there is none (`documentId`). */
+/** Opens `id` in the reader, making the user's copy first when there is none (`documentId`). A visitor reads it
+ * on a page of its own, which keeps nothing; asking the AI about it takes an account. */
 export function useRead(id: string, documentId: string | null) {
   const router = useRouter();
+  const { session } = useAuth();
+  const signIn = useSignIn();
   const open = useOpenArticle();
   const [error, setError] = useState<string | null>(null);
   const href = documentId ? `/reader/${documentId}` : null;
 
   /** `query`: what the reader should open with, as `?panel=chat`. */
   async function read(query = "") {
+    if (!session) return query ? signIn() : router.push(`/feed/read/${id}`);
     if (href) return router.push(`${href}${query}`);
     setError(null);
     try {
@@ -263,10 +276,13 @@ export function useRead(id: string, documentId: string | null) {
 /** Puts `id` in the library, unread, without leaving the feed (`documentId`: it is there already). */
 export function useSave(id: string, documentId: string | null) {
   const t = useT();
+  const { session } = useAuth();
+  const signIn = useSignIn();
   const open = useOpenArticle();
   const { showToast } = useUi();
 
   async function save() {
+    if (!session) return signIn();
     if (documentId || open.isPending) return;
     try {
       await open.mutateAsync(id);
@@ -322,4 +338,30 @@ export async function exploreChat(
     throw new ApiError(0, MSG["MSG-26"]); // connection dropped mid-stream
   }
   throw new ApiError(0, MSG["MSG-26"]);
+}
+
+/** An article as a visitor reads it: its text headed by its credit, kept in no library. */
+export type FeedArticle = {
+  id: string;
+  title: string;
+  source_name: string;
+  url: string;
+  authors: string;
+  language: string;
+  kind: ArticleKind;
+  license: string;
+  license_url: string;
+  topics: Topic[];
+  word_count: number;
+  published_at: string | null;
+  content: string;
+};
+
+export function useFeedArticle(id: string) {
+  return useQuery({
+    queryKey: [...feedKey, "article", id],
+    queryFn: () => publicApi<FeedArticle>(`/feed/articles/${id}`),
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
 }

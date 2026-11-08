@@ -1,4 +1,4 @@
-"""ORM models (SRS section 5): users, documents, highlights, summaries, notebooks, document chat, feed."""
+"""ORM models (SRS section 5): users, documents, highlights, summaries, notebooks, document chat, feed, posts."""
 
 import enum
 import uuid
@@ -44,7 +44,7 @@ class TimestampMixin:
 
 USER_ROLES = ("user", "admin")
 # The version of the terms of use (frontend /terms). Bump it when they change: everyone is asked again.
-TERMS_VERSION = "2026-10-19"
+TERMS_VERSION = "2026-11-05"
 
 
 class User(TimestampMixin, Base):
@@ -112,6 +112,22 @@ class User(TimestampMixin, Base):
         return chat_remaining(self, get_settings().chat_daily_quota)
 
 
+MAX_COLLECTION_NAME = 80
+
+
+class Collection(TimestampMixin, Base):
+    """A shelf of the user's library, usually a subject. Removing it leaves the documents in the library."""
+
+    __tablename__ = "collections"
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_collections_user_name"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(MAX_COLLECTION_NAME), nullable=False)
+
+
 class SourceType(str, enum.Enum):
     upload = "upload"
     manual = "manual"
@@ -168,6 +184,12 @@ class Document(TimestampMixin, Base):
     chart_data: Mapped[dict | None] = mapped_column(JsonType, deferred=True)
     # How to cite the document (schemas.Citation): filled from its DOI or by the user, for BibTeX export.
     citation: Mapped[dict | None] = mapped_column(JsonType)
+    # The shelf it is on, if any.
+    collection_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("collections.id", ondelete="SET NULL"), index=True
+    )
+    # The licence it came under, when known (services/rights); None for what the user uploaded or found.
+    license: Mapped[str | None] = mapped_column(String(32))
 
     user: Mapped[User] = relationship(back_populates="documents")
 
@@ -252,8 +274,11 @@ MAX_NOTEBOOK_SOURCES = 100  # FR-NB-01
 MAX_NOTEBOOK_VERSIONS = 50  # FR-NB-03 step 5: older snapshots are dropped
 
 
+MAX_NOTEBOOK_TOPIC = 80
+
+
 class Notebook(TimestampMixin, Base):
-    """FR-NB-02..05: a Markdown study notebook written by AI from highlights. Starts as a draft; "Lưu" saves it."""
+    """FR-NB-02..05: a Markdown notebook, started empty or written by AI from highlights. "Lưu" saves it."""
 
     __tablename__ = "notebooks"
     __table_args__ = (
@@ -269,7 +294,9 @@ class Notebook(TimestampMixin, Base):
     content: Mapped[str] = mapped_column(Text, default="", nullable=False)
     status: Mapped[str] = mapped_column(String(8), default="draft", nullable=False)
     ai_model: Mapped[str | None] = mapped_column(String(100))
-    # DR-03: drafts not opened or edited for 30 days are deleted.
+    # The subject or project it belongs to, in the user's words: the list is grouped by it.
+    topic: Mapped[str | None] = mapped_column(String(MAX_NOTEBOOK_TOPIC))
+    # DR-03: AI drafts not opened or edited for 30 days are deleted.
     opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     sources: Mapped[list["NotebookHighlight"]] = relationship(
@@ -294,6 +321,20 @@ class NotebookHighlight(Base):
     added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     highlight: Mapped[Highlight] = relationship(lazy="joined")
+
+
+class NotebookDocument(Base):
+    """A document the notebook draws on. It stays in the library; deleting it there only removes the link."""
+
+    __tablename__ = "notebook_documents"
+
+    notebook_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("notebooks.id", ondelete="CASCADE"), primary_key=True
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
 class NotebookVersion(Base):
@@ -411,6 +452,11 @@ ADMIN_ACTIONS = (
     "channel.add",
     "channel.update",
     "channel.delete",
+    "post.hide",
+    "post.show",
+    "post.delete",
+    "comment.hide",
+    "comment.show",
 )
 
 
@@ -456,6 +502,134 @@ TOPICS = (
     "travel",
     "sports",
 )
+
+
+# A summary, a personal view, a synthesis of several sources, or just the link to an original on the web.
+POST_KINDS = ("summary", "insight", "synthesis", "link")
+POST_REPORT_REASONS = ("copyright", "inaccurate", "spam", "offensive")
+MIN_POST_CARDS = 3
+MAX_POST_CARDS = 9
+MAX_POST_TITLE = 160
+MAX_CARD_HEADING = 120
+MAX_CARD_BODY = 600
+MAX_POST_BODY = 20_000
+MAX_COMMENT_CHARS = 1000
+
+
+class Post(TimestampMixin, Base):
+    """What a user wrote to share: a copy of its own. The notebook and documents it came from stay private, and
+    taking the post down touches neither. Others see it only while it is published and not hidden."""
+
+    __tablename__ = "posts"
+    __table_args__ = (
+        CheckConstraint("status IN ('draft', 'published')", name="ck_posts_status"),
+        CheckConstraint("kind IN ('summary', 'insight', 'synthesis', 'link')", name="ck_posts_kind"),
+        Index("ix_posts_status_published", "status", "published_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    notebook_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("notebooks.id", ondelete="SET NULL"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="draft", nullable=False)
+    title: Mapped[str] = mapped_column(String(MAX_POST_TITLE), default="", nullable=False)
+    # [{heading, body}]: the cards as they read, in order.
+    cards: Mapped[list] = mapped_column(JsonType, default=list, nullable=False)
+    # The longer text "read on" opens, in Markdown; optional.
+    body: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    topic: Mapped[str | None] = mapped_column(String(16), index=True)
+    # The AI wrote some of it: readers are told, and the author must say they read it through.
+    ai_assisted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Set by an admin: out of the community until shown again; the author sees that it was hidden.
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    author: Mapped[User] = relationship(lazy="joined")
+    sources: Mapped[list["PostSource"]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True, order_by="PostSource.position", lazy="selectin"
+    )
+
+
+class PostSource(Base):
+    """A document a post was written from, as it was then, so the post still names it after the document is
+    deleted. `shown` is the author's choice to name it publicly; a source left unshown is seen by no one else."""
+
+    __tablename__ = "post_sources"
+    __table_args__ = (Index("ix_post_sources_post", "post_id", "position"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    post_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="SET NULL"), index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    url: Mapped[str | None] = mapped_column(String(2048))
+    credit: Mapped[str] = mapped_column(String(1000), default="", nullable=False)
+    license: Mapped[str | None] = mapped_column(String(32))
+    shown: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+
+class SavedPost(Base):
+    """A post a reader kept to come back to."""
+
+    __tablename__ = "saved_posts"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    post_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    saved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class PostReport(Base):
+    """A reader saying a post should not be there: one per reader and post, the latest reason standing."""
+
+    __tablename__ = "post_reports"
+
+    post_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    reason: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+class PostComment(Base):
+    """A reader's comment on a published post, flat: public like the post, and moderated like it."""
+
+    __tablename__ = "post_comments"
+    __table_args__ = (Index("ix_post_comments_post_created", "post_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    post_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    author: Mapped[User] = relationship(lazy="joined")
+
+
+class CommentReport(Base):
+    """A reader reporting a comment, as PostReport does a post."""
+
+    __tablename__ = "comment_reports"
+
+    comment_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("post_comments.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    reason: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
 class Article(Base):

@@ -1,0 +1,130 @@
+{
+  "source": "https://github.com/quangpao/HowToLiveBetter",
+  "commit": "e25fd8958aea137fcb75a54ef60acf943c3c017f",
+  "commit_date": "2026-11-07",
+  "license": "CC BY 4.0",
+  "note": "1-2 entries per topic group to turn into Feed shorts. must_keep: the limits each short has to say, from the entry's own notes.",
+  "picks": [
+    {
+      "group": "Tâm lý, hành vi và năng suất",
+      "topic": "mind",
+      "entry": "viet-dinh-lam-thanh-may-gio-o-dau-gap-chuyen-gi-thi",
+      "ref": "4.1",
+      "grade": "A",
+      "title": "Viết \"định làm\" thành \"mấy giờ, ở đâu, gặp chuyện gì thì làm gì\"",
+      "feed_title": "Vì sao có kế hoạch rồi vẫn không bắt đầu?",
+      "must_keep": [
+        "Phân tích gộp 94 phép kiểm định, d = 0,65",
+        "Phần lớn nghiên cứu làm trên sinh viên và hành vi sức khỏe",
+        "Chỉ có tác dụng với việc bản thân thật sự muốn làm; giúp bắt đầu, không giúp giỏi lên"
+      ]
+    },
+    {
+      "group": "Tâm lý, hành vi và năng suất",
+      "topic": "mind",
+      "entry": "tat-thong-bao-khong-can-thiet-de-dien-thoai-ra-ngoai-tam",
+      "ref": "3.1",
+      "grade": "A",
+      "title": "Tắt thông báo không cần thiết, để điện thoại ra ngoài tầm mắt",
+      "feed_title": "Điện thoại chỉ kêu một tiếng, sự tập trung đã mất",
+      "must_keep": [
+        "Đừng tắt sạch: gộp thông báo 3 lần/ngày tốt hơn, tắt hẳn thì lo lắng hơn",
+        "Phần 'để điện thoại ra ngoài tầm mắt' chưa chắc: nghiên cứu lặp lại 2020 không thấy tác động chung",
+        "Nghề phải trực thì giữ thông báo của app điều phối"
+      ]
+    },
+    {
+      "group": "Học tập và phát triển bản thân",
+      "topic": "education",
+      "entry": "hoc-xong-mot-bai-thi-gap-sach-lai-tu-tra-loi-dung",
+      "ref": "23.14",
+      "grade": "A",
+      "title": "Học xong một bài thì gấp sách lại tự trả lời, đừng mở ra đọc lại ngay",
+      "feed_title": "Đọc lại thấy trôi chưa chắc là đã nhớ",
+      "must_keep": [
+        "Thí nghiệm làm trên học sinh, sinh viên ở nước ngoài, đo bằng bài kiểm tra trên lớp",
+        "Không cấm đọc lại: đọc lại để tìm chỗ hổng vẫn tốt, chỉ đừng lấy làm cách học chính"
+      ]
+    },
+    {
+      "group": "Học tập và phát triển bản thân",
+      "topic": "education",
+      "entry": "cung-chung-ay-gio-chia-ra-nhieu-ngay-thay-vi-hoc-mot",
+      "ref": "23.15",
+      "grade": "A",
+      "title": "Cùng chừng ấy giờ, chia ra nhiều ngày thay vì học một mạch",
+      "feed_title": "Học dồn một đêm hay chia ra nhiều ngày?",
+      "must_keep": [
+        "Tổng hợp 317 thí nghiệm; nghiên cứu không cho một con số ngày dùng chung",
+        "Không phải càng giãn càng tốt: khoảng ôn tối ưu co giãn theo quãng cần nhớ",
+        "Mốc 'một phần mười' là mẹo xếp lịch, không phải số nghiên cứu công bố"
+      ]
+    },
+    {
+      "group": "Tài chính và công việc",
+      "topic": "economy",
+      "entry": "tra-du-du-no-the-moi-thang-neu-buoc-phai-vay-doi",
+      "ref": "5.7",
+      "grade": "B",
+      "title": "Trả đủ dư nợ thẻ mỗi tháng; nếu buộc phải vay, đổi mọi con số về %/năm rồi mới so",
+      "feed_title": "\"Trả góp 0%\" thật ra là bao nhiêu phần trăm một năm?",
+      "must_keep": [
+        "Lãi thẻ 2,54%–3,71%/tháng, tức 30,5%–44,5%/năm (số tại thời điểm đồng bộ)",
+        "Trả thiếu một phần nhỏ là mất miễn lãi cho toàn bộ giao dịch trong kỳ",
+        "Mục này không cấm vay, chỉ bắt so bằng %/năm"
+      ]
+    },
+    {
+      "group": "Tài chính và công việc",
+      "topic": "economy",
+      "entry": "dung-cu-tang-gio-lam-mai",
+      "ref": "3.13",
+      "grade": "B",
+      "title": "Đừng cứ tăng giờ làm mãi",
+      "feed_title": "Làm thêm giờ mãi thì cái giá là gì?",
+      "must_keep": [
+        "Tăng 13% (mạch vành) và 33% (đột quỵ) là nguy cơ tương đối, không phải 13% số người sẽ bị",
+        "Mốc so sánh là từ 55 giờ/tuần; vùng giữa chưa được đo, đừng đọc thành '41 giờ là an toàn'"
+      ]
+    },
+    {
+      "group": "Quan hệ và đời sống",
+      "topic": "family",
+      "entry": "yeu-xa-khong-te-hon-yeu-gan-cho-de-vo-la-may",
+      "ref": "10.6",
+      "grade": "B",
+      "title": "Yêu xa không tệ hơn yêu gần; chỗ dễ vỡ là mấy tháng đầu sau khi dọn về một nhà",
+      "feed_title": "Yêu xa có thật sự khó giữ hơn?",
+      "must_keep": [
+        "Kết luận: yêu xa không tệ hơn; chỗ dễ vỡ là 3 tháng đầu sau khi về sống gần",
+        "Hai nghiên cứu của cùng một nhóm, mẫu sinh viên Mỹ 2006–2007, không có đối chứng ngẫu nhiên: đọc được chiều, không đọc được tỷ lệ"
+      ]
+    },
+    {
+      "group": "Quan hệ và đời sống",
+      "topic": "technology",
+      "entry": "mat-khau-dung-ma-van-mat-tai-khoan-bat-xac-thuc-hai",
+      "ref": "14.1",
+      "grade": "B",
+      "title": "Mật khẩu đúng mà vẫn mất tài khoản: bật xác thực hai lớp, chọn cách xác nhận hiện trên máy thay vì tin nhắn",
+      "feed_title": "Mật khẩu mạnh rồi, sao vẫn mất tài khoản?",
+      "must_keep": [
+        "Việt Nam chưa có nghiên cứu đo hai lớp giảm được bao nhiêu vụ; chọn cách xác nhận là suy luận kỹ thuật",
+        "Không đọc mã xác thực cho ai, kể cả người tự xưng là công an hay nhân viên ngân hàng"
+      ]
+    },
+    {
+      "group": "Sức khỏe và an toàn",
+      "topic": "health",
+      "entry": "ngu-du-7-den-8-tieng-dung-coi-6-tieng-la-du",
+      "ref": "3.3",
+      "grade": "A",
+      "title": "Ngủ đủ 7 đến 8 tiếng, đừng coi 6 tiếng là đủ",
+      "feed_title": "\"Ngủ 6 tiếng vẫn tỉnh\" có thật không?",
+      "must_keep": [
+        "7–8 tiếng là cho người lớn; trẻ vị thành niên cần nhiều hơn",
+        "Nhóm ngủ dài có nguy cơ cao chủ yếu vì đã có bệnh, không phải vì ngủ nhiều gây bệnh"
+      ]
+    }
+  ]
+}

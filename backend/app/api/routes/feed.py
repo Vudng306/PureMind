@@ -1,7 +1,9 @@
 """The feed (Bảng tin): openly licensed articles by topic, to read in the app.
 
 Reading one puts a copy in the user's library, headed by the credit its licence asks for, so the reader,
-highlights, summaries and the AI work on it as on anything the user added.
+highlights, summaries and the AI work on it as on anything the user added. A visitor without an account sees
+the same feed and reads an article here, with nothing kept for them: what they follow, where they stopped and
+what they read all need an account.
 """
 
 import logging
@@ -18,7 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, undefer
 
-from app.api.deps import CurrentUser, SessionDep, SettingsDep
+from app.api.deps import CurrentUser, OptionalUser, SessionDep, SettingsDep
 from app.api.routes.chat import IN_PROGRESS, _sse
 from app.api.routes.documents import _commit_new_link
 from app.api.routes.summaries import CONSENT_REQUIRED, NOT_CONFIGURED
@@ -164,14 +166,15 @@ class FollowIn(BaseModel):
     topics: list[str] = Field(min_length=1, max_length=len(TOPICS))
 
 
-def _following(user) -> list[str] | None:
-    chosen = (user.reading_preferences or {}).get("topics")
+def _following(user: User | None) -> list[str] | None:
+    """The topics the user chose; None, meaning every topic, before they choose and for a visitor."""
+    chosen = (user.reading_preferences or {}).get("topics") if user else None
     return [t for t in chosen if t in TOPICS] if isinstance(chosen, list) else None
 
 
 @router.get("", response_model=FeedPage)
 async def list_feed(
-    user: CurrentUser,
+    user: OptionalUser,
     session: SessionDep,
     topic: str | None = None,
     kind: str | None = None,
@@ -198,14 +201,14 @@ async def list_feed(
     found = list(
         await session.scalars(stmt.order_by(Article.rank.desc(), Article.id).offset(offset).limit(limit))
     )
-    cards = await _cards(session, user.id, found)
+    cards = await _cards(session, user.id if user else None, found)
     return FeedPage(articles=cards, total=total, has_more=offset + len(cards) < total, following=following)
 
 
-async def _cards(session: AsyncSession, user_id: uuid.UUID, found: list[Article]) -> list[ArticleCard]:
+async def _cards(session: AsyncSession, user_id: uuid.UUID | None, found: list[Article]) -> list[ArticleCard]:
     """The articles as the page shows them, with the user's copy of each they have opened."""
     copies = {}
-    if found:
+    if found and user_id:
         rows = await session.execute(
             select(Document.url, Document.id).where(
                 Document.user_id == user_id, Document.url.in_([a.url for a in found])
@@ -254,12 +257,13 @@ def _shorts_query():
     )
 
 
-async def _short_cards(session: AsyncSession, user_id: uuid.UUID, rows) -> list[ShortCard]:
-    """The shorts as the viewer shows them, with the user's copy of what each opens and their place in it."""
+async def _short_cards(session: AsyncSession, user_id: uuid.UUID | None, rows) -> list[ShortCard]:
+    """The shorts as the viewer shows them, with the user's copy of what each opens and their place in it
+    (a visitor has neither, and starts each on its first card)."""
     reads = [g or a for _, a, g in rows]
     ids = [short.id for short, _, _ in rows]
     copies, states, kept = {}, {}, {}
-    if rows:
+    if rows and user_id:
         found = await session.execute(
             select(Document.url, Document.id).where(
                 Document.user_id == user_id, Document.url.in_([r.url for r in reads])
@@ -272,6 +276,7 @@ async def _short_cards(session: AsyncSession, user_id: uuid.UUID, rows) -> list[
                 select(ShortState).where(ShortState.user_id == user_id, ShortState.short_id.in_(ids))
             )
         }
+    if rows:
         kept = {
             k.content_id: k
             for k in await session.scalars(
@@ -317,7 +322,7 @@ async def _short_cards(session: AsyncSession, user_id: uuid.UUID, rows) -> list[
 
 @router.get("/shorts", response_model=ShortsPage)
 async def list_shorts(
-    user: CurrentUser,
+    user: OptionalUser,
     session: SessionDep,
     topic: str | None = None,
     mode: Literal["following", "for_you"] = "following",
@@ -330,11 +335,13 @@ async def list_shorts(
     if topic is not None and topic not in TOPICS:
         raise HTTPException(422, MSG["MSG-INVALID"])
     wanted = [topic] if topic else _following(user)
-    stmt = _shorts_query().where(
-        ~exists().where(
-            ShortState.short_id == Short.id, ShortState.user_id == user.id, ShortState.dismissed.is_(True)
+    stmt = _shorts_query()
+    if user:
+        stmt = stmt.where(
+            ~exists().where(
+                ShortState.short_id == Short.id, ShortState.user_id == user.id, ShortState.dismissed.is_(True)
+            )
         )
-    )
     order = [Article.rank.desc(), Short.id]
     if wanted:
         chosen = Article.id.in_(select(ArticleTopic.article_id).where(ArticleTopic.topic.in_(wanted)))
@@ -344,7 +351,7 @@ async def list_shorts(
             stmt = stmt.where(chosen)
     total = await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     rows = (await session.execute(stmt.order_by(*order).offset(offset).limit(limit))).all()
-    cards = await _short_cards(session, user.id, rows)
+    cards = await _short_cards(session, user.id if user else None, rows)
     return ShortsPage(shorts=cards, total=total, has_more=offset + len(cards) < total)
 
 
@@ -376,9 +383,9 @@ async def _short_row(session: AsyncSession, short_id: uuid.UUID):
 
 
 @router.get("/shorts/{short_id}", response_model=ShortCard)
-async def get_short(short_id: uuid.UUID, user: CurrentUser, session: SessionDep):
+async def get_short(short_id: uuid.UUID, user: OptionalUser, session: SessionDep):
     """One short, as a shared link or "continue reading" opens it, whether or not it is in the list."""
-    [card] = await _short_cards(session, user.id, [await _short_row(session, short_id)])
+    [card] = await _short_cards(session, user.id if user else None, [await _short_row(session, short_id)])
     return card
 
 
@@ -573,7 +580,7 @@ async def chat(payload: ExploreAsk, request: Request, user: CurrentUser, setting
 
 
 @router.get("/topics", response_model=Topics)
-async def list_topics(user: CurrentUser, session: SessionDep):
+async def list_topics(user: OptionalUser, session: SessionDep):
     """Every topic with how many articles it has, and the ones the user follows."""
     rows = await session.execute(
         select(ArticleTopic.topic, func.count())
@@ -604,7 +611,7 @@ class Facets(BaseModel):
 
 @router.get("/facets", response_model=Facets)
 async def list_facets(
-    user: CurrentUser,
+    user: OptionalUser,
     session: SessionDep,
     topic: str | None = None,
     kind: str | None = None,
@@ -707,8 +714,53 @@ async def open_article(article_id: uuid.UUID, user: CurrentUser, session: Sessio
         published_at=article.published_at,
         extraction_status=ExtractionStatus.done,
         citation=citation.model_dump(),
+        license=article.license,
     )
     if (dup := await _commit_new_link(session, doc, user, article.url)) is not None:
         return dup
     await session.refresh(doc)
     return doc
+
+
+class FeedArticle(BaseModel):
+    """An article to read without an account: its text headed by its credit, as the library's copy would be."""
+
+    id: uuid.UUID
+    title: str
+    source_name: str
+    url: str
+    authors: str
+    language: str
+    kind: str
+    license: str
+    license_url: str
+    topics: list[str]
+    word_count: int
+    published_at: datetime | None
+    content: str
+
+
+@router.get("/articles/{article_id}", response_model=FeedArticle)
+async def read_article(article_id: uuid.UUID, session: SessionDep):
+    """An article to read where it is, for a visitor: nothing goes in a library. A signed-in reader opens it
+    instead (POST /feed/{id}/open), which keeps their copy."""
+    article = await session.scalar(
+        select(Article).where(Article.id == article_id).options(undefer(Article.content))
+    )
+    if article is None or article.hidden_at is not None:
+        raise HTTPException(404, MSG["MSG-FEED-404"])
+    return FeedArticle(
+        id=article.id,
+        title=article.title,
+        source_name=source_names().get(article.source, article.source),
+        url=article.url,
+        authors=article.authors,
+        language=article.language,
+        kind=article.kind,
+        license=article.license,
+        license_url=article.license_url,
+        topics=sorted(t.topic for t in article.topics),
+        word_count=article.word_count,
+        published_at=article.published_at,
+        content=f"*{_credit(article)}*\n\n{article.content}",
+    )

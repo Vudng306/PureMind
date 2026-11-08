@@ -31,6 +31,7 @@ from app.services.sources import (
     europepmc,
     frym,
     globalvoices,
+    hlb,
     openalex,
     owid,
     plos,
@@ -116,6 +117,7 @@ SOURCES = {
             elife.SUBJECTS,
         ),
         Source(frym.SOURCE, frym.NAME, frym.collect, frym.from_link, ("kids.frontiersin.org",)),
+        Source(hlb.SOURCE, hlb.NAME, hlb.collect, hlb.from_link, hlb.HOSTS),
         Source(
             arxiv.SOURCE,
             arxiv.NAME,

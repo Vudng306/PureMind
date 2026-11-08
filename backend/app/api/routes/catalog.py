@@ -280,6 +280,7 @@ async def open_article(article_id: str, user: CurrentUser, session: SessionDep):
             year=published.year if published else None,
             doi=article.get("doi") or "",
         ).model_dump(),
+        license=article["license"],
     )
     if (dup := await _commit_new_link(session, doc, user, url)) is not None:
         return dup

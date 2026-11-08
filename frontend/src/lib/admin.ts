@@ -27,7 +27,12 @@ export type AdminAction =
   | "crawl.source"
   | "channel.add"
   | "channel.update"
-  | "channel.delete";
+  | "channel.delete"
+  | "post.hide"
+  | "post.show"
+  | "post.delete"
+  | "comment.hide"
+  | "comment.show";
 
 export interface AdminUserItem {
   id: string;

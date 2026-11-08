@@ -31,9 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(() => {
         if (active) setState({ session: null, loading: false });
       });
+    let userId: string | null = null;
     const { data } = auth.onAuthStateChange((event, session) => {
       setState({ session, loading: false });
       if (event === "SIGNED_OUT") queryClient.clear(); // FR-AUTH-04 step 2
+      // What a visitor was shown (the feed, with nothing of theirs in it) is fetched again as theirs.
+      const now = session?.user.id ?? null;
+      if (now && userId === null && event === "SIGNED_IN") void queryClient.invalidateQueries();
+      userId = now;
     });
     return () => {
       active = false;

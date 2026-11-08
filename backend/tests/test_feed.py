@@ -12,7 +12,7 @@ from sqlalchemy import delete, select
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
-from app.models import Article, ArticleTag, ArticleTopic, Short, User
+from app.models import Article, ArticleTag, ArticleTopic, Document, Short, User
 from app.services import articles, crawler, guides, shorts, web
 from app.services.openai_client import AIError, Completion, Usage
 from app.services.sources import (
@@ -306,8 +306,47 @@ async def test_open_unknown_article(client, auth):
     assert r.status_code == 404
 
 
-async def test_feed_needs_an_account(client):
-    assert (await client.get("/api/feed")).status_code == 401
+async def test_a_visitor_reads_the_feed_and_keeps_nothing(client, feed):
+    made = await _two_shorts(feed)
+    [card] = (await client.get("/api/feed", params={"topic": "mind"})).json()["articles"]
+    assert card["title"] == "Sleep" and card["document_id"] is None
+    assert (await client.get("/api/feed")).json()["following"] is None  # every topic
+    assert (await client.get("/api/feed/topics")).status_code == 200
+    assert (await client.get("/api/feed/facets")).status_code == 200
+    r = await client.get("/api/feed/shorts")
+    assert r.json()["total"] == 2 and all(s["card_index"] == 0 for s in r.json()["shorts"])
+    assert (await client.get(f"/api/feed/shorts/{made['Sleep']}")).json()["original_title"] == "Sleep"
+
+    # Read where it is, with its credit, and put in no library.
+    r = await client.get(f"/api/feed/articles/{card['id']}")
+    assert r.status_code == 200
+    first_line = r.json()["content"].split("\n\n")[0]
+    assert "[PLOS](https://a.example/1)" in first_line and "CC BY 4.0" in first_line
+    async with SessionLocal() as session:
+        assert await session.scalar(select(Document).where(Document.url == card["url"])) is None
+    assert (await client.get(f"/api/feed/articles/{uuid.uuid4()}")).status_code == 404
+
+    # What is kept for a reader needs an account.
+    assert (await client.post(f"/api/feed/{card['id']}/open")).status_code == 401
+    assert (await client.put("/api/feed/topics", json={"topics": ["mind"]})).status_code == 401
+    assert (await client.get("/api/feed/shorts/reading")).status_code == 401
+    progress = await client.put(f"/api/feed/shorts/{made['Sleep']}/progress", json={"card_index": 1})
+    assert progress.status_code == 401
+    interest = await client.put(f"/api/feed/shorts/{made['Sleep']}/interest", json={"interested": False})
+    assert interest.status_code == 401
+    # A token that is sent must still be good: it is not read as a visitor's.
+    bad = {"Authorization": "Bearer not-a-token"}
+    assert (await client.get("/api/feed", headers=bad)).status_code == 401
+
+
+async def test_a_hidden_article_cannot_be_read_by_a_visitor(client, feed):
+    await feed(item("https://a.example/gone", "Taken down", ["mind"]))
+    async with SessionLocal() as session:
+        article = await session.scalar(select(Article).where(Article.url == "https://a.example/gone"))
+        article.hidden_at = datetime.now(UTC)
+        await session.commit()
+        article_id = article.id
+    assert (await client.get(f"/api/feed/articles/{article_id}")).status_code == 404
 
 
 async def test_refresh_takes_the_sources_new_topics(feed):

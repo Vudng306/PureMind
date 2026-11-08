@@ -8,7 +8,7 @@ import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
@@ -19,9 +19,23 @@ from app.core.config import Settings
 from app.core.messages import MSG
 from app.core.ratelimit import doi_limiter, upload_limiter
 from app.db.session import SessionLocal
-from app.models import Document, ExtractionStatus, SourceType, User
-from app.schemas import DocumentListItem, DocumentOut, DocumentUpdate, DoiLookup
-from app.services import doi, equation_ocr, figure_notes, page_ocr, storage, table_ocr, web
+from app.models import Article as CatalogArticle
+from app.models import (
+    ArticleTopic,
+    Collection,
+    Document,
+    ExtractionStatus,
+    Highlight,
+    NotebookDocument,
+    NotebookHighlight,
+    Post,
+    PostSource,
+    SourceType,
+    Summary,
+    User,
+)
+from app.schemas import DocumentListItem, DocumentOut, DocumentUpdate, DocumentUsage, DoiLookup
+from app.services import doi, equation_ocr, figure_notes, page_ocr, rights, storage, table_ocr, web
 from app.services.epub import extract_epub, looks_like_epub
 from app.services.extraction import (
     IMAGE_NAME,
@@ -73,7 +87,20 @@ async def list_documents(
     stmt = select(Document).options(defer(Document.content_clean)).where(Document.user_id == user.id)
     if source_type:
         stmt = stmt.where(Document.source_type == source_type)
-    return (await session.scalars(stmt.order_by(order))).all()
+    docs = (await session.scalars(stmt.order_by(order))).all()
+    urls = [d.url for d in docs if d.url]
+    topics: dict[str, list[str]] = {}
+    if urls:  # a copy of a shared article is on that article's subjects
+        rows = await session.execute(
+            select(CatalogArticle.url, ArticleTopic.topic)
+            .join(ArticleTopic, ArticleTopic.article_id == CatalogArticle.id)
+            .where(CatalogArticle.url.in_(urls))
+        )
+        for url, topic in rows.all():
+            topics.setdefault(url, []).append(topic)
+    return [
+        DocumentListItem.model_validate(d).model_copy(update={"topics": topics.get(d.url or "", [])}) for d in docs
+    ]
 
 
 def ai_consented(user: User | None) -> bool:
@@ -268,6 +295,7 @@ async def upload_document(
 
 async def _commit_new_link(session: AsyncSession, doc: Document, user: User, url: str) -> JSONResponse | None:
     """Insert a saved link; if a concurrent request saved the same URL first, return that one (BR-03)."""
+    doc.license = doc.license or await rights.license_of_url(session, url)
     session.add(doc)
     try:
         await session.commit()
@@ -536,6 +564,13 @@ async def update_document(
     """FR-DOC-07."""
     doc = await _owned_document(session, user, document_id)
     data = payload.model_dump(exclude_unset=True, exclude_none=True)
+    if "collection_id" in payload.model_fields_set:  # null is a value here: off the shelf
+        if payload.collection_id is not None:
+            shelf = await session.get(Collection, payload.collection_id)
+            if shelf is None or shelf.user_id != user.id:  # NFR-SEC-04
+                raise HTTPException(status.HTTP_404_NOT_FOUND, MSG["MSG-COLLECTION-404"])
+        doc.collection_id = payload.collection_id
+        data.pop("collection_id", None)
     if "last_read_page" in data and doc.page_count and data["last_read_page"] > doc.page_count:
         raise HTTPException(422, "Số trang không hợp lệ.")
     if "title" in data:
@@ -547,6 +582,38 @@ async def update_document(
     await session.commit()
     await session.refresh(doc)
     return doc
+
+
+@router.get("/{document_id}/usage", response_model=DocumentUsage)
+async def document_usage(document_id: uuid.UUID, user: CurrentUser, session: SessionDep):
+    """What removing the document affects, so the dialog can say so before anything goes."""
+    doc = await _owned_document(session, user, document_id)
+    highlights = await session.scalar(select(func.count(Highlight.id)).where(Highlight.document_id == doc.id))
+    notes = await session.scalar(
+        select(func.count(Highlight.id)).where(
+            Highlight.document_id == doc.id, Highlight.note.is_not(None), Highlight.note != ""
+        )
+    )
+    through = (
+        select(NotebookHighlight.notebook_id)
+        .join(Highlight, Highlight.id == NotebookHighlight.highlight_id)
+        .where(Highlight.document_id == doc.id)
+    )
+    linked = select(NotebookDocument.notebook_id).where(NotebookDocument.document_id == doc.id)
+    notebooks = await session.scalar(select(func.count()).select_from(through.union(linked).subquery()))
+    posts = await session.scalar(
+        select(func.count(func.distinct(PostSource.post_id)))
+        .join(Post, Post.id == PostSource.post_id)
+        .where(PostSource.document_id == doc.id, Post.user_id == user.id)
+    )
+    summary = await session.scalar(select(Summary.id).where(Summary.document_id == doc.id))
+    return DocumentUsage(
+        highlights=highlights or 0,
+        notes=notes or 0,
+        has_summary=summary is not None,
+        notebooks=notebooks or 0,
+        posts=posts or 0,
+    )
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

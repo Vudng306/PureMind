@@ -59,10 +59,13 @@ function useWhere() {
 export function SourceGroups({
   groups,
   onRemove,
+  onInsert,
   busy,
 }: {
   groups: SourceGroup[];
   onRemove: (source: NotebookSource) => void;
+  /** Quotes the passage into the notes, with its [n]. */
+  onInsert?: (source: NotebookSource) => void;
   busy: boolean;
 }) {
   const t = useT();
@@ -92,6 +95,11 @@ export function SourceGroups({
                     <Link href={readerLink(s)} className="font-semibold text-accent hover:underline">
                       {t("nb.openInDocument")}
                     </Link>
+                    {onInsert && (
+                      <button type="button" className="font-semibold text-accent hover:underline" onClick={() => onInsert(s)}>
+                        {t("nb.quoteIntoNotes")}
+                      </button>
+                    )}
                   </span>
                 </div>
                 <RemoveButton source={s} onRemove={() => onRemove(s)} busy={busy} />

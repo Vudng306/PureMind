@@ -5,7 +5,13 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
-from app.models import MAX_CHAT_MESSAGES, MAX_CHAT_QUESTION, ExtractionStatus, SourceType
+from app.models import (
+    MAX_CHAT_MESSAGES,
+    MAX_CHAT_QUESTION,
+    MAX_NOTEBOOK_TOPIC,
+    ExtractionStatus,
+    SourceType,
+)
 from app.services import doi as doi_service
 
 HighlightColor = Literal["yellow", "green", "blue", "pink", "purple"]
@@ -148,6 +154,10 @@ class DocumentListItem(BaseModel):
     read_fraction: float | None
     is_read: bool
     citation: Citation | None = None
+    collection_id: uuid.UUID | None = None
+    license: str | None = None
+    # The subjects of the article it is a copy of, if it is one; the list fills these in.
+    topics: list[str] = []
     created_at: datetime
     updated_at: datetime
 
@@ -174,6 +184,17 @@ class DocumentUpdate(BaseModel):
     is_read: bool | None = None
     note: str | None = Field(default=None, max_length=20000)
     citation: Citation | None = None
+    collection_id: uuid.UUID | None = None  # null takes it off its shelf
+
+
+class DocumentUsage(BaseModel):
+    """What else goes, or stays, when a document is removed from the library."""
+
+    highlights: int
+    notes: int  # highlights with a note of their own
+    has_summary: bool
+    notebooks: int
+    posts: int
 
 
 MAX_RECTS = 200
@@ -345,6 +366,33 @@ class NotebookUpdate(BaseModel):
     content: str | None = None
     highlight_ids: list[uuid.UUID] | None = Field(default=None, max_length=1000)
     status: Literal["saved"] | None = None  # a saved notebook never goes back to draft
+    topic: str | None = Field(default=None, max_length=MAX_NOTEBOOK_TOPIC)  # "" takes it off its topic
+    # The model of an AI summary pasted in. Only ever set once: it tells later posts that AI helped.
+    ai_model: str | None = Field(default=None, max_length=100)
+
+
+class NotebookCreate(BaseModel):
+    """A notebook started by hand: no AI, and no sources unless a document is given."""
+
+    title: str = Field(min_length=1, max_length=255)
+    topic: str | None = Field(default=None, max_length=MAX_NOTEBOOK_TOPIC)
+    document_id: uuid.UUID | None = None
+
+
+class NotebookDocumentLink(BaseModel):
+    document_id: uuid.UUID
+
+
+class NotebookDocumentOut(BaseModel):
+    """A document the notebook draws on: linked by hand, through a highlight, or both."""
+
+    id: uuid.UUID
+    title: str
+    url: str | None
+    file_type: Literal["pdf", "epub", "web"]
+    license: str | None
+    linked: bool  # linked by hand, so it can be unlinked
+    highlight_count: int
 
 
 class NotebookSource(BaseModel):
@@ -359,6 +407,8 @@ class NotebookListItem(BaseModel):
     title: str
     status: Literal["draft", "saved"]
     source_count: int
+    topic: str | None = None
+    document_count: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -385,7 +435,9 @@ class NotebookOut(BaseModel):
     content: str
     status: Literal["draft", "saved"]
     ai_model: str | None
+    topic: str | None = None
     sources: list[NotebookSource]
+    documents: list[NotebookDocumentOut] = []
     created_at: datetime
     updated_at: datetime
 

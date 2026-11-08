@@ -63,6 +63,11 @@ const ACTION_LABEL: Record<AdminAuditEntry["action"], Key> = {
   "channel.add": "admin.actionChannelAdd",
   "channel.update": "admin.actionChannelUpdate",
   "channel.delete": "admin.actionChannelDelete",
+  "post.hide": "admin.actionPostHide",
+  "post.show": "admin.actionPostShow",
+  "post.delete": "admin.actionPostDelete",
+  "comment.hide": "admin.actionCommentHide",
+  "comment.show": "admin.actionCommentShow",
 };
 
 /** "Reset credits · had used 20 AI and 7 chat credits": what was done, with the numbers kept at the time. */

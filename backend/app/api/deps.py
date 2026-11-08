@@ -81,6 +81,17 @@ async def get_current_user(request: Request, session: SessionDep, settings: Sett
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+async def get_optional_user(request: Request, session: SessionDep, settings: SettingsDep) -> User | None:
+    """A visitor without a token comes in as nobody. A token that is sent must still be good, so an expired
+    session is refreshed by the app rather than quietly read as a visitor's."""
+    if not request.headers.get("Authorization"):
+        return None
+    return await get_current_user(request, session, settings)
+
+
+OptionalUser = Annotated[User | None, Depends(get_optional_user)]
+
+
 async def require_admin(user: CurrentUser) -> User:
     """FR-ADM-01: the role is read from the database on every request, so revoking it takes effect at once."""
     if not user.is_admin:

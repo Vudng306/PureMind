@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { AiConsentDialog } from "@/components/ai-consent-dialog";
+import { useAuth } from "@/components/auth-provider";
 import { Icon, type IconName } from "@/components/icons";
 import { Alert, Spinner } from "@/components/ui";
 import { progressOf } from "@/lib/doc-view";
@@ -31,6 +32,7 @@ import {
 import { useLang, useT, type Key } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { useAccount } from "@/lib/queries";
+import { useSignIn } from "@/lib/sign-in";
 import { toneAt } from "@/lib/tone";
 import { useUi } from "@/lib/ui-store";
 
@@ -104,6 +106,8 @@ export function FeedViewer({
   const uiLang = useLang();
   const { showToast } = useUi();
   const feed = useShorts(topic, topic ? "following" : "for_you");
+  const { session } = useAuth();
+  const signIn = useSignIn();
   const box = useRef<HTMLDivElement>(null);
   const placeKey = `${PLACE_KEY}:${topic ?? "for_you"}`;
 
@@ -190,6 +194,7 @@ export function FeedViewer({
   }
 
   async function hide(short: ShortCard) {
+    if (!session) return signIn(); // what a visitor would rather not see is not kept for them
     setHidden((h) => [...h, short.id]);
     setUndo(short);
     try {
@@ -325,7 +330,7 @@ export function FeedViewer({
 
       <aside className="hidden max-w-[270px] flex-col gap-4 min-[1200px]:flex" aria-label={t("feed.rail.aria")}>
         {placed && current && <ShortActions key={current.id} short={current} variant="rail" onHide={() => void hide(current)} />}
-        <KeepReading current={current?.id} onOpen={open} />
+        {session && <KeepReading current={current?.id} onOpen={open} />}
       </aside>
 
       <AiConsentDialog
@@ -342,6 +347,8 @@ export function FeedViewer({
  * reader first asks for it and then kept, and they stay on their card while it comes. */
 function useCardLanguage(current: ShortCard | undefined, uiLang: "vi" | "en") {
   const { data: user } = useAccount();
+  const { session } = useAuth();
+  const signIn = useSignIn();
   const consented = Boolean(user?.reading_preferences.ai_consent);
   const [wanted, setWanted] = useState<"vi" | "en">(uiLang);
   // An English interface shows English where it exists; only pressing EN spends anything.
@@ -386,6 +393,8 @@ function useCardLanguage(current: ShortCard | undefined, uiLang: "vi" | "en") {
     textOf: (s: ShortCard): ShortText => (wanted === "en" && english(s)) || s,
     languageOf: (s: ShortCard): "vi" | "en" => (wanted === "en" && english(s) ? "en" : "vi"),
     choose: (language: "vi" | "en") => {
+      // Writing an English one asks the AI, which takes an account; one already written is anyone's to read.
+      if (language === "en" && !session && current && !english(current)) return signIn();
       setWanted(language);
       setPressed(language === "en");
       setFailed(null);
@@ -431,6 +440,7 @@ function ShortSlide({
   const pager = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
   const saved = useRef(short.card_index);
+  const signedIn = Boolean(useAuth().session); // a visitor's place in it is not kept
   const tone = short.topics[0] ? toneAt(TOPICS.indexOf(short.topics[0])) : "";
 
   // Back where they stopped: this card, not the first.
@@ -445,7 +455,7 @@ function ShortSlide({
   }, []);
 
   useEffect(() => {
-    if (!active || page === saved.current || (page === 0 && saved.current === 0)) return;
+    if (!signedIn || !active || page === saved.current || (page === 0 && saved.current === 0)) return;
     const timer = setTimeout(() => {
       const before = saved.current;
       saved.current = page;
@@ -456,7 +466,7 @@ function ShortSlide({
         });
     }, DWELL_MS);
     return () => clearTimeout(timer);
-  }, [active, page, short.id, qc]);
+  }, [signedIn, active, page, short.id, qc]);
 
   function show(i: number) {
     pager.current?.scrollTo({ left: i * pager.current.clientWidth, behavior: glide() });

@@ -1,4 +1,4 @@
-"""FR-NB-01..05: AI notebooks built from highlights."""
+"""FR-NB-01..05: notebooks, started by hand or written by AI from highlights, and the documents they draw on."""
 
 import json
 import logging
@@ -24,13 +24,18 @@ from app.models import (
     Document,
     Highlight,
     Notebook,
+    NotebookDocument,
     NotebookHighlight,
     NotebookVersion,
+    Post,
     User,
     utcnow,
 )
 from app.schemas import (
     HighlightOut,
+    NotebookCreate,
+    NotebookDocumentLink,
+    NotebookDocumentOut,
     NotebookGenerate,
     NotebookListItem,
     NotebookOut,
@@ -40,7 +45,7 @@ from app.schemas import (
     NotebookVersionOut,
     file_type_of,
 )
-from app.services import ai_quota, notebook_writer
+from app.services import ai_quota, notebook_writer, rights
 from app.services.openai_client import AIError, Usage
 from app.services.summarizer import detect_language
 
@@ -101,6 +106,55 @@ async def _owned_notebook(session: AsyncSession, user: User, notebook_id: uuid.U
     return nb
 
 
+async def _documents(session: AsyncSession, nb: Notebook) -> list[NotebookDocumentOut]:
+    """The documents it draws on, linked by hand or through a highlight. They stay managed in the library."""
+    linked = set(
+        (
+            await session.scalars(select(NotebookDocument.document_id).where(NotebookDocument.notebook_id == nb.id))
+        ).all()
+    )
+    counts = dict(
+        (
+            await session.execute(
+                select(Highlight.document_id, func.count(Highlight.id))
+                .join(NotebookHighlight, NotebookHighlight.highlight_id == Highlight.id)
+                .where(NotebookHighlight.notebook_id == nb.id)
+                .group_by(Highlight.document_id)
+            )
+        ).all()
+    )
+    ids = linked | set(counts)
+    if not ids:
+        return []
+    rows = await session.execute(
+        select(
+            Document.id,
+            Document.title,
+            Document.url,
+            Document.source_type,
+            Document.original_filename,
+            Document.license,
+        )
+        .where(Document.id.in_(ids))
+        .order_by(Document.title)
+    )
+    out = []
+    for r in rows.all():
+        license_ = r.license or await rights.license_of_url(session, r.url)
+        out.append(
+            NotebookDocumentOut(
+                id=r.id,
+                title=r.title,
+                url=r.url,
+                file_type=file_type_of(r.source_type, r.original_filename),
+                license=license_,
+                linked=r.id in linked,
+                highlight_count=counts.get(r.id, 0),
+            )
+        )
+    return out
+
+
 async def _out(session: AsyncSession, nb: Notebook) -> NotebookOut:
     rows = (
         await session.execute(
@@ -123,6 +177,8 @@ async def _out(session: AsyncSession, nb: Notebook) -> NotebookOut:
         content=nb.content,
         status=nb.status,
         ai_model=nb.ai_model,
+        topic=nb.topic,
+        documents=await _documents(session, nb),
         created_at=nb.created_at,
         updated_at=nb.updated_at,
         sources=[
@@ -196,6 +252,64 @@ async def _snapshot(session: AsyncSession, nb: Notebook) -> None:
 
 def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _clean_topic(topic: str | None) -> str | None:
+    return " ".join((topic or "").split()) or None
+
+
+async def _owned_doc(session: AsyncSession, user: User, document_id: uuid.UUID) -> Document:
+    doc = await session.get(Document, document_id)
+    if doc is None or doc.user_id != user.id:  # NFR-SEC-04
+        raise HTTPException(status.HTTP_404_NOT_FOUND, MSG["MSG-19"])
+    return doc
+
+
+@router.post("", response_model=NotebookOut, status_code=status.HTTP_201_CREATED)
+async def create_notebook(payload: NotebookCreate, user: CurrentUser, session: SessionDep):
+    """A notebook started by hand: no AI involved, and kept until the user deletes it."""
+    nb = Notebook(
+        user_id=user.id,
+        title=_clean_title(payload.title),
+        content="",
+        status="saved",
+        topic=_clean_topic(payload.topic),
+    )
+    session.add(nb)
+    await session.flush()
+    if payload.document_id:
+        await _owned_doc(session, user, payload.document_id)
+        session.add(NotebookDocument(notebook_id=nb.id, document_id=payload.document_id))
+    await session.commit()
+    await session.refresh(nb)
+    return await _out(session, nb)
+
+
+@router.post("/{notebook_id}/documents", response_model=NotebookOut)
+async def link_document(
+    notebook_id: uuid.UUID, payload: NotebookDocumentLink, user: CurrentUser, session: SessionDep
+):
+    """Link a library document. Nothing is copied: there is one place documents are kept."""
+    nb = await _owned_notebook(session, user, notebook_id)
+    await _owned_doc(session, user, payload.document_id)
+    if await session.get(NotebookDocument, (nb.id, payload.document_id)) is None:
+        session.add(NotebookDocument(notebook_id=nb.id, document_id=payload.document_id))
+        nb.updated_at = utcnow()
+        await session.commit()
+        await session.refresh(nb)
+    return await _out(session, nb)
+
+
+@router.delete("/{notebook_id}/documents/{document_id}", response_model=NotebookOut)
+async def unlink_document(notebook_id: uuid.UUID, document_id: uuid.UUID, user: CurrentUser, session: SessionDep):
+    """Remove the link only: the document stays in the library and the notebook keeps its text."""
+    nb = await _owned_notebook(session, user, notebook_id)
+    link = await session.get(NotebookDocument, (nb.id, document_id))
+    if link is not None:
+        await session.delete(link)
+        await session.commit()
+        await session.refresh(nb)
+    return await _out(session, nb)
 
 
 @router.post("/generate", response_model=NotebookOut, status_code=status.HTTP_201_CREATED)
@@ -274,6 +388,9 @@ async def list_notebooks(user: CurrentUser, session: SessionDep, highlight_id: u
             select(Notebook.id).where(
                 Notebook.user_id == user.id,
                 Notebook.status == "draft",
+                # What the AI drafted and nobody came back to. What a person started, or wrote a post from, stays.
+                Notebook.ai_model.is_not(None),
+                Notebook.id.not_in(select(Post.notebook_id).where(Post.notebook_id.is_not(None))),
                 Notebook.opened_at < cutoff,
                 Notebook.updated_at < cutoff,
             )
@@ -289,6 +406,7 @@ async def list_notebooks(user: CurrentUser, session: SessionDep, highlight_id: u
             Notebook.id,
             Notebook.title,
             Notebook.status,
+            Notebook.topic,
             Notebook.created_at,
             Notebook.updated_at,
             count.label("source_count"),
@@ -301,8 +419,33 @@ async def list_notebooks(user: CurrentUser, session: SessionDep, highlight_id: u
     if highlight_id:
         cites = select(NotebookHighlight.notebook_id).where(NotebookHighlight.highlight_id == highlight_id)
         stmt = stmt.where(Notebook.id.in_(cites))
+    rows = (await session.execute(stmt)).all()
+    drawn_on: dict[uuid.UUID, set[uuid.UUID]] = {r.id: set() for r in rows}
+    if rows:
+        linked = await session.execute(
+            select(NotebookDocument.notebook_id, NotebookDocument.document_id).where(
+                NotebookDocument.notebook_id.in_(list(drawn_on))
+            )
+        )
+        through = await session.execute(
+            select(NotebookHighlight.notebook_id, Highlight.document_id)
+            .join(Highlight, Highlight.id == NotebookHighlight.highlight_id)
+            .where(NotebookHighlight.notebook_id.in_(list(drawn_on)))
+        )
+        for notebook_id, document_id in [*linked.all(), *through.all()]:
+            drawn_on[notebook_id].add(document_id)
     return [
-        NotebookListItem.model_validate(r, from_attributes=True) for r in (await session.execute(stmt)).all()
+        NotebookListItem(
+            id=r.id,
+            title=r.title,
+            status=r.status,
+            topic=r.topic,
+            source_count=r.source_count,
+            document_count=len(drawn_on[r.id]),
+            created_at=r.created_at,
+            updated_at=r.updated_at,
+        )
+        for r in rows
     ]
 
 
@@ -347,6 +490,10 @@ async def update_notebook(
             if hid not in kept:
                 session.add(NotebookHighlight(notebook_id=nb.id, highlight_id=hid, position=nxt))
                 nxt += 1
+    if "topic" in payload.model_fields_set:
+        nb.topic = _clean_topic(payload.topic)
+    if payload.ai_model and not nb.ai_model:
+        nb.ai_model = payload.ai_model
     if payload.status:
         nb.status = payload.status
         await _snapshot(session, nb)

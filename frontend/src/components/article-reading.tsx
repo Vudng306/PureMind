@@ -106,7 +106,7 @@ function QuickReading({ article, quick, signedIn, onFull }: { article: Article; 
 }
 
 /** A chart of the article, from the publisher's site. The source's text is trusted here, unlike a model's. */
-function articleFigure(src: string, alt: string) {
+export function articleFigure(src: string, alt: string) {
   return (
     <figure className="mb-6">
       <FigureImage documentId="" src={src} alt={alt} />

@@ -13,13 +13,17 @@ from app.api.routes import (
     account,
     admin,
     admin_content,
+    admin_posts,
     catalog,
     chat,
+    collections,
+    community,
     documents,
     feed,
     highlights,
     notebooks,
     papers,
+    posts,
     search,
     summaries,
     translate,
@@ -169,14 +173,18 @@ async def healthz():
 
 app.include_router(account.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
+app.include_router(collections.router, prefix="/api")
 app.include_router(highlights.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 app.include_router(summaries.router, prefix="/api")
 app.include_router(notebooks.router, prefix="/api")
+app.include_router(posts.router, prefix="/api")
+app.include_router(community.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(translate.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(admin_content.router, prefix="/api")
+app.include_router(admin_posts.router, prefix="/api")
 app.include_router(catalog.router, prefix="/api")
 app.include_router(papers.router, prefix="/api")
 app.include_router(feed.router, prefix="/api")

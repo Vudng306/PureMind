@@ -26,12 +26,26 @@ export interface NotebookSource {
   file_type: "pdf" | "epub" | "web";
 }
 
+/** A document the notebook draws on. It stays in the library: this is a link, not a copy. */
+export interface NotebookDocument {
+  id: string;
+  title: string;
+  url: string | null;
+  file_type: "pdf" | "epub" | "web";
+  license: string | null;
+  /** False when it is here only because one of its highlights is: then it cannot be unlinked by itself. */
+  linked: boolean;
+  highlight_count: number;
+}
+
 export interface Notebook {
   id: string;
   title: string;
   content: string;
   status: NotebookStatus;
   ai_model: string | null;
+  topic: string | null;
+  documents: NotebookDocument[];
   sources: NotebookSource[];
   created_at: string;
   updated_at: string;
@@ -41,7 +55,9 @@ export interface NotebookListItem {
   id: string;
   title: string;
   status: NotebookStatus;
+  topic: string | null;
   source_count: number;
+  document_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -70,7 +86,49 @@ export function useNotebook(id: string) {
 export type NotebookPatch = Partial<Pick<Notebook, "title" | "content">> & {
   highlight_ids?: string[];
   status?: "saved";
+  /** "" takes the notebook off its topic. */
+  topic?: string;
+  /** The model behind an AI summary inserted by hand. */
+  ai_model?: string;
 };
+
+export const MAX_NOTEBOOK_TOPIC = 80;
+
+/** A blank notebook, costing no AI. */
+export function createNotebook(input: { title: string; topic?: string; document_id?: string }) {
+  return api<Notebook>("/notebooks", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function linkNotebookDocument(notebookId: string, documentId: string) {
+  return api<Notebook>(`/notebooks/${notebookId}/documents`, {
+    method: "POST",
+    body: JSON.stringify({ document_id: documentId }),
+  });
+}
+
+export function useLinkDocument(notebookId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) => linkNotebookDocument(notebookId, documentId),
+    onSuccess: (nb) => {
+      qc.setQueryData(notebookKey(notebookId), nb);
+      void qc.invalidateQueries({ queryKey: [...notebooksKey, "list"] });
+    },
+  });
+}
+
+/** The document stays in the library and its highlights stay where they are. */
+export function useUnlinkDocument(notebookId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) =>
+      api<Notebook>(`/notebooks/${notebookId}/documents/${documentId}`, { method: "DELETE" }),
+    onSuccess: (nb) => {
+      qc.setQueryData(notebookKey(notebookId), nb);
+      void qc.invalidateQueries({ queryKey: [...notebooksKey, "list"] });
+    },
+  });
+}
 
 export function useUpdateNotebook(id: string) {
   const qc = useQueryClient();

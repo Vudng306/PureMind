@@ -11,6 +11,7 @@ import { api } from "@/lib/api";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { useT } from "@/lib/i18n";
 import { EMAIL_RE, MSG } from "@/lib/messages";
+import { safeNext } from "@/lib/sign-in";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 function LoginForm() {
@@ -25,10 +26,12 @@ function LoginForm() {
   );
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Back to the page that asked for an account (saving an article, say), else to Explore.
+  const next = safeNext(params.get("next")) ?? "/explore";
 
   useEffect(() => {
-    if (!loading && session) router.replace("/explore");
-  }, [loading, session, router]);
+    if (!loading && session) router.replace(next);
+  }, [loading, session, router, next]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,7 +48,7 @@ function LoginForm() {
       });
       if (authError) return setError(authErrorMessage(authError));
       await api("/account").catch(() => undefined); // FR-AUTH-02 step 3: load / provision profile
-      router.replace("/explore");
+      router.replace(next);
     } catch (err) {
       setError(authErrorMessage(err instanceof Error ? err : new Error()));
     } finally {

@@ -42,3 +42,7 @@ translate_minute_limiter = RateLimiter(limit=20, window_seconds=60)
 translate_day_limiter = RateLimiter(limit=300, window_seconds=24 * 3600)
 # A whole article is many passages. One already kept costs nothing and does not count.
 translate_article_day_limiter = RateLimiter(limit=50, window_seconds=24 * 3600)
+# What goes in front of everyone: enough for anyone writing by hand, not for a script.
+publish_limiter = RateLimiter(limit=20, window_seconds=3600)
+comment_limiter = RateLimiter(limit=30, window_seconds=3600)
+report_limiter = RateLimiter(limit=30, window_seconds=3600)

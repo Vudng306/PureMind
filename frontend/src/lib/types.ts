@@ -78,6 +78,12 @@ export interface DocumentListItem {
   read_fraction: number | null;
   is_read: boolean;
   citation: Citation | null;
+  /** The shelf it is on, if any. */
+  collection_id: string | null;
+  /** The licence the source states; null for a private upload or a page we know nothing about. */
+  license: string | null;
+  /** Topics of the Explore article it came from. */
+  topics: string[];
   created_at: string;
   updated_at: string;
 }

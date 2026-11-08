@@ -22,6 +22,7 @@ from app.services.ai_quota import today_vn
 AI_ENDPOINTS = {
     ("POST", "/api/summaries"),
     ("POST", "/api/notebooks/generate"),
+    ("POST", "/api/posts/{post_id}/draft"),
     ("POST", "/api/chat/conversations/{conversation_id}/messages"),
     ("POST", "/api/feed/chat"),
     ("POST", "/api/translate"),

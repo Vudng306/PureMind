@@ -15,6 +15,7 @@ import { UserMenu } from "@/components/user-menu";
 import { ApiError } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { useAccount } from "@/lib/queries";
+import { signInHref } from "@/lib/sign-in";
 import { supabase } from "@/lib/supabase";
 import { useUi } from "@/lib/ui-store";
 
@@ -114,6 +115,37 @@ export function AppOverlays() {
 
 /** The signed-in app's frame: the bar on top, the dock on a phone. Explore uses it too once signed in, though
  * it lives outside the app's pages because visitors may browse it. */
+/** The pages a visitor can open without an account (Explore and the feed): what they can reach, and signing in,
+ * which brings them back to the same page. */
+export function PublicShell({ children, mainClassName = "px-4 pb-[72px] pt-6 sm:px-10 sm:pt-10" }: {
+  children: React.ReactNode;
+  mainClassName?: string;
+}) {
+  const pathname = usePathname();
+  const t = useT();
+  return (
+    <div className="app-backdrop min-h-screen">
+      <header className="glass sticky top-0 z-20 border-b print:hidden">
+        <div className="flex h-[68px] items-center gap-2 px-4 sm:gap-4 sm:px-10 xl:gap-6">
+          {/* On a narrow phone the two pages and signing in come first; the sign-in page has the language too. */}
+          <div className="hidden min-[420px]:block">
+            <Logo word="hidden min-[520px]:inline" />
+          </div>
+          <MainNav items={PUBLIC_NAV} className="flex" />
+          <span className="flex-1" />
+          <div className="hidden sm:block">
+            <LanguageToggle />
+          </div>
+          <Link href={signInHref(pathname)} className="btn-primary h-11 shrink-0 px-3 sm:px-4">
+            {t("explore.signIn")}
+          </Link>
+        </div>
+      </header>
+      <main className={mainClassName}>{children}</main>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: user } = useAccount();

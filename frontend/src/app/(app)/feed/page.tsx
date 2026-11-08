@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useAuth } from "@/components/auth-provider";
+import { CommunityFeed } from "@/components/community-feed";
 import { ExploreChat } from "@/components/explore-chat";
 import { FeedViewer } from "@/components/feed-viewer";
 import { Icon } from "@/components/icons";
@@ -21,8 +23,9 @@ import {
   type Topic,
 } from "@/lib/feed";
 import { useT, type Key } from "@/lib/i18n";
-import { tagTone, toneAt } from "@/lib/tone";
 import { MSG } from "@/lib/messages";
+import { useSignIn } from "@/lib/sign-in";
+import { tagTone, toneAt } from "@/lib/tone";
 
 const topicLabel = (topic: Topic) => `feed.topic.${topic}` as Key;
 /** Each topic its own tone, the same wherever it shows. */
@@ -31,26 +34,65 @@ const topicTone = (topic: Topic) => toneAt(TOPICS.indexOf(topic));
 /** "cards": the quick reads, which are the page. The full list and the chat are ways out of them, not rivals. */
 type View = "cards" | "all" | "chat";
 
-/** The feed: quick reads on the topics the user follows, chosen on the first visit. */
+/** The feed: quick reads on the topics the user follows, chosen on the first visit. A visitor reads every topic,
+ * and is asked to sign in for what needs an account: choosing topics, the community and the chat. */
 export default function FeedPage() {
   const t = useT();
+  const { session } = useAuth();
+  const signIn = useSignIn();
+  const guest = !session;
   const topics = useTopics();
   const [editing, setEditing] = useState(false);
   const [view, setView] = useState<View>("cards");
-  const following = topics.data?.following ?? null;
+  const [community, setCommunity] = useState(false);
+  const following = guest ? [...TOPICS] : (topics.data?.following ?? null);
   const reading = following !== null && !editing;
-  const immersive = reading && view === "cards";
+  const immersive = reading && view === "cards" && !community;
+  const editTopics = guest ? signIn : () => setEditing(true);
+
+  // Read here rather than with useSearchParams, which would make the whole page wait for the client.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("scope") !== "community") return;
+    if (guest) signIn();
+    else setCommunity(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the address is read once, when the page opens
+  }, []);
+
+  function show(next: View) {
+    if (guest && next === "chat") signIn();
+    else setView(next);
+  }
+
+  /** Readers' posts are a place of their own, so the address says which one this is. */
+  function showCommunity(on: boolean) {
+    if (on && guest) return signIn();
+    setCommunity(on);
+    window.history.replaceState(null, "", on ? "/feed?scope=community" : "/feed");
+  }
 
   return (
     // The card fills the screen, so it takes back what the app's page leaves around its content: see .feed-card.
     <div className={immersive ? "-mb-8 -mt-2 sm:-mt-6 lg:-mb-14" : ""}>
       <div className={`mx-auto flex w-full flex-col ${immersive ? "max-w-[1280px] gap-2 lg:gap-3" : "max-w-[820px] gap-7"}`}>
-        <div className={immersive || (reading && view === "chat") ? "sr-only" : "flex flex-col gap-2"}>
+        <div className={immersive || community || (reading && view === "chat") ? "sr-only" : "flex flex-col gap-2"}>
           <h1 className="page-title">{t("feed.title")}</h1>
           <p className="max-w-2xl text-base leading-relaxed text-muted">{t("feed.lede")}</p>
         </div>
 
-        {topics.isPending ? (
+        {/* Readers' posts ask for no topics, so a reader who has not chosen any can still open them. */}
+        {community ? (
+          <div className="flex flex-col gap-4">
+            <div className="segmented self-start" role="group" aria-label={t("feed.scope")}>
+              <button type="button" aria-pressed="false" onClick={() => showCommunity(false)}>
+                {t("feed.scope.forYou")}
+              </button>
+              <button type="button" aria-pressed="true">
+                {t("feed.scope.community")}
+              </button>
+            </div>
+            <CommunityFeed />
+          </div>
+        ) : topics.isPending ? (
           <Spinner />
         ) : topics.isError ? (
           <div className="flex flex-col items-start gap-3">
@@ -67,14 +109,14 @@ export default function FeedPage() {
             onCancel={following ? () => setEditing(false) : undefined}
           />
         ) : view === "cards" ? (
-          <QuickReads following={following} onEdit={() => setEditing(true)} onView={setView} />
+          <QuickReads following={following} onEdit={editTopics} onView={show} onCommunity={() => showCommunity(true)} />
         ) : (
           <>
             <button type="button" className="btn-ghost h-10 self-start px-3 text-sm" onClick={() => setView("cards")}>
               <Icon name="back" size={16} />
               {t("feed.back")}
             </button>
-            {view === "chat" ? <ExploreChat /> : <AllArticles following={following} onEdit={() => setEditing(true)} />}
+            {view === "chat" ? <ExploreChat /> : <AllArticles following={following} onEdit={editTopics} />}
           </>
         )}
       </div>
@@ -87,10 +129,12 @@ function QuickReads({
   following,
   onEdit,
   onView,
+  onCommunity,
 }: {
   following: Topic[];
   onEdit: () => void;
   onView: (view: View) => void;
+  onCommunity: () => void;
 }) {
   const t = useT();
   const [byTopic, setByTopic] = useState(false);
@@ -106,6 +150,9 @@ function QuickReads({
           </button>
           <button type="button" aria-pressed={byTopic} onClick={() => setByTopic(true)}>
             {t("feed.scope.topics")}
+          </button>
+          <button type="button" aria-pressed="false" onClick={onCommunity}>
+            {t("feed.scope.community")}
           </button>
         </div>
         {byTopic && (

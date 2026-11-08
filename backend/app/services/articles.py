@@ -166,6 +166,7 @@ def source_names() -> dict[str, str]:
         europepmc,
         frym,
         globalvoices,
+        hlb,
         openalex,
         owid,
         plos,
@@ -173,5 +174,5 @@ def source_names() -> dict[str, str]:
 
     return {
         m.SOURCE: m.NAME
-        for m in (conversation, globalvoices, owid, plos, europepmc, elife, frym, arxiv, openalex, guides)
+        for m in (conversation, globalvoices, owid, plos, europepmc, elife, frym, hlb, arxiv, openalex, guides)
     }

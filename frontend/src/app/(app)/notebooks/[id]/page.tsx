@@ -6,6 +6,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 
 import { HighlightPicker } from "@/components/highlight-picker";
 import { Icon } from "@/components/icons";
+import { NotebookDocuments } from "@/components/notebook-documents";
 import { NotebookMarkdown } from "@/components/notebook-markdown";
 import { HighlightDigest, SourceGroups } from "@/components/notebook-sources";
 import { Alert, ConfirmDialog, Spinner, useModal } from "@/components/ui";
@@ -18,6 +19,7 @@ import { MSG } from "@/lib/messages";
 import {
   MAX_NOTEBOOK_CHARS,
   MAX_NOTEBOOK_TITLE,
+  MAX_NOTEBOOK_TOPIC,
   STATUS_LABEL,
   citedPositions,
   groupSources,
@@ -32,6 +34,7 @@ import {
   type NotebookVersion,
   type SourceGroup,
 } from "@/lib/notebooks";
+import { useCreatePost } from "@/lib/posts";
 import { usePreferences } from "@/lib/preferences";
 import { useUi } from "@/lib/ui-store";
 
@@ -271,7 +274,9 @@ function Editor({ notebook }: { notebook: Notebook }) {
 
   const [title, setTitle] = useState(notebook.title);
   const [content, setContent] = useState(notebook.content);
-  const [view, setView] = useState<View>("preview");
+  const [topic, setTopic] = useState(notebook.topic ?? "");
+  // A blank notebook opens ready for typing; one with something in it opens as read.
+  const [view, setView] = useState<View>(notebook.content.trim() ? "preview" : "edit");
   const [saving, setSaving] = useState<"auto" | "save" | null>(null);
   const [savedAt, setSavedAt] = useState(notebook.updated_at);
   const [autoFailed, setAutoFailed] = useState(false);
@@ -281,12 +286,14 @@ function Editor({ notebook }: { notebook: Notebook }) {
   const [history, setHistory] = useState(false);
 
   // What the server has, to know what is unsaved.
-  const stored = useRef({ title: notebook.title, content: notebook.content });
-  const latest = useRef({ title, content });
-  latest.current = { title, content };
+  const stored = useRef({ title: notebook.title, content: notebook.content, topic: notebook.topic ?? "" });
+  const latest = useRef({ title, content, topic });
+  latest.current = { title, content, topic };
   const deleted = useRef(false);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const createPost = useCreatePost();
 
-  const dirty = title !== stored.current.title || content !== stored.current.content;
+  const dirty = title !== stored.current.title || content !== stored.current.content || topic !== stored.current.topic;
   const tooLong = content.length > MAX_NOTEBOOK_CHARS;
   const titleOk = title.trim().length > 0 && title.length <= MAX_NOTEBOOK_TITLE;
   const valid = titleOk && !tooLong;
@@ -294,7 +301,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
   const send = useCallback(
     async (kind: "auto" | "save") => {
       const snapshot = latest.current;
-      const patch: NotebookPatch = { title: snapshot.title, content: snapshot.content };
+      const patch: NotebookPatch = { title: snapshot.title, content: snapshot.content, topic: snapshot.topic };
       if (kind === "save") patch.status = "saved";
       setSaving(kind);
       try {
@@ -336,10 +343,10 @@ function Editor({ notebook }: { notebook: Notebook }) {
   updateRef.current = update;
   useEffect(
     () => () => {
-      const { title: t, content: c } = latest.current;
-      const changed = t !== stored.current.title || c !== stored.current.content;
+      const { title: t, content: c, topic: o } = latest.current;
+      const changed = t !== stored.current.title || c !== stored.current.content || o !== stored.current.topic;
       if (changed && !deleted.current && t.trim() && c.length <= MAX_NOTEBOOK_CHARS) {
-        updateRef.current.mutate({ title: t, content: c });
+        updateRef.current.mutate({ title: t, content: c, topic: o });
       }
     },
     [],
@@ -369,6 +376,40 @@ function Editor({ notebook }: { notebook: Notebook }) {
 
   const removeSource = (source: NotebookSource) =>
     void setSources(sources.filter((x) => x !== source).map((x) => x.highlight.id));
+
+  /** Puts text in at the caret when the editor is open, at the end otherwise, then shows it in the editor. */
+  function insertText(text: string) {
+    const area = editorRef.current;
+    const at = view === "edit" && area ? area.selectionEnd : content.length;
+    const before = content.slice(0, at).replace(/\s*$/, "");
+    const after = content.slice(at).replace(/^\s*/, "");
+    setContent(`${before}${before ? "\n\n" : ""}${text}${after ? `\n\n${after}` : "\n"}`);
+    setView("edit");
+  }
+
+  /** The passage as a quote with its [n], which the preview links back to the place in the document. */
+  const quoteSource = (source: NotebookSource) =>
+    insertText(`> ${source.highlight.selected_text.replace(/\s*\n+\s*/g, " ").trim()} [${source.position}]`);
+
+  /** Later posts from this notebook then say that AI helped. */
+  function insertSummary(markdown: string, aiModel: string) {
+    insertText(markdown);
+    if (!notebook.ai_model) {
+      mutateAsync({ ai_model: aiModel }).catch(() => setSaveError(MSG["MSG-99"]));
+    }
+  }
+
+  /** Writes what is on screen first, so the draft starts from the notes as they stand. */
+  async function writePost() {
+    setSaveError(null);
+    try {
+      if (dirty && valid) await send("auto");
+      const post = await createPost.mutateAsync({ notebook_id: notebook.id, kind: "synthesis" });
+      router.push(`/publish/${post.id}`);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : MSG["MSG-99"]);
+    }
+  }
 
   /** The highlights by document, with notes, as a .md file (the same format as the Highlights page). */
   function exportDigest() {
@@ -455,6 +496,10 @@ function Editor({ notebook }: { notebook: Notebook }) {
           >
             <Icon name="trash" />
           </button>
+          <button type="button" className="btn-outline h-10" onClick={() => void writePost()} disabled={!valid || createPost.isPending}>
+            <Icon name="pencil" size={16} />
+            {t("nb.writePost")}
+          </button>
           <button type="button" className="btn-primary h-10" onClick={() => void send("save")} disabled={!valid || saving !== null}>
             {t(saving === "save" ? "common.saving" : "common.save")}
           </button>
@@ -475,6 +520,16 @@ function Editor({ notebook }: { notebook: Notebook }) {
                     className="w-full rounded-lg border border-transparent bg-transparent px-1 py-1 font-serif text-3xl font-medium leading-tight text-ink outline-none hover:border-line focus:border-accent sm:text-4xl"
                   />
                   {!titleOk && <span className="px-1 text-sm text-danger">{t("nb.titleRequired")}</span>}
+                </label>
+                <label className="flex items-center gap-2 px-1 text-[13px] text-muted">
+                  <span className="shrink-0">{t("nb.topicLabel")}</span>
+                  <input
+                    value={topic}
+                    maxLength={MAX_NOTEBOOK_TOPIC}
+                    placeholder={t("nb.topicPlaceholder")}
+                    onChange={(e) => setTopic(e.target.value)}
+                    className="h-8 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 text-[13px] text-ink outline-none hover:border-line focus:border-accent sm:max-w-[280px]"
+                  />
                 </label>
                 <span className="px-1 text-[13px] text-muted">
                   {t("nb.madeOn", { date: formatDate(notebook.created_at) })}
@@ -509,6 +564,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
                     </label>
                     <textarea
                       id="notebook-content"
+                      ref={editorRef}
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       spellCheck={false}
@@ -567,7 +623,8 @@ function Editor({ notebook }: { notebook: Notebook }) {
               className="flex flex-col gap-3 lg:sticky lg:top-[96px] lg:max-h-[calc(100vh-120px)] lg:self-start lg:overflow-y-auto"
               aria-label={t("nb.sourcesAria")}
             >
-              <div className="flex items-center gap-2">
+              <NotebookDocuments notebook={notebook} onInsert={insertSummary} />
+              <div className="mt-2 flex items-center gap-2">
                 <h2 className="eyebrow flex-1">{t("nb.sourcesCount", { n: sources.length })}</h2>
                 <button type="button" className="btn-ghost h-9 px-3 text-sm" onClick={() => setAdding(true)} disabled={update.isPending}>
                   <Icon name="plus" size={16} />
@@ -575,7 +632,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
                 </button>
               </div>
               {sources.length === 0 && missing.length === 0 && <p className="text-sm text-muted">{t("nb.noSources")}</p>}
-              <SourceGroups groups={groups} onRemove={removeSource} busy={update.isPending} />
+              <SourceGroups groups={groups} onRemove={removeSource} onInsert={quoteSource} busy={update.isPending} />
               {missing.length > 0 && (
                 <ul className="flex flex-col gap-2">
                   {missing.map((n) => (

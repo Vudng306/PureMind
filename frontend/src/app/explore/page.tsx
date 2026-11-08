@@ -1,15 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { Suspense } from "react";
 
-import { AppShell, MainNav, PUBLIC_NAV, useLockedOut } from "@/components/app-shell";
+import { AppShell, PublicShell, useLockedOut } from "@/components/app-shell";
 import { useAuth } from "@/components/auth-provider";
-import { LanguageToggle } from "@/components/language-toggle";
 import { SharedLibrary } from "@/components/shared-library";
 import { TermsGate } from "@/components/terms-gate";
-import { Logo, Spinner } from "@/components/ui";
-import { useT } from "@/lib/i18n";
+import { Spinner } from "@/components/ui";
 import { useAccount } from "@/lib/queries";
 
 /** The site's front page, and public: a visitor browses the open articles; adding one to a library needs an account.
@@ -41,26 +38,10 @@ function SignedInExplore() {
 }
 
 function PublicExplore() {
-  const t = useT();
-
   return (
-    <div className="app-backdrop min-h-screen">
-      <header className="glass sticky top-0 z-20 border-b">
-        <div className="flex h-[68px] items-center gap-3 px-4 sm:gap-4 sm:px-10 xl:gap-6">
-          <Logo word="hidden min-[400px]:inline" />
-          <MainNav items={PUBLIC_NAV} className="hidden sm:flex" />
-          <span className="flex-1" />
-          <LanguageToggle />
-          <Link href="/login" className="btn-primary h-11 px-4">
-            {t("explore.signIn")}
-          </Link>
-        </div>
-      </header>
-
-      <main>
-        <Explore signedIn={false} className="mx-auto max-w-[1200px] px-4 pb-[72px] pt-8 sm:px-10 sm:pt-10" />
-      </main>
-    </div>
+    <PublicShell mainClassName="">
+      <Explore signedIn={false} className="mx-auto max-w-[1200px] px-4 pb-[72px] pt-8 sm:px-10 sm:pt-10" />
+    </PublicShell>
   );
 }
 
