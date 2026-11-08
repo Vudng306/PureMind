@@ -6,7 +6,7 @@ from sqlalchemy import delete, select
 
 from app.db.session import SessionLocal
 from app.models import TOPICS, Article
-from app.services import crawler
+from app.services import crawler, shorts
 from app.services.sources import CC_BY, hlb
 
 PATH = "book/04-dung-lang-phi-thoi-gian.md"
@@ -171,3 +171,20 @@ async def test_a_newer_commit_updates_the_article_instead_of_adding_one():
         async with SessionLocal() as session:
             await session.execute(delete(Article).where(Article.url == old.url))
             await session.commit()
+
+
+def test_each_pick_has_a_brief_for_its_short():
+    briefs = hlb.read_briefs()
+    assert set(briefs) == set(hlb.read_pin().picks)
+    assert all(b.title and b.must_keep for b in briefs.values())
+
+
+def test_a_short_is_asked_to_state_the_entrys_limits():
+    first = hlb.parse_chapter(CHAPTER, PATH)[0]
+    item = hlb.entry_item(first, PATH, PIN, ["mind"])
+    article = Article(title=item.title, credit=item.credit, content=item.content)
+    prompt = shorts._prompt(article, "Vì sao chưa bắt đầu?", ["d = 0,65", "chỉ giúp bắt đầu"])
+    assert "Vì sao chưa bắt đầu?" in prompt
+    assert "- d = 0,65" in prompt and "- chỉ giúp bắt đầu" in prompt
+    # Without a brief, the prompt is the article alone.
+    assert "editor" not in shorts._prompt(article)

@@ -967,6 +967,12 @@ async def test_a_point_that_says_nothing_is_no_card(client, auth, feed):
     assert card["points"] == SHORT.points and card["total_cards"] == len(SHORT.points) + 2
 
 
+def test_a_point_with_the_next_field_spilled_into_it_is_no_card():
+    spilled = 'takeaway":"Không phải khoảng cách, mà là 3 tháng đầu mới là giai đoạn dễ vỡ nhất."}'
+    kept = "Lãi thẻ 2,54%–3,71%/tháng, tức 30,5%–44,5%/năm."
+    assert shorts.usable([kept, spilled, '"hook": "Bạn có từng nghĩ như vậy?"']) == [kept]
+
+
 async def test_write_short_refuses_too_few_points(feed, monkeypatch):
     await feed(open_item("https://a.example/by", "Attribution", ["mind"], source="plos"))
     thin = SHORT.model_copy(update={"points": [SHORT.points[0], "takeaway"]})

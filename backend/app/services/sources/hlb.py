@@ -112,6 +112,22 @@ def read_pin(path: Path = PICKS) -> Pin:
     )
 
 
+@dataclass(frozen=True)
+class Brief:
+    """What the editor asks of an entry's short: a title to start from and the limits it has to say."""
+
+    title: str
+    must_keep: list[str]
+
+
+def read_briefs(path: Path = PICKS) -> dict[str, Brief]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {
+        p["entry"]: Brief(title=p.get("feed_title", ""), must_keep=list(p.get("must_keep", [])))
+        for p in data["picks"]
+    }
+
+
 def page_url(path: str, entry_id: str | None = None) -> str:
     """Where a reader finds the entry on GitHub: on the branch, so the address outlives the commit."""
     return f"{REPO_URL}/blob/{BRANCH}/{path}" + (f"#entry-{entry_id}" if entry_id else "")
