@@ -5,7 +5,7 @@ import { useState } from "react";
 import { GoogleSignIn } from "@/components/auth-parts";
 import { SupabaseConfigNotice } from "@/components/config-notice";
 import { LanguageToggle } from "@/components/language-toggle";
-import { Alert } from "@/components/ui";
+import { Alert, Wordmark } from "@/components/ui";
 import { api } from "@/lib/api";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { useT } from "@/lib/i18n";
@@ -19,8 +19,8 @@ export function AdminGate({ children }: { children: React.ReactNode }) {
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="card flex w-full max-w-[420px] flex-col gap-[22px] p-7 shadow-float sm:p-8">
         <div className="flex items-center justify-between">
-          <span className="flex items-baseline gap-2">
-            <span className="font-display text-[26px] font-semibold">PureMind</span>
+          <span className="flex items-center gap-2.5">
+            <Wordmark />
             <span className="eyebrow">{t("admin.title").toUpperCase()}</span>
           </span>
           <LanguageToggle />

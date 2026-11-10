@@ -207,7 +207,7 @@ function SearchView() {
     <div className="mx-auto flex max-w-[880px] flex-col gap-6">
       <h1 className="page-title">{t("search.title")}</h1>
 
-      <label className="flex h-14 items-center gap-3 rounded-xl border border-field bg-surface px-4 text-muted focus-within:border-accent">
+      <label className="flex h-14 items-center gap-3 rounded-xl border border-field bg-surface px-4 text-muted focus-within:border-focus">
         <Icon name="search" size={20} />
         <span className="sr-only">{t("search.keyword")}</span>
         <input
@@ -254,7 +254,7 @@ function SearchView() {
           <select
             value={category ?? ""}
             onChange={(e) => go({ category: isCategory(e.target.value) ? e.target.value : null, type: null })}
-            className="h-9 rounded-full border border-field bg-surface pl-3 pr-8 text-[13px] text-ink outline-none focus:border-accent"
+            className="h-9 rounded-full border border-field bg-surface pl-3 pr-8 text-[13px] text-ink outline-none focus:border-focus"
           >
             <option value="">{t("highlights.allCategories")}</option>
             {CATEGORIES.map((c) => (

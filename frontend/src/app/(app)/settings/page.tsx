@@ -171,7 +171,7 @@ function Settings() {
                   {HIGHLIGHT_COLORS.map((c) => (
                     <label
                       key={c}
-                      className="flex h-11 items-center gap-2.5 rounded-[10px] border border-field bg-page px-3 focus-within:border-accent"
+                      className="flex h-11 items-center gap-2.5 rounded-[10px] border border-field bg-page px-3 focus-within:border-focus"
                     >
                       <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: COLOR_DOT[c] }} />
                       <span className="sr-only">{t("settings.colorMeaningOf", { color: COLOR_NAME[lang][c] })}</span>
@@ -187,7 +187,7 @@ function Settings() {
                 </div>
                 <button
                   type="button"
-                  className="self-start py-2 text-[13px] text-accent hover:underline"
+                  className="self-start py-2 text-[13px] text-accent-text hover:underline"
                   onClick={() => prefs.set({ colorLabels: { yellow: "", green: "", blue: "", pink: "", purple: "" } })}
                 >
                   {t("settings.restoreDefaults")}

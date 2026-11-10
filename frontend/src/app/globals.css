@@ -2,28 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
-/* "Giấy ấm, đậm nét": warm paper, near-black ink and a terracotta accent; three reading themes (PRD 6.1,
-   SRS FR-RDR-05). Values are "r g b". The accent keeps 4.5:1 with white text and with the paper. */
+/* PureMind Design System v1, "Warm Editorial Minimalism": warm cream paper, near-black ink, serif headings
+   and a sans UI. The accent is the logo's blue (#2F54EB),
+   chosen over the system's terracotta on 2026-11-10 (PRD 6.1, SRS FR-RDR-05). Values are "r g b".
+   Names here → names in the design system's tokens.json:
+     bg surface-page · surface surface-card · soft surface-subtle · ink content-primary ·
+     muted content-secondary · line line-default · field line-strong (controls, ≥3:1) ·
+     accent brand-primary (fills) · accent-hover/-pressed · accent-text brand-text (orange text, ≥5.5:1) ·
+     accent-soft brand-soft · accent-on-soft brand-on-soft · on-accent on-brand · focus status-focus ·
+     success/warning/danger(-soft) status-* · highlight highlight.
+   "body" (long UI text between ink and muted), "page", "menu" and "sepia" are the app's own. */
 :root,
 [data-theme="light"] {
   --bg: 250 246 238;
   --surface: 255 253 249;
   --ink: 26 23 18;
   --body: 55 49 41;
-  --muted: 110 101 89;
+  --muted: 103 95 86;
   --line: 232 223 206;
-  --field: 214 202 180;
-  --soft: 242 235 221;
+  --field: 142 131 119;
+  --soft: 241 234 224;
   --page: 255 255 255;
-  --accent: 196 70 31;
-  --accent-soft: 251 228 216;
+  --accent: 47 84 235;
+  --accent-hover: 39 71 214;
+  --accent-pressed: 31 59 176;
+  --accent-text: 38 69 201;
+  --accent-soft: 227 233 253;
+  --accent-on-soft: 31 59 176;
   --on-accent: 255 255 255;
+  --focus: 35 93 168;
   --menu: 26 23 18;
   --menu-fg: 250 246 238;
-  --danger: 168 40 30;
-  --danger-soft: 250 226 222;
-  --success: 32 104 74;
-  --success-soft: 220 238 228;
+  --danger: 170 51 44;
+  --danger-soft: 247 227 224;
+  --on-danger: 255 255 255;
+  --success: 39 102 79;
+  --success-soft: 227 239 232;
+  --warning: 138 80 11;
+  --warning-soft: 248 236 216;
+  --highlight: 246 223 168;
+  --scrim: 26 23 18;
+  --scrim-alpha: 0.45;
+  --shadow-card: 0 1px 2px rgb(26 23 18 / 0.06);
+  --shadow-raised: 0 10px 30px rgb(26 23 18 / 0.1);
   --shadow: 60 40 20;
   --shadow-alpha: 0.12;
   color-scheme: light;
@@ -34,44 +55,71 @@
   --surface: 245 234 213;
   --ink: 50 38 24;
   --body: 70 56 38;
-  --muted: 104 88 66;
+  --muted: 98 82 60;
   --line: 217 198 164;
-  --field: 202 181 146;
+  --field: 138 116 86;
   --soft: 226 209 178;
   --page: 247 238 221;
-  --accent: 160 66 26;
-  --accent-soft: 240 210 186;
+  --accent: 42 71 194;
+  --accent-hover: 36 64 176;
+  --accent-pressed: 29 53 146;
+  --accent-text: 36 64 176;
+  --accent-soft: 214 220 240;
+  --accent-on-soft: 29 53 146;
   --on-accent: 255 255 255;
+  --focus: 35 93 168;
   --menu: 50 38 24;
   --menu-fg: 245 234 213;
   --danger: 150 40 28;
   --danger-soft: 240 214 200;
+  --on-danger: 255 255 255;
   --success: 56 90 40;
   --success-soft: 222 226 196;
+  --warning: 122 70 8;
+  --warning-soft: 240 222 186;
+  --highlight: 240 214 150;
+  --scrim: 50 38 24;
+  --scrim-alpha: 0.45;
+  --shadow-card: 0 1px 2px rgb(58 46 30 / 0.1);
+  --shadow-raised: 0 10px 30px rgb(58 46 30 / 0.16);
   --shadow: 58 46 30;
   --shadow-alpha: 0.18;
   color-scheme: light;
 }
 
+/* "Night": the reader's dark theme and the app's for those who prefer it. */
 [data-theme="dark"] {
-  --bg: 21 19 17;
-  --surface: 32 29 26;
-  --ink: 244 238 228;
+  --bg: 23 20 15;
+  --surface: 32 28 23;
+  --ink: 243 237 227;
   --body: 218 210 197;
-  --muted: 163 154 141;
-  --line: 54 50 45;
-  --field: 76 70 62;
-  --soft: 44 40 36;
-  --page: 32 29 26;
-  --accent: 246 136 96;
-  --accent-soft: 66 38 28;
-  --on-accent: 28 16 10;
-  --menu: 244 238 228;
-  --menu-fg: 21 19 17;
-  --danger: 245 170 155;
-  --danger-soft: 62 32 28;
-  --success: 140 210 170;
-  --success-soft: 30 52 42;
+  --muted: 184 174 159;
+  --line: 59 52 43;
+  --field: 125 115 102;
+  --soft: 43 38 31;
+  --page: 32 28 23;
+  --accent: 124 149 247;
+  --accent-hover: 147 168 248;
+  --accent-pressed: 106 133 242;
+  --accent-text: 143 166 248;
+  --accent-soft: 30 36 64;
+  --accent-on-soft: 143 166 248;
+  --on-accent: 26 23 18;
+  --focus: 141 180 238;
+  --menu: 243 237 227;
+  --menu-fg: 23 20 15;
+  --danger: 238 141 132;
+  --danger-soft: 58 32 29;
+  --on-danger: 26 23 18;
+  --success: 116 195 160;
+  --success-soft: 29 46 38;
+  --warning: 230 174 92;
+  --warning-soft: 51 41 27;
+  --highlight: 90 69 32;
+  --scrim: 0 0 0;
+  --scrim-alpha: 0.6;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-raised: 0 10px 30px rgb(0 0 0 / 0.5);
   --shadow: 0 0 0;
   --shadow-alpha: 0.5;
   color-scheme: dark;
@@ -110,11 +158,7 @@ body {
 
 /* The app's pages (not the reader): a warm glow of the accent in the corner of the paper. */
 .app-backdrop {
-  background:
-    radial-gradient(60% 420px at 100% -120px, rgb(var(--accent-soft) / 0.9), transparent),
-    radial-gradient(50% 360px at 0% -80px, rgb(var(--surface)), transparent),
-    rgb(var(--bg));
-  background-attachment: fixed;
+  background: rgb(var(--bg));
 }
 
 /* A cover drawn from the tone: two discs of the tone over its pale ground. --ax/--ay and --bx/--by move the
@@ -127,39 +171,54 @@ body {
   color: rgb(var(--tone-fg));
 }
 
+/* One focus ring on every surface (≥6:1): blue, so it never reads as the accent or as an error. */
 :focus-visible {
-  outline: 2px solid rgb(var(--accent));
+  outline: 2px solid rgb(var(--focus));
   outline-offset: 2px;
 }
 
 ::placeholder {
-  color: rgb(var(--muted) / 0.85);
+  color: rgb(var(--muted));
+}
+
+/* Motion is short and only for state; none at all when the reader asks for less. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @layer components {
+  /* Buttons: radius-md, 44px touch target, label 14px/500. One primary per screen. */
   .btn {
-    @apply inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full px-5 text-[15px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[14px] border border-transparent px-4 text-sm font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45;
   }
   .btn-primary {
-    @apply btn bg-accent font-semibold text-on-accent shadow-[0_6px_16px_-6px_rgb(var(--accent)/0.7)] hover:brightness-[0.94];
+    @apply btn bg-accent font-semibold text-on-accent hover:bg-accent-hover active:bg-accent-pressed;
   }
   .btn-dark {
     @apply btn bg-ink font-semibold text-bg hover:bg-ink/90;
   }
   .btn-outline {
-    @apply btn border border-field bg-transparent text-ink hover:bg-soft;
+    @apply btn border-field bg-surface text-ink hover:bg-soft;
   }
   .btn-ghost {
     @apply btn bg-transparent text-ink hover:bg-soft;
   }
   .btn-danger {
-    @apply btn bg-[#A33A2B] font-semibold text-white hover:bg-[#8F3124];
+    @apply btn bg-danger font-semibold text-on-danger hover:bg-danger/90;
   }
   .icon-btn {
-    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent text-ink transition-colors hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent text-ink transition-colors duration-150 hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40;
   }
+  /* Inputs: radius-sm, a line-strong border (≥3:1) and the focus ring outside it. */
   .input {
-    @apply h-12 w-full rounded-[14px] border border-field bg-surface px-4 text-base text-ink focus:border-accent focus:outline-none;
+    @apply h-12 w-full rounded-[10px] border border-field bg-surface px-3.5 text-base text-ink focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-focus aria-[invalid=true]:border-danger;
   }
   .field-label {
     @apply flex flex-col gap-1.5 text-sm font-medium;
@@ -174,20 +233,29 @@ body {
     -webkit-backdrop-filter: blur(16px) saturate(1.3);
     backdrop-filter: blur(16px) saturate(1.3);
   }
+  /* Chips: pill, line-default border; the chosen one is brand-soft with the brand's dark text. */
   .chip {
-    @apply inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface px-4 text-sm font-medium text-body transition-colors hover:border-field hover:bg-soft;
+    @apply inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface px-3.5 text-sm font-medium text-ink transition-colors duration-150 hover:bg-soft;
   }
   .chip[aria-pressed="true"],
   .chip[aria-selected="true"],
   .chip[aria-checked="true"] {
-    @apply border-ink bg-ink font-semibold text-bg hover:bg-ink;
+    @apply border-accent bg-accent-soft font-semibold text-accent-on-soft hover:bg-accent-soft;
   }
+  /* Overline: a content-type label above a title, upper case. */
   .eyebrow {
-    @apply text-xs font-bold tracking-[0.1em] text-accent;
+    @apply text-xs font-semibold leading-4 tracking-[0.06em] text-accent-text;
   }
-  /* A page's own title: the display face, large and tight. */
+  /* A page's own title: "page-heading", serif 34px (28px on mobile). */
   .page-title {
-    @apply font-display text-[40px] font-semibold leading-[1.02] tracking-[-0.02em] sm:text-[56px];
+    @apply font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.01em] sm:text-[34px];
+  }
+  /* "display": the hero line on Explore, 46px (32px on mobile). */
+  .display-title {
+    @apply font-display text-[32px] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[46px];
+  }
+  .section-title {
+    @apply font-display text-[21px] font-semibold leading-[1.3] sm:text-2xl;
   }
   /* A segmented control: the choices sit in a sunken track, the chosen one raised on paper. */
   .segmented {
@@ -203,7 +271,7 @@ body {
   }
   .segmented > [aria-selected="true"] svg,
   .segmented > [aria-pressed="true"] svg {
-    @apply text-accent;
+    @apply text-accent-text;
   }
   /* The feed's card fills what is left of the screen, down to where its text would no longer fit: under it are the
      action bar and, below lg, the app's dock. --feed-chips: the row of topics, when it takes a line of its own. */
@@ -228,7 +296,7 @@ body {
     margin-bottom: auto;
   }
   .dialog {
-    @apply m-auto max-h-[calc(100vh-32px)] w-[min(calc(100vw-32px),580px)] rounded-[26px] border border-line bg-surface p-0 text-ink shadow-pop backdrop:bg-[rgb(43_38_32/0.4)];
+    @apply m-auto max-h-[calc(100vh-32px)] w-[min(calc(100vw-32px),580px)] rounded-[18px] border border-line bg-surface p-0 text-ink shadow-raised backdrop:bg-[rgb(var(--scrim)/var(--scrim-alpha))];
   }
 }
 

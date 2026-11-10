@@ -1,13 +1,17 @@
-import type { Metadata } from "next";
-import { Be_Vietnam_Pro, Fraunces, Source_Serif_4 } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Be_Vietnam_Pro, Newsreader } from "next/font/google";
 
 import { Providers } from "@/components/providers";
 
 import "./globals.css";
 
-// Source Serif is for reading; Fraunces only for titles (page titles, covers, the name).
-const serif = Source_Serif_4({ subsets: ["latin", "vietnamese"], variable: "--font-serif", display: "swap" });
-const display = Fraunces({ subsets: ["latin", "vietnamese"], variable: "--font-display", display: "swap" });
+// Design System v1: Newsreader (serif) for headings, card titles and long reading; Be Vietnam Pro for the UI.
+const serif = Newsreader({
+  subsets: ["latin", "vietnamese"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
+  display: "swap",
+});
 const sans = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
   weight: ["400", "500", "600", "700"],
@@ -20,12 +24,19 @@ export const metadata: Metadata = {
   description: "Không gian yên tĩnh để đọc, suy nghĩ và lưu giữ ý tưởng.",
 };
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf6ee" },
+    { media: "(prefers-color-scheme: dark)", color: "#17140f" },
+  ],
+};
+
 // Apply the saved theme and language before first paint to avoid a flash.
 const themeScript = `try{var p=(JSON.parse(localStorage.getItem("puremind-preferences")||"{}").state)||{};var d=document.documentElement;d.dataset.theme=p.theme==="dark"?"dark":"light";d.lang=p.language||"vi"}catch(e){}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" suppressHydrationWarning className={`${serif.variable} ${display.variable} ${sans.variable}`}>
+    <html lang="vi" suppressHydrationWarning className={`${serif.variable} ${sans.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

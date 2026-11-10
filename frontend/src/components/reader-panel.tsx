@@ -190,7 +190,7 @@ function HighlightCard({
           {h.note}
         </button>
       ) : (
-        <button type="button" onClick={onEdit} className="h-9 self-start text-sm font-medium text-accent hover:underline">
+        <button type="button" onClick={onEdit} className="h-9 self-start text-sm font-medium text-accent-text hover:underline">
           {t("panel.addNote")}
         </button>
       )}
@@ -352,7 +352,7 @@ export function ReaderPanel({
                 href={`/notebooks/new?document=${docId}`}
                 className="flex items-center gap-2 rounded-lg border border-line px-3 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-soft"
               >
-                <Icon name="spark" size={16} className="text-accent" />
+                <Icon name="spark" size={16} className="text-accent-text" />
                 <span className="flex-1">{t("panel.makeNotebook")}</span>
                 <Icon name="next" size={16} className="text-muted" />
               </Link>
@@ -427,7 +427,7 @@ export function ReaderPanel({
                 }}
                 onBlur={() => void saveNote(draft)}
                 placeholder={t("panel.docNotePlaceholder")}
-                className="min-h-[320px] flex-1 resize-none rounded-[10px] border border-line bg-bg px-3.5 py-3 font-serif text-base font-normal leading-relaxed text-ink outline-none focus:border-accent"
+                className="min-h-[320px] flex-1 resize-none rounded-[10px] border border-line bg-bg px-3.5 py-3 font-serif text-base font-normal leading-relaxed text-ink outline-none focus:border-focus"
               />
             </label>
             <span className={`text-xs ${status === "error" ? "text-danger" : "text-muted"}`} aria-live="polite">

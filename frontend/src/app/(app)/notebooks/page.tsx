@@ -63,7 +63,7 @@ function NewNotebookDialog({ open, topics, onClose }: { open: boolean; topics: s
     }
   }
 
-  const field = "h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-accent";
+  const field = "h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-focus";
 
   return (
     <dialog
@@ -157,7 +157,7 @@ export default function NotebooksPage() {
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center gap-3.5 rounded-[22px] border-2 border-dashed border-field bg-surface/60 px-6 py-16 text-center">
-          <span aria-hidden className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent">
+          <span aria-hidden className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent-text">
             <Icon name="note" size={26} />
           </span>
           <span className="font-display text-[28px] font-semibold">{msg("MSG-35")}</span>

@@ -113,7 +113,7 @@ function LoginForm() {
         type="button"
         onClick={forgot}
         disabled={!isSupabaseConfigured}
-        className="self-start py-2 text-sm font-medium text-accent hover:underline disabled:opacity-50"
+        className="self-start py-2 text-sm font-medium text-accent-text hover:underline disabled:opacity-50"
       >
         {t("auth.forgot")}
       </button>

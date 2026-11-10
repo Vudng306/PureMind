@@ -48,7 +48,7 @@ function Cite({ n, sources, onOpen }: { n: number; sources: Map<number, ChatCita
     <button
       type="button"
       onClick={() => onOpen(source)}
-      className={`${cls} bg-accent/15 text-accent hover:bg-accent/25`}
+      className={`${cls} bg-accent/15 text-accent-text hover:bg-accent/25`}
       title={`${citationLabel(source, lang)}: “${source.text.slice(0, 120)}”`}
       aria-label={t("chat.sourceN", { n, where: citationLabel(source, lang) })}
     >
@@ -266,7 +266,7 @@ export function ChatPanel({
             value={conversationId ?? ""}
             onChange={(e) => setConversationId(e.target.value || null)}
             disabled={busy}
-            className="h-9 min-w-0 flex-1 rounded-full border border-field bg-surface pl-3 pr-7 text-[13px] text-ink outline-none focus:border-accent"
+            className="h-9 min-w-0 flex-1 rounded-full border border-field bg-surface pl-3 pr-7 text-[13px] text-ink outline-none focus:border-focus"
           >
             {list?.map((c) => (
               <option key={c.id} value={c.id}>
@@ -350,7 +350,7 @@ export function ChatPanel({
         <label className="sr-only" htmlFor="chat-question">
           {t("chat.questionLabel")}
         </label>
-        <div className="flex items-end gap-2 rounded-[14px] border border-field bg-bg px-3 py-2 focus-within:border-accent">
+        <div className="flex items-end gap-2 rounded-[14px] border border-field bg-bg px-3 py-2 focus-within:border-focus">
           <textarea
             id="chat-question"
             value={draft}

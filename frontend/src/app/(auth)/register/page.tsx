@@ -80,7 +80,7 @@ export default function RegisterPage() {
   if (sentTo) {
     return (
       <div className="flex flex-col gap-[18px]">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-soft text-accent">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-soft text-accent-text">
           <Icon name="mail" size={26} />
         </span>
         <h2 className="font-serif text-4xl font-medium">{t("auth.checkInbox")}</h2>

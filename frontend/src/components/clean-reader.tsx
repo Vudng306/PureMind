@@ -94,7 +94,7 @@ function Inlines({ nodes }: { nodes: Inline[] }) {
             return <br key={i} />;
           case "link":
             return (
-              <a key={i} href={n.href} target="_blank" rel="noopener noreferrer nofollow" className="text-accent underline underline-offset-2">
+              <a key={i} href={n.href} target="_blank" rel="noopener noreferrer nofollow" className="text-accent-text underline underline-offset-2">
                 <Inlines nodes={n.c} />
               </a>
             );
@@ -216,7 +216,7 @@ function SourceButton({ blockId }: { blockId: string }) {
   if (!onViewSource || !hasSource?.(blockId)) return null;
   return (
     <button type="button" onClick={() => onViewSource(blockId)} className={HOVER_CHIP}>
-      <Icon name="file" size={13} className="text-accent" />
+      <Icon name="file" size={13} className="text-accent-text" />
       {t("reader.viewInPdf")}
     </button>
   );
@@ -240,13 +240,13 @@ function Figure({ blockId, src, alt }: { blockId: string; src: string; alt: stri
               onClick={() => setShowData((v) => !v)}
               className={`${HOVER_CHIP} ${showData ? "!opacity-100" : ""}`}
             >
-              <Icon name="chart" size={13} className="text-accent" />
+              <Icon name="chart" size={13} className="text-accent-text" />
               {t("reader.chartData")}
             </button>
           )}
           {onExplain && (
             <button type="button" onClick={() => onExplain(src, alt)} className={HOVER_CHIP}>
-              <Icon name="spark" size={13} className="text-accent" />
+              <Icon name="spark" size={13} className="text-accent-text" />
               {t("chat.explainImage")}
             </button>
           )}

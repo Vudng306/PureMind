@@ -76,7 +76,7 @@ export default function AdminUsersPage() {
           ))}
         </div>
         <span className="hidden flex-1 sm:block" />
-        <label className="flex h-10 w-full items-center gap-2 rounded-full border border-field bg-surface px-3 text-muted focus-within:border-accent sm:w-[280px]">
+        <label className="flex h-10 w-full items-center gap-2 rounded-full border border-field bg-surface px-3 text-muted focus-within:border-focus sm:w-[280px]">
           <Icon name="search" size={16} />
           <span className="sr-only">{t("admin.search")}</span>
           <input

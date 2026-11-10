@@ -75,7 +75,7 @@ function read(form: Form): { title: string; citation: Citation } | Key {
   };
 }
 
-const field = "h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-accent";
+const field = "h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-focus";
 const label = "flex min-w-0 flex-col gap-1.5 text-sm text-muted";
 
 /** How a document is cited: typed in, or filled in from its DOI. What the BibTeX export writes. */
@@ -193,7 +193,7 @@ export function CitationDialog({ doc, onClose }: { doc: DocumentListItem | null;
         <label className={label}>
           {t("cite.authors")}
           <textarea
-            className="min-h-[76px] resize-y rounded-lg border border-field bg-surface px-3 py-2.5 text-[15px] leading-normal text-ink outline-none focus:border-accent"
+            className="min-h-[76px] resize-y rounded-lg border border-field bg-surface px-3 py-2.5 text-[15px] leading-normal text-ink outline-none focus:border-focus"
             rows={3}
             value={form.authors}
             onChange={set("authors")}
@@ -247,7 +247,7 @@ export function CitationDialog({ doc, onClose }: { doc: DocumentListItem | null;
         {notice && !error && <Alert tone="success">{notice}</Alert>}
 
         <div className="mt-1 flex flex-wrap items-center justify-end gap-2.5">
-          <button type="button" className="btn-ghost h-11 basis-full justify-start px-3 text-sm text-accent sm:mr-auto sm:basis-auto" onClick={copy} disabled={busy}>
+          <button type="button" className="btn-ghost h-11 basis-full justify-start px-3 text-sm text-accent-text sm:mr-auto sm:basis-auto" onClick={copy} disabled={busy}>
             <Icon name="copy" size={16} />
             {t("cite.copyBib")}
           </button>

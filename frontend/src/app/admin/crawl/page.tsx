@@ -46,7 +46,7 @@ export default function AdminCrawlPage() {
         <div className="card flex flex-col justify-between gap-4 p-5">
           <div className="flex flex-col gap-1.5">
             {running ? (
-              <span role="status" className="flex items-center gap-2 text-[15px] font-semibold text-accent">
+              <span role="status" className="flex items-center gap-2 text-[15px] font-semibold text-accent-text">
                 <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent" />
                 {t("crawl.runningNow", { done: Object.keys(running.stats).length, total: running.sources.length })}
               </span>
@@ -108,7 +108,7 @@ function ScheduleCard({ schedule }: { schedule: Schedule }) {
           value={draft.hour}
           disabled={!draft.enabled}
           onChange={(e) => setDraft({ ...draft, hour: Number(e.target.value) })}
-          className="h-10 rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-accent disabled:opacity-50"
+          className="h-10 rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-focus disabled:opacity-50"
         >
           {HOURS.map((h) => (
             <option key={h} value={h}>
@@ -296,7 +296,7 @@ function RunSummary({ run }: { run: CrawlRun }) {
 }
 
 const STATUS_CLS = {
-  running: "bg-accent-soft text-accent",
+  running: "bg-accent-soft text-accent-text",
   done: "bg-success-soft text-success",
   failed: "bg-danger-soft text-danger",
 } as const;

@@ -85,7 +85,7 @@ export function AddToNotebookDialog({ doc, onClose }: { doc: DocumentListItem | 
             maxLength={MAX_NOTEBOOK_TITLE}
             placeholder={t("addNb.newLabel")}
             onChange={(e) => setTitle(e.target.value)}
-            className="h-11 min-w-0 flex-1 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-accent"
+            className="h-11 min-w-0 flex-1 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-focus"
           />
           <button type="submit" className="btn-primary h-11" disabled={!clean || busy}>
             {t("addNb.create")}

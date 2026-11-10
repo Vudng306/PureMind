@@ -217,7 +217,7 @@ function Studio({ post }: { post: Post }) {
     !publish.isPending;
   const canAddCard = !isLink && cards.length < MAX_POST_CARDS && !locked;
   const field =
-    "w-full rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-accent disabled:opacity-70";
+    "w-full rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-focus disabled:opacity-70";
   const quotaLeft = account.data?.ai_quota_remaining;
 
   return (

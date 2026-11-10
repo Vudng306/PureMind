@@ -8,7 +8,7 @@ import { AdminGate, AdminLogin } from "@/components/admin-login";
 import { useAuth } from "@/components/auth-provider";
 import { Icon } from "@/components/icons";
 import { LanguageToggle } from "@/components/language-toggle";
-import { Alert, Spinner } from "@/components/ui";
+import { Alert, Spinner, Wordmark } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import { useMsg, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
@@ -85,8 +85,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="app-backdrop min-h-screen">
       <header className="glass sticky top-0 z-20 border-b">
         <div className="flex h-[64px] items-center gap-3 px-4 sm:gap-6 sm:px-10">
-          <Link href="/admin/traffic" className="flex items-baseline gap-2">
-            <span className="font-display font-semibold text-[23px]">PureMind</span>
+          <Link href="/admin/traffic" className="flex items-center gap-2.5">
+            <Wordmark word="hidden sm:inline" />
             <span className="eyebrow">{t("admin.title").toUpperCase()}</span>
           </Link>
           <nav className="hidden gap-1 md:flex" aria-label={t("admin.tabsAria")}>

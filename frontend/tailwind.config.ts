@@ -2,6 +2,7 @@ import type { Config } from "tailwindcss";
 
 const withVar = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
 
+// Colours, radii and shadows follow the PureMind Design System v1 (tokens in src/app/globals.css).
 export default {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
@@ -17,28 +18,39 @@ export default {
         soft: withVar("soft"),
         page: withVar("page"),
         accent: withVar("accent"),
+        "accent-hover": withVar("accent-hover"),
+        "accent-pressed": withVar("accent-pressed"),
+        "accent-text": withVar("accent-text"),
         "accent-soft": withVar("accent-soft"),
+        "accent-on-soft": withVar("accent-on-soft"),
         tone: withVar("tone"),
         "tone-bg": withVar("tone-bg"),
         "tone-fg": withVar("tone-fg"),
         "on-accent": withVar("on-accent"),
+        focus: withVar("focus"),
         menu: withVar("menu"),
         "menu-fg": withVar("menu-fg"),
         danger: withVar("danger"),
         "danger-soft": withVar("danger-soft"),
+        "on-danger": withVar("on-danger"),
         success: withVar("success"),
         "success-soft": withVar("success-soft"),
+        warning: withVar("warning"),
+        "warning-soft": withVar("warning-soft"),
+        highlight: withVar("highlight"),
       },
       fontFamily: {
-        serif: ["var(--font-serif)", "Georgia", "serif"],
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "var(--font-serif)", "Georgia", "serif"],
+        serif: ["var(--font-serif)", "Georgia", "Times New Roman", "serif"],
+        sans: ["var(--font-sans)", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+        // Headings use the same serif as reading text (Newsreader); kept as its own name for the call sites.
+        display: ["var(--font-serif)", "Georgia", "serif"],
       },
-      maxWidth: { reading: "760px" },
+      maxWidth: { reading: "740px", container: "1280px" },
       boxShadow: {
-        card: "0 1px 2px rgb(var(--shadow) / calc(var(--shadow-alpha) * 0.5)), 0 6px 18px -8px rgb(var(--shadow) / var(--shadow-alpha))",
-        float: "0 12px 32px rgb(var(--shadow) / var(--shadow-alpha))",
-        pop: "0 28px 70px rgb(0 0 0 / 0.30)",
+        card: "var(--shadow-card)",
+        raised: "var(--shadow-raised)",
+        float: "var(--shadow-raised)",
+        pop: "var(--shadow-raised)",
       },
       keyframes: {
         "pm-slide": { from: { transform: "translateX(-100%)" }, to: { transform: "translateX(260%)" } },

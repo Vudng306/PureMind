@@ -12,7 +12,7 @@ const readerLink = (s: NotebookSource) => `/reader/${s.highlight.document_id}?hl
 
 function Position({ n }: { n: number }) {
   return (
-    <span className="mt-0.5 flex h-6 min-w-6 shrink-0 items-center justify-center rounded bg-accent/15 px-1 font-sans text-xs font-semibold text-accent">
+    <span className="mt-0.5 flex h-6 min-w-6 shrink-0 items-center justify-center rounded bg-accent/15 px-1 font-sans text-xs font-semibold text-accent-text">
       {n}
     </span>
   );
@@ -92,11 +92,11 @@ export function SourceGroups({
                   </span>
                   <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
                     {where(s)}
-                    <Link href={readerLink(s)} className="font-semibold text-accent hover:underline">
+                    <Link href={readerLink(s)} className="font-semibold text-accent-text hover:underline">
                       {t("nb.openInDocument")}
                     </Link>
                     {onInsert && (
-                      <button type="button" className="font-semibold text-accent hover:underline" onClick={() => onInsert(s)}>
+                      <button type="button" className="font-semibold text-accent-text hover:underline" onClick={() => onInsert(s)}>
                         {t("nb.quoteIntoNotes")}
                       </button>
                     )}
@@ -157,7 +157,7 @@ export function HighlightDigest({
                   <span className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted">
                     {where(s)}
                     {onRemove && (
-                      <Link href={readerLink(s)} className="font-semibold text-accent hover:underline">
+                      <Link href={readerLink(s)} className="font-semibold text-accent-text hover:underline">
                         {t("nb.openInDocument")}
                       </Link>
                     )}

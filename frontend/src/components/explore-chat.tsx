@@ -127,7 +127,7 @@ export function ExploreChat() {
                 className="card flex items-start gap-3 p-4 text-left text-[15px] leading-snug text-ink transition-colors hover:border-accent"
                 onClick={() => void send(t(key))}
               >
-                <Icon name="spark" size={16} className="mt-0.5 shrink-0 text-accent" />
+                <Icon name="spark" size={16} className="mt-0.5 shrink-0 text-accent-text" />
                 {t(key)}
               </button>
             ))}
@@ -172,7 +172,7 @@ export function ExploreChat() {
         <label className="sr-only" htmlFor="explore-message">
           {t("feedChat.inputLabel")}
         </label>
-        <div className="glass flex items-end gap-2 rounded-[18px] border border-field px-3 py-2 shadow-lg focus-within:border-accent">
+        <div className="glass flex items-end gap-2 rounded-[18px] border border-field px-3 py-2 shadow-lg focus-within:border-focus">
           <textarea
             ref={input}
             id="explore-message"
@@ -242,7 +242,7 @@ function Reply({ content, articles, cited }: { content: string; articles: Articl
           const cls = "mx-px rounded px-1 py-px align-[0.1em] font-sans text-[0.72em] font-semibold";
           if (!a) return <span className={`${cls} bg-soft text-muted`}>{n}</span>;
           return (
-            <a href={`#explore-${a.id}`} className={`${cls} bg-accent/15 text-accent hover:bg-accent/25`} title={a.title} aria-label={t("feedChat.refAria", { n, title: a.title })}>
+            <a href={`#explore-${a.id}`} className={`${cls} bg-accent/15 text-accent-text hover:bg-accent/25`} title={a.title} aria-label={t("feedChat.refAria", { n, title: a.title })}>
               {n}
             </a>
           );
@@ -277,7 +277,7 @@ function Recommendation({ article, n }: { article: ArticleCard; n: number }) {
   return (
     <article className="card flex h-full flex-col gap-2 p-4">
       <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 flex h-5 min-w-5 shrink-0 items-center justify-center rounded bg-accent/15 px-1 text-[11px] font-semibold text-accent">{n}</span>
+        <span className="mt-0.5 flex h-5 min-w-5 shrink-0 items-center justify-center rounded bg-accent/15 px-1 text-[11px] font-semibold text-accent-text">{n}</span>
         <div className="flex min-w-0 flex-col gap-1">
           <h3 className="font-serif text-[17px] font-medium leading-snug">
             <button type="button" className="text-left hover:underline hover:underline-offset-4" onClick={() => void read()}>

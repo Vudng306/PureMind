@@ -624,7 +624,7 @@ function ShortSlide({
             </button>
             <button
               type="button"
-              className="btn-ghost h-11 min-w-11 px-3 text-sm font-semibold text-accent hover:text-accent"
+              className="btn-ghost h-11 min-w-11 px-3 text-sm font-semibold text-accent-text hover:text-accent-text"
               onClick={() => (last ? onArticle(1) : turn(1))}
               aria-label={t(last ? "feed.short.next" : "feed.short.nextCardAria")}
             >

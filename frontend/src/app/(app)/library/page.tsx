@@ -56,7 +56,7 @@ const READ_LABEL: Record<ReadState | "all", Key> = {
 };
 const FILE_TYPES = ["pdf", "epub", "web"] as const;
 const FILTER_SELECT =
-  "h-10 rounded-full border border-line bg-surface pl-3.5 pr-8 text-sm font-medium text-ink shadow-card outline-none focus:border-accent";
+  "h-10 rounded-full border border-line bg-surface pl-3.5 pr-8 text-sm font-medium text-ink shadow-card outline-none focus:border-focus";
 
 interface CardActions {
   onAddToNotebook: () => void;
@@ -222,7 +222,7 @@ function NameDialog({
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={maxLength}
-            className="h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-accent"
+            className="h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-focus"
           />
         </label>
         {error && <Alert>{error}</Alert>}
@@ -282,7 +282,7 @@ function MoveDialog({
     }
   }
 
-  const field = "h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-accent";
+  const field = "h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-focus";
 
   return (
     <dialog
@@ -437,7 +437,7 @@ function DocumentCard({ doc, actions }: { doc: DocumentListItem; actions: CardAc
             )}
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-[13px] text-muted">{failed ? "" : progressLabel(doc, pct)}</span>
-              <span className="btn-outline pointer-events-none h-10 px-4 text-sm font-semibold group-hover:border-accent group-hover:text-accent">{t(failed ? "library.viewOriginal" : "library.readAction")}</span>
+              <span className="btn-outline pointer-events-none h-10 px-4 text-sm font-semibold group-hover:border-accent group-hover:text-accent-text">{t(failed ? "library.viewOriginal" : "library.readAction")}</span>
             </div>
           </div>
         )}
@@ -921,7 +921,7 @@ export default function LibraryPage() {
                     {t(label)} · {counts[value]}
                   </button>
                 ))}
-                <label className="flex h-10 w-full items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-muted shadow-card focus-within:border-accent sm:w-[240px]">
+                <label className="flex h-10 w-full items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-muted shadow-card focus-within:border-focus sm:w-[240px]">
                   <Icon name="search" size={16} />
                   <span className="sr-only">{t("library.filterName")}</span>
                   <input
@@ -1003,7 +1003,7 @@ export default function LibraryPage() {
                 </div>
               ) : view.length === 0 ? (
                 <div className="flex flex-col items-center gap-3.5 rounded-[22px] border-2 border-dashed border-field bg-surface/60 px-6 py-16 text-center">
-                  <span aria-hidden className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent">
+                  <span aria-hidden className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent-text">
                     <Icon name="book" size={26} />
                   </span>
                   <span className="font-display text-[28px] font-semibold">

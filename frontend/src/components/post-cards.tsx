@@ -32,7 +32,7 @@ export function PostPager({ title, cards }: { title: string; cards: PostCard[] }
           const el = e.currentTarget;
           setAt(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
         }}
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-accent"
+        className="flex snap-x snap-mandatory overflow-x-auto rounded-2xl outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-focus"
       >
         {cards.map((card, i) => (
           <article

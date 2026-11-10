@@ -74,7 +74,7 @@ function Comments({ postId, onReport }: { postId: string; onReport: (path: strin
           maxLength={MAX_COMMENT_CHARS}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={t("community.commentPlaceholder")}
-          className="min-h-[88px] w-full resize-y rounded-xl border border-field bg-surface p-3 text-[15px] text-ink outline-none focus:border-accent"
+          className="min-h-[88px] w-full resize-y rounded-xl border border-field bg-surface p-3 text-[15px] text-ink outline-none focus:border-focus"
         />
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted">{t("community.commentPublic")}</span>

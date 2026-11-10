@@ -124,7 +124,7 @@ export function PostByline({ post }: { post: PublicPost }) {
       <span className="rounded-full bg-soft px-2 py-0.5 text-xs font-semibold text-ink">{t(kindLabel(post.kind))}</span>
       {post.topic && <span className="rounded-full bg-soft px-2 py-0.5 text-xs text-ink">{t(`feed.topic.${post.topic}` as Key)}</span>}
       {post.ai_assisted && (
-        <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent">
+        <span className="flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-semibold text-accent-text">
           <Icon name="spark" size={12} />
           {t("community.aiAssisted")}
         </span>
@@ -223,7 +223,7 @@ export function CommunityFeed() {
             aria-label={t("community.topicFilter")}
             value={topic ?? ""}
             onChange={(e) => setTopic((e.target.value || null) as Topic | null)}
-            className="h-10 shrink-0 rounded-full border border-line bg-surface pl-3.5 pr-8 text-sm font-medium text-ink shadow-card outline-none focus:border-accent"
+            className="h-10 shrink-0 rounded-full border border-line bg-surface pl-3.5 pr-8 text-sm font-medium text-ink shadow-card outline-none focus:border-focus"
           >
             <option value="">{t("community.allTopics")}</option>
             {TOPICS.map((x) => (

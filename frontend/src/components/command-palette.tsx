@@ -148,7 +148,7 @@ export function CommandPalette() {
         run: a.run,
         node: (
           <>
-            <span className="flex w-11 justify-center text-accent">
+            <span className="flex w-11 justify-center text-accent-text">
               <Icon name={a.icon} />
             </span>
             <span className="text-[15px]">{a.label}</span>

@@ -6,18 +6,41 @@ import { useEffect, useRef } from "react";
 import { useT } from "@/lib/i18n";
 import { useUi } from "@/lib/ui-store";
 
-/** The name with its mark: a terracotta tile with the P, then the word in the display face. */
+/** The brand mark: the original P file (public/brand/puremind-mark.png), never redrawn, recoloured or inverted.
+ *  36px by default (logo-mark is 36–40px on desktop, 32–36px on mobile). */
+export function BrandMark({ size = 36, className = "" }: { size?: number; className?: string }) {
+  return (
+    // A plain <img>: the file is a small PNG served as is, so there is nothing for next/image to optimise.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/brand/puremind-mark.png"
+      alt=""
+      aria-hidden
+      width={size}
+      height={size}
+      style={{ width: size, height: size }}
+      className={`shrink-0 select-none rounded-[22%] ${className}`}
+      draggable={false}
+    />
+  );
+}
+
+/** The mark and the name in the serif, 8–12px apart, without a link. */
+export function Wordmark({ size = 36, word = "", className = "" }: { size?: number; word?: string; className?: string }) {
+  return (
+    <span className={`flex shrink-0 items-center gap-2.5 ${className}`}>
+      <BrandMark size={size} />
+      {/* `word`: where the name shows beside the mark, when a narrow bar has only room for the mark. */}
+      <span className={`font-serif text-[22px] font-semibold leading-none tracking-[-0.01em] ${word}`}>PureMind</span>
+    </span>
+  );
+}
+
+/** The logo as a link home. */
 export function Logo({ href = "/explore", className = "", word = "" }: { href?: string; className?: string; word?: string }) {
   return (
-    <Link href={href} aria-label="PureMind" className={`flex shrink-0 items-center gap-2.5 ${className}`}>
-      <span
-        aria-hidden
-        className="grid h-9 w-9 place-items-center rounded-[11px] bg-accent font-display text-[22px] font-semibold leading-none text-on-accent shadow-[0_6px_14px_-6px_rgb(var(--accent)/0.8)]"
-      >
-        P
-      </span>
-      {/* `word`: where the name shows beside the mark, when a narrow bar has only room for the mark. */}
-      <span className={`font-display text-[23px] font-semibold tracking-[-0.01em] ${word}`}>PureMind</span>
+    <Link href={href} aria-label="PureMind" className={`flex shrink-0 rounded-[10px] ${className}`}>
+      <Wordmark word={word} />
     </Link>
   );
 }

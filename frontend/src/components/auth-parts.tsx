@@ -78,7 +78,7 @@ export function GoogleSignIn({
         disabled={busy || !isSupabaseConfigured}
         className="btn h-[50px] border border-field bg-surface text-base hover:bg-soft"
       >
-        <span className="font-bold text-accent">G</span>
+        <span className="font-bold text-accent-text">G</span>
         {t(busy ? "auth.googleRedirect" : "auth.google")}
       </button>
     </>

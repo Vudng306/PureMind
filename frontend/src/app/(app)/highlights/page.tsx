@@ -27,7 +27,7 @@ const NOTE_PREVIEW = 200;
 type Sort = "newest" | "document";
 
 const selectCls =
-  "h-10 max-w-full rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-accent";
+  "h-10 max-w-full rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-focus";
 
 /** FR-HL-05: every highlight across the library, filtered and sorted, 50 at a time. */
 export default function HighlightsPage() {

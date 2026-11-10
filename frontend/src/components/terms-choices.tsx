@@ -27,7 +27,7 @@ export function TermsChoices({
         <input type="checkbox" className={box} checked={terms} onChange={(e) => onTerms(e.target.checked)} />
         <span className="text-body">
           {t("terms.acceptPre")}
-          <Link href="/terms" target="_blank" className="font-medium text-accent underline underline-offset-2">
+          <Link href="/terms" target="_blank" className="font-medium text-accent-text underline underline-offset-2">
             {t("terms.acceptLink")}
           </Link>
           {t("terms.acceptPost")}

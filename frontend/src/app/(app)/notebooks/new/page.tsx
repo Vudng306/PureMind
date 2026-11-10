@@ -196,7 +196,7 @@ function NewNotebook() {
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value as NotebookLanguage)}
-              className="h-11 rounded-[10px] border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-accent"
+              className="h-11 rounded-[10px] border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-focus"
             >
               {LANGUAGES.map(([value, label]) => (
                 <option key={value} value={value}>

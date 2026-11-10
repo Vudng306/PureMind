@@ -86,7 +86,7 @@ export function SummaryPanel({ docId, onKeyword }: { docId: string; onKeyword: (
         value={language}
         onChange={(e) => setLanguage(e.target.value as SummaryLanguage)}
         disabled={working}
-        className="h-10 rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-accent"
+        className="h-10 rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-focus"
       >
         {LANGUAGES.map(([value, label]) => (
           <option key={value} value={value}>

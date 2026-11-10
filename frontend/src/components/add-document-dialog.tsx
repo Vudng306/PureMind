@@ -171,14 +171,14 @@ export function AddDocumentDialog() {
         {tab === "file" ? (
           file ? (
             <div className="flex h-[72px] items-center gap-3.5 rounded-xl border border-line pl-4 pr-2">
-              <span className="text-accent">
+              <span className="text-accent-text">
                 <Icon name="file" size={26} />
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="truncate text-[15px] font-medium">{file.name}</span>
                 <span className="text-[13px] text-muted">{formatSize(file.size)}</span>
               </span>
-              <button type="button" className="btn-ghost px-3.5 text-sm text-accent" onClick={() => fileInput.current?.click()} disabled={busy}>
+              <button type="button" className="btn-ghost px-3.5 text-sm text-accent-text" onClick={() => fileInput.current?.click()} disabled={busy}>
                 {t("add.changeFile")}
               </button>
             </div>
@@ -189,7 +189,7 @@ export function AddDocumentDialog() {
               disabled={busy}
               className="flex h-[190px] flex-col items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-dashed border-field bg-bg text-muted transition-colors hover:border-accent"
             >
-              <span className="text-accent">
+              <span className="text-accent-text">
                 <Icon name="upload" size={30} />
               </span>
               <span className="text-base font-medium text-ink">{t("add.pickFile")}</span>

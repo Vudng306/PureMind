@@ -25,7 +25,7 @@ import { Alert, Spinner } from "./ui";
 
 const PAGE_SIZE = 50;
 const selectCls =
-  "h-10 max-w-full rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-accent";
+  "h-10 max-w-full rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-focus";
 
 function highlightsPath(docId: string, category: string, page: number, pageSize = PAGE_SIZE) {
   const params = new URLSearchParams({ sort: "document", page: String(page), page_size: String(pageSize) });
@@ -233,7 +233,7 @@ export function HighlightPicker({
                     {free.length > 0 && (
                       <button
                         type="button"
-                        className="btn-ghost h-8 px-2.5 text-[13px] font-semibold text-accent"
+                        className="btn-ghost h-8 px-2.5 text-[13px] font-semibold text-accent-text"
                         onClick={() => void (allChosen ? unselectDoc(section.docId) : selectAll(section.docId))}
                         disabled={selectingAll}
                       >

@@ -80,7 +80,7 @@ export default function AdminArticlesPage() {
       <QuickReports />
 
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("articles.filters")}>
-        <label className="flex h-10 w-full items-center gap-2 rounded-full border border-field bg-surface px-3 text-muted focus-within:border-accent sm:w-[300px]">
+        <label className="flex h-10 w-full items-center gap-2 rounded-full border border-field bg-surface px-3 text-muted focus-within:border-focus sm:w-[300px]">
           <Icon name="search" size={16} />
           <span className="sr-only">{t("articles.search")}</span>
           <input
@@ -252,7 +252,7 @@ function Select({ label, value, onChange, children }: { label: string; value: st
 const BADGE = {
   visible: "bg-success-soft text-success",
   hidden: "bg-ink text-bg",
-  info: "bg-accent-soft text-accent",
+  info: "bg-accent-soft text-accent-text",
 } as const;
 
 function Badge({ tone, children }: { tone: keyof typeof BADGE; children: React.ReactNode }) {
@@ -314,7 +314,7 @@ function AddFromLink() {
         <p className="text-[13px] leading-relaxed text-muted">{t("link.lead", { date })}</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <label className="flex h-11 min-w-0 flex-1 basis-80 items-center gap-2 rounded-full border border-field bg-surface px-4 focus-within:border-accent">
+        <label className="flex h-11 min-w-0 flex-1 basis-80 items-center gap-2 rounded-full border border-field bg-surface px-4 focus-within:border-focus">
           <Icon name="link" size={16} />
           <span className="sr-only">{t("link.url")}</span>
           <input

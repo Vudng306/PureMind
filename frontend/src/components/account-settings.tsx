@@ -154,7 +154,7 @@ export function AccountSettings() {
           <div className="flex flex-col gap-1">
             <button
               type="button"
-              className="btn-ghost h-9 px-3 text-sm text-accent"
+              className="btn-ghost h-9 px-3 text-sm text-accent-text"
               onClick={() => avatarInput.current?.click()}
               disabled={avatar.isPending}
             >
@@ -249,7 +249,7 @@ export function AccountSettings() {
             <span className="text-sm leading-relaxed text-muted">{t("account.aiHint")}</span>
           </span>
         </label>
-        <Link href="/terms" target="_blank" className="self-start text-sm text-accent underline underline-offset-2">
+        <Link href="/terms" target="_blank" className="self-start text-sm text-accent-text underline underline-offset-2">
           {t("account.readTerms")}
         </Link>
       </section>

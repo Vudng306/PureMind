@@ -73,7 +73,7 @@ function QuickReading({ article, quick, signedIn, onFull }: { article: Article; 
   const t = useT();
   return (
     <div className="flex flex-col gap-6">
-      <p className="inline-flex items-center gap-2 self-start rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
+      <p className="inline-flex items-center gap-2 self-start rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-text">
         <Icon name="spark" size={14} />{t("catalog.aiMade")}
       </p>
       <header className="flex flex-col gap-3">
@@ -199,7 +199,7 @@ function FullReading({ article, wanted, signedIn, error, opening, onOpenInReader
   return (
     <div>
       {translated && (
-        <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
+        <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-text">
           <Icon name="spark" size={14} />{t("catalog.translatedBadge")}
         </p>
       )}
@@ -278,7 +278,7 @@ export function ArticleReading({ article, topic, signedIn, error, opening, saved
   return (
     <article ref={top} className="mx-auto max-w-3xl scroll-mt-24">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <button type="button" onClick={onBack} className="btn-ghost -ml-3 px-3 text-sm text-accent">{t("catalog.back")}</button>
+        <button type="button" onClick={onBack} className="btn-ghost -ml-3 px-3 text-sm text-accent-text">{t("catalog.back")}</button>
         <div className="ml-auto flex items-center gap-2">
           {signedIn && (
             <button type="button" disabled={saved || opening} onClick={onSave} className="btn-ghost h-10 gap-1.5 px-3 text-[13px] disabled:cursor-default">

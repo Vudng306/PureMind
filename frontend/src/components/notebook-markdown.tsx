@@ -33,7 +33,7 @@ function NotebookRef({ n, sources }: { n: number; sources: Sources | null }) {
   return (
     <Link
       href={`/reader/${s.highlight.document_id}?hl=${s.highlight.id}`}
-      className={`${cls} bg-accent/15 text-accent hover:bg-accent/25`}
+      className={`${cls} bg-accent/15 text-accent-text hover:bg-accent/25`}
       title={`${s.document_title}${
         s.highlight.page_number ? ` · ${t("search.pageOf", { page: s.highlight.page_number })}` : ""
       }: “${s.highlight.selected_text.slice(0, 120)}”`}
@@ -85,7 +85,7 @@ function Inlines({ nodes, renderRef }: { nodes: Inline[]; renderRef: RefRenderer
             return <br key={i} />;
           case "link":
             return (
-              <a key={i} href={n.href} target="_blank" rel="noopener noreferrer nofollow" className="text-accent underline underline-offset-2">
+              <a key={i} href={n.href} target="_blank" rel="noopener noreferrer nofollow" className="text-accent-text underline underline-offset-2">
                 <Inlines nodes={n.c} renderRef={renderRef} />
               </a>
             );

@@ -801,7 +801,7 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
                   </div>
                 </>
               )}
-              <Link href="/settings" className="flex items-center gap-1.5 text-[13px] text-accent hover:underline">
+              <Link href="/settings" className="flex items-center gap-1.5 text-[13px] text-accent-text hover:underline">
                 <Icon name="gear" size={14} />
                 {t("settings.allOptions")}
               </Link>

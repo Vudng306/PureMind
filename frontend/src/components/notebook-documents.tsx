@@ -66,7 +66,7 @@ function AddDocumentDialog({
           </button>
         </div>
         <p className="text-sm text-muted">{t("nbdoc.addHint")}</p>
-        <label className="flex h-10 items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-muted focus-within:border-accent">
+        <label className="flex h-10 items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-muted focus-within:border-focus">
           <Icon name="search" size={16} />
           <span className="sr-only">{t("library.filterName")}</span>
           <input
@@ -146,7 +146,7 @@ function DocumentRow({
             {doc.license}
           </span>
         ) : (
-          <button type="button" className="font-semibold text-accent hover:underline" disabled={busy} onClick={onInsertSummary}>
+          <button type="button" className="font-semibold text-accent-text hover:underline" disabled={busy} onClick={onInsertSummary}>
             {t("nbdoc.insertSummary")}
           </button>
         )}

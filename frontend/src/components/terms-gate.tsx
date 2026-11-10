@@ -11,7 +11,7 @@ import type { User } from "@/lib/types";
 
 import { LanguageToggle } from "./language-toggle";
 import { TermsChoices } from "./terms-choices";
-import { Alert } from "./ui";
+import { Alert, Wordmark } from "./ui";
 
 /**
  * Shown instead of the app until the user accepts the current terms of use: accounts made with Google,
@@ -44,7 +44,7 @@ export function TermsGate({ user }: { user: User }) {
     <main className="app-backdrop flex min-h-screen items-center justify-center px-4 py-12">
       <form onSubmit={submit} className="card flex w-full max-w-[520px] flex-col gap-5 p-6 sm:p-8" noValidate>
         <div className="flex items-center justify-between">
-          <span className="font-display text-[24px] font-semibold">PureMind</span>
+          <Wordmark />
           <LanguageToggle />
         </div>
         <h1 className="font-display text-[32px] font-semibold leading-tight tracking-[-0.01em]">{t("terms.gateTitle")}</h1>

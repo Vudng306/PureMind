@@ -44,7 +44,7 @@ export function ChartData({ chart }: { chart: Chart }) {
           }
           className="chip ml-auto h-7 px-2.5 text-[12px]"
         >
-          <Icon name="download" size={13} className="text-accent" />
+          <Icon name="download" size={13} className="text-accent-text" />
           {t("reader.chartCsv")}
         </button>
       </div>

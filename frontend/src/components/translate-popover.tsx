@@ -130,7 +130,7 @@ export function TranslatePopover({
           style={{ left, width, maxHeight: CARD_MAX_H, ...place }}
         >
           <div className="flex items-center gap-2">
-            <Icon name="translate" size={16} className="text-accent" />
+            <Icon name="translate" size={16} className="text-accent-text" />
             <span className="flex-1 text-[13px] font-semibold text-ink">{t("translate.title")}</span>
             <button type="button" aria-label={t("common.close")} onClick={onClose} className="icon-btn h-8 w-8 text-muted">
               <Icon name="x" size={15} />

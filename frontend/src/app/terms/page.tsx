@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 
 import { Icon } from "@/components/icons";
 import { LanguageToggle } from "@/components/language-toggle";
+import { Wordmark } from "@/components/ui";
 import { useLang, useT } from "@/lib/i18n";
 import { TERMS } from "@/lib/terms";
 
@@ -24,7 +25,7 @@ export default function TermsPage() {
         <LanguageToggle />
       </div>
       <header className="flex flex-col gap-3">
-        <span className="font-display text-[23px] font-semibold">PureMind</span>
+        <Wordmark />
         <h1 className="font-display text-[36px] font-semibold leading-tight tracking-[-0.01em] sm:text-[44px]">{t("terms.title")}</h1>
         <p className="text-sm text-muted">{terms.updated}</p>
         <p className="text-[16px] leading-relaxed text-body">{terms.intro}</p>

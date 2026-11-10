@@ -517,7 +517,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     maxLength={MAX_NOTEBOOK_TITLE}
-                    className="w-full rounded-lg border border-transparent bg-transparent px-1 py-1 font-serif text-3xl font-medium leading-tight text-ink outline-none hover:border-line focus:border-accent sm:text-4xl"
+                    className="w-full rounded-lg border border-transparent bg-transparent px-1 py-1 font-serif text-3xl font-medium leading-tight text-ink outline-none hover:border-line focus:border-focus sm:text-4xl"
                   />
                   {!titleOk && <span className="px-1 text-sm text-danger">{t("nb.titleRequired")}</span>}
                 </label>
@@ -528,7 +528,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
                     maxLength={MAX_NOTEBOOK_TOPIC}
                     placeholder={t("nb.topicPlaceholder")}
                     onChange={(e) => setTopic(e.target.value)}
-                    className="h-8 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 text-[13px] text-ink outline-none hover:border-line focus:border-accent sm:max-w-[280px]"
+                    className="h-8 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 text-[13px] text-ink outline-none hover:border-line focus:border-focus sm:max-w-[280px]"
                   />
                 </label>
                 <span className="px-1 text-[13px] text-muted">
@@ -568,7 +568,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       spellCheck={false}
-                      className="min-h-[60vh] w-full resize-y rounded-xl border border-field bg-bg/40 p-4 font-mono text-[13.5px] leading-relaxed text-ink outline-none focus:border-accent"
+                      className="min-h-[60vh] w-full resize-y rounded-xl border border-field bg-bg/40 p-4 font-mono text-[13.5px] leading-relaxed text-ink outline-none focus:border-focus"
                     />
                     <span className={`flex flex-wrap gap-x-3 text-xs ${tooLong ? "text-danger" : "text-muted"}`}>
                       <span>

@@ -8,7 +8,7 @@ import { useT, type Key, type T } from "@/lib/i18n";
 import { Icon } from "./icons";
 
 export const SELECT_CLS =
-  "h-10 max-w-full rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-accent";
+  "h-10 max-w-full rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-focus";
 
 const BADGE = {
   admin: "bg-ink text-bg",
