@@ -1,4 +1,5 @@
-"""Store the picked entries of Cẩm nang sống thông minh, at the commit data/hlb-picks.json pins.
+"""Store the entries of Cẩm nang sống thông minh, at the commit data/hlb-picks.json pins: every entry when its
+"scope" is "all", else only the picked ones.
 
     python -m app.scripts.sync_hlb             # the articles
     python -m app.scripts.sync_hlb --shorts    # and a short for each picked one that has none
@@ -31,7 +32,8 @@ async def sync() -> None:
         counts = await crawler.keep(session, items)
     async with SessionLocal() as session:
         await articles.rerank(session)
-    print(f"{hlb.NAME} @ {pin.commit[:7]}: {len(pin.picks)} picked, {counts}")
+    scope = "every entry" if pin.everything else f"{len(pin.picks)} picked"
+    print(f"{hlb.NAME} @ {pin.commit[:7]}: {scope}, {counts}")
 
 
 async def write_shorts() -> None:
@@ -67,8 +69,10 @@ async def write_shorts() -> None:
 
 
 async def main(argv: list[str]) -> None:
-    parser = argparse.ArgumentParser(description=f"Store {hlb.NAME}'s picked entries in the feed.")
-    parser.add_argument("--shorts", action="store_true", help="also write a short for each picked entry")
+    parser = argparse.ArgumentParser(description=f"Store {hlb.NAME}'s entries in the feed.")
+    parser.add_argument(
+        "--shorts", action="store_true", help="also write a short for each picked entry (not every entry)"
+    )
     args = parser.parse_args(argv)
     if args.shorts and not get_settings().openai_api_key:
         parser.error("OPENAI_API_KEY is not set")

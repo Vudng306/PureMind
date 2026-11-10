@@ -11,11 +11,12 @@ from app.api.routes import catalog
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models import ContentTranslation, User
-from app.scripts import pick_explore
-from app.scripts.collect_catalog import EXCLUDED_TITLES, OUTPUT, PER_TOPIC, TOPICS, fits_topic, search_query
+from app.scripts import build_explore, pick_explore
+from app.scripts.collect_catalog import EXCLUDED_TITLES, OUTPUT, fits_topic, search_query
 from app.services import article_translation, quick_reads
 from app.services.html_markdown import word_count
 from app.services.openai_client import AIError, Completion, Usage
+from app.services.sources import hlb
 from tests.test_summaries import consent
 
 
@@ -171,13 +172,35 @@ def test_an_editorial_is_not_collected_as_research():
     assert EXCLUDED_TITLES.match("Editorial: Understandings and experiences of colourism")
 
 
-def test_the_collected_catalog_keeps_every_article_in_a_topic_it_fits():
+def test_the_written_catalog_is_the_handbook_in_its_six_groups():
+    """Explore is built from the handbook (scripts/build_explore); collect_catalog's research set is retired."""
     articles = json.loads(OUTPUT.read_text(encoding="utf-8"))["articles"]
-    for topic in TOPICS:
-        titles = [a["title"] for a in articles if a["topic"] == topic]
-        assert len(titles) == PER_TOPIC, topic
-        assert [t for t in titles if not fits_topic(topic, t)] == [], topic
-    assert {a["license"] for a in articles} <= {"CC BY", "CC0"}
+    assert len(articles) == len({a["id"] for a in articles}) == len({a["url"] for a in articles})
+    assert {a["topic"] for a in articles} == set(build_explore.GROUPS)
+    assert {a["source"] for a in articles} == {hlb.NAME} and {a["license"] for a in articles} == {"CC BY 4.0"}
+    assert {a["grade"] for a in articles} <= {"A", "B", "C"}
+    assert all(build_explore.GROUP_OF[a["chapter"]] == a["topic"] for a in articles)
+    assert all(hlb.entry_id_in(a["url"]) for a in articles)
+    assert sum("headline" in a for a in articles) == sum(bool(b.title) for b in hlb.read_briefs().values())
+
+
+def test_the_api_filters_by_chapter_grade_and_choice_and_says_what_the_catalog_holds():
+    catalog._load.cache_clear()
+    every = catalog.list_articles(limit=1000)
+    by_chapter = catalog.list_articles(chapter=4, limit=1000)
+    by_grade = catalog.list_articles(grade="A", limit=1000)
+    chosen = catalog.list_articles(featured=True, limit=1000)
+    assert 0 < by_chapter["total"] == sum(a.get("chapter") == 4 for a in catalog.catalog()["articles"])
+    assert {c["number"] for c in every["chapters"]} == set(range(1, 37))
+    assert all(a.get("grade") == "A" for a in by_grade["articles"])
+    assert by_grade["grades"] == every["grades"] and by_grade["total"] == every["grades"]["A"]
+    assert sum(by_chapter["grades"].values()) == by_chapter["total"]
+    assert all("headline" in a for a in chosen["articles"])
+    # What the whole catalog holds stays the same whatever the filters, but the picks offer only their own chapters.
+    for listed in (by_chapter, by_grade, chosen):
+        assert listed["topic_counts"] == every["topic_counts"]
+    assert by_chapter["chapters"] == by_grade["chapters"] == every["chapters"]
+    assert sum(c["count"] for c in chosen["chapters"]) == chosen["total"] < every["total"]
 
 
 QUICK = {
@@ -244,10 +267,13 @@ def test_a_quick_read_is_only_for_a_long_article_that_may_be_adapted():
     assert not quick_reads.wanted_for({"word_count": 1200, "license": "CC BY 4.0"})
 
 
-def test_every_written_quick_read_belongs_to_the_catalog_and_is_quick():
+def test_every_written_quick_read_of_a_catalog_article_is_quick():
+    """The Quick Reads were written for the research catalog Explore had before the handbook; they are kept, unused,
+    for that catalog's return. Any that is of an article Explore has must still pass the checks."""
     known = {a["id"]: a for a in json.loads(OUTPUT.read_text(encoding="utf-8"))["articles"]}
     for article_id, quick in quick_reads.load().items():
-        assert article_id in known
+        if article_id not in known:
+            continue
         draft = quick_reads.Draft.model_validate({k: v for k, v in quick.items() if k != "written_at"})
         quick_reads.check(draft, known[article_id]["title"] + " " + known[article_id]["content"])
 

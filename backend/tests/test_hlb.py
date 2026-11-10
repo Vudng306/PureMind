@@ -109,7 +109,7 @@ def test_every_chapter_has_feed_topics():
 def test_the_pinned_picks_are_readable_and_use_feed_topics():
     pin = hlb.read_pin()
     assert len(pin.commit) == 40 and pin.date.tzinfo is not None
-    assert len(pin.picks) == 9
+    assert len(pin.picks) == 100  # 9 hand-titled, then 91 picked by group quota (2026-11-10)
     assert all(t in TOPICS for topics in pin.picks.values() for t in topics)
 
 

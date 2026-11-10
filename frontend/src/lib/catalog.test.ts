@@ -28,24 +28,25 @@ describe("orderTopics", () => {
 });
 
 describe("featuredOf", () => {
-  it("puts the hand-chosen articles first and in their order, with their headlines", () => {
-    const lead = "around-half-of-people-will-experience-a-mental-health-issue-in-their-lifetime";
-    const next = "the-ick-the-psychology-of-why-a-romantic-partner-can-suddenly-repulse-you-293266";
-    const picks = featuredOf([article("a", social), article(next, psych), article(lead, family)]);
-    expect(picks.map((p) => p.article.id)).toEqual([lead, next, "a"]);
-    expect(picks[0].title).toBeTruthy();
+  const chosen = (id: string, topic: string): Article => ({ ...article(id, topic), headline: `H ${id}`, description: `D ${id}` });
+
+  it("puts the hand-chosen articles first, one a topic, with our headline and the entry's plain words", () => {
+    const picks = featuredOf([article("a", social), chosen("b", psych), chosen("c", psych), chosen("d", family)]);
+    expect(picks.map((p) => p.article.id)).toEqual(["b", "d", "a"]);
+    expect(picks[0]).toMatchObject({ title: "H b", dek: "D b" });
     expect(picks[2].title).toBeUndefined();
   });
 
-  it("finds every hand-chosen article among the short reads Explore really has, each a short one", () => {
-    const written = new URL("../../../backend/app/data/catalog-picks.json", import.meta.url);
-    const picks = featuredOf(JSON.parse(readFileSync(written, "utf-8")));
+  it("finds three chosen entries in three topics in the catalog Explore really has", () => {
+    const written = new URL("../../../backend/app/data/catalog.json", import.meta.url);
+    const picks = featuredOf(JSON.parse(readFileSync(written, "utf-8")).articles);
     expect(picks).toHaveLength(3);
     expect(picks.every((p) => p.title && p.dek)).toBe(true);
     expect(new Set(picks.map((p) => p.article.topic)).size).toBe(3);
+    expect(picks.every((p) => TOPICS.some((topic) => topic.name === p.article.topic))).toBe(true);
   });
 
-  it("fills in from different topics when a new choosing dropped the chosen ones", () => {
+  it("fills in from different topics when nothing was chosen", () => {
     const picks = featuredOf([article("a", psych), article("b", psych), article("c", social), article("d", family)]);
     expect(picks.map((p) => p.article.id)).toEqual(["a", "c", "d"]);
   });

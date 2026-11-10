@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { ArticleReading } from "@/components/article-reading";
 import { Icon } from "@/components/icons";
 import { API_URL, api } from "@/lib/api";
-import { TOPICS, featuredOf, orderTopics, readNext, type Article, type Catalog, type Pick } from "@/lib/catalog";
+import { GRADES, TOPICS, featuredOf, orderTopics, readNext, type Article, type Catalog, type Grade, type Pick } from "@/lib/catalog";
 import { documentsKey } from "@/lib/documents";
 import { readingMinutes } from "@/lib/feed";
 import { useLang, useT, type Key } from "@/lib/i18n";
@@ -37,8 +37,8 @@ function summaryOf(text: string): string {
   return text.replace(/^\s*(?:#+\s*)?/, "").replace(LEADING_LABEL, "");
 }
 
-/** Asked for when browsing every topic at once: the API's maximum, and well above the catalog's size. */
-const BROWSE_LIMIT = 200;
+/** The front page asks only for the hand-chosen entries: three lead, the rest are worth reading next. */
+const FRONT_LIMIT = 24;
 const PAGE_SIZE = 24;
 
 /** What one card can do, the same on all of them. */
@@ -52,13 +52,15 @@ type CardActions = {
   onSave?: (article: Article) => void;
 };
 
-/** What an article is and how long it takes, above its title. */
+/** What an article is and how long it takes, above its title: for a handbook entry, its number in the book and
+ * the grade of its evidence. */
 function ArticleMeta({ article: a }: { article: Article }) {
   const t = useT();
   const minutes = readingMinutes(a.word_count ?? 0);
   return (
     <span className="text-xs font-semibold tracking-wide">
-      {t(`feed.kind.${a.kind}` as Key)}
+      {a.ref ? t("catalog.entry", { ref: a.ref }) : t(`feed.kind.${a.kind}` as Key)}
+      {a.grade ? ` · ${t("catalog.gradeShort", { grade: a.grade })}` : ""}
       {a.quick
         ? ` · ${t("catalog.quickMeta", { n: minutes })}`
         : a.word_count ? ` · ${t("common.minutesRead", { n: minutes })}` : ""}
@@ -73,7 +75,7 @@ function CardFoot({ article: a, actions }: { article: Article; actions: CardActi
   const saved = actions.saved.has(a.id);
   return (
     <span className="flex min-h-[52px] items-center justify-between gap-3 border-t border-line px-5 py-1.5 text-xs sm:px-6">
-      <span className={`min-w-0 truncate ${actions.opening === a.id ? "font-semibold text-accent" : "text-muted"}`}>
+      <span className={`min-w-0 truncate ${actions.opening === a.id ? "font-semibold text-accent-text" : "text-muted"}`}>
         {actions.opening === a.id ? t("catalog.opening") : `${a.source} · ${a.license} · ${a.language.toUpperCase()}`}
       </span>
       {actions.onSave && (
@@ -161,14 +163,18 @@ function FeaturedStory({ pick, lead, actions }: { pick: Pick; lead: boolean; act
   );
 }
 
-/** The first thing on the page, and the reason to open it: one article large, two beside it. */
-function Featured({ picks, actions }: { picks: Pick[]; actions: CardActions }) {
+/** The first thing on the page, and the reason to open it: one article large, two beside it, and the way to
+ * every pick. */
+function Featured({ picks, total, actions, onSeeAll }: { picks: Pick[]; total: number; actions: CardActions; onSeeAll: () => void }) {
   const t = useT();
   const [lead, ...others] = picks;
   if (!lead) return null;
   return (
     <section aria-labelledby="explore-featured" className="flex flex-col gap-4">
-      <h2 id="explore-featured" className="font-display text-2xl font-semibold leading-tight tracking-[-0.01em]">{t("catalog.featured")}</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="explore-featured" className="font-display text-2xl font-semibold leading-tight tracking-[-0.01em]">{t("catalog.featured")}</h2>
+        {total > picks.length && <button type="button" className="btn-ghost shrink-0 px-3 text-sm text-accent-text" onClick={onSeeAll}>{t("catalog.pickedAll", { n: total })}</button>}
+      </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
         <FeaturedStory pick={lead} lead actions={actions} />
         <div className="grid gap-6">
@@ -181,7 +187,7 @@ function Featured({ picks, actions }: { picks: Pick[]; actions: CardActions }) {
 
 /** Every topic as a door into its own list, in place of a row of articles for each. */
 function TopicDoors({ topics, counts, actions, onPick }: {
-  topics: string[]; counts: (name: string) => number; actions: CardActions; onPick: (name: string) => void;
+  topics: string[]; counts: Record<string, number>; actions: CardActions; onPick: (name: string) => void;
 }) {
   const t = useT();
   const lang = useLang();
@@ -194,7 +200,7 @@ function TopicDoors({ topics, counts, actions, onPick }: {
             <span className="flex items-center gap-2.5">
               <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full bg-tone" />
               <span className="min-w-0 flex-1 font-display text-lg font-semibold leading-snug group-hover:underline group-hover:decoration-tone group-hover:underline-offset-4">{actions.label(name)}</span>
-              <span className="shrink-0 text-xs font-medium text-muted">{t("catalog.count", { n: counts(name) })}</span>
+              <span className="shrink-0 text-xs font-medium text-muted">{t("catalog.count", { n: counts[name] ?? 0 })}</span>
             </span>
             <span className="pl-5 text-sm leading-relaxed text-muted">{TOPICS.find((topic) => topic.name === name)?.about[lang]}</span>
           </button>
@@ -204,7 +210,42 @@ function TopicDoors({ topics, counts, actions, onPick }: {
   );
 }
 
-/** The shared library of open articles (Europe PMC, CC BY): the whole of /explore. With nothing searched or
+/** Narrowing a list: a chapter of the book (of the topic, when one is chosen), a grade of evidence, and the
+ * picks alone. */
+function Filters({ chapters, chapter, grade, grades, picked, onChapter, onGrade, onPicked }: {
+  chapters: NonNullable<Catalog["chapters"]>; chapter: number | null; grade: Grade | ""; grades: Catalog["grades"];
+  picked: boolean; onChapter: (chapter: number | null) => void; onGrade: (grade: Grade | "") => void; onPicked: (picked: boolean) => void;
+}) {
+  const t = useT();
+  return (
+    <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+      <button type="button" className="chip" aria-pressed={picked} onClick={() => onPicked(!picked)}>{t("catalog.pickedOnly")}</button>
+      {chapters.length > 1 && (
+        <label className="flex min-w-0 max-w-full flex-col gap-1.5 text-sm font-medium">
+          {t("catalog.chapter")}
+          <select className="input h-11 w-[min(100%,26rem)] py-0" value={chapter ?? ""} onChange={(e) => onChapter(e.target.value ? Number(e.target.value) : null)}>
+            <option value="">{t("catalog.allChapters")}</option>
+            {chapters.map((c) => <option key={c.number} value={c.number}>{c.number}. {c.title} ({c.count})</option>)}
+          </select>
+        </label>
+      )}
+      <div role="group" aria-labelledby="explore-grade" className="flex flex-col gap-1.5">
+        <span id="explore-grade" className="text-sm font-medium">{t("catalog.grade")}</span>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="chip" aria-pressed={!grade} onClick={() => onGrade("")}>{t("catalog.allGrades")}</button>
+          {GRADES.map((g) => (
+            <button key={g} type="button" className="chip" aria-pressed={grade === g} title={t(`catalog.grade${g}` as Key)} onClick={() => onGrade(g)}>
+              {g}{grades && <span className="ml-1.5 font-normal opacity-70">{grades[g] ?? 0}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+      {grade && <p className="basis-full max-w-3xl text-sm leading-relaxed text-muted">{t(`catalog.grade${grade}` as Key)}</p>}
+    </div>
+  );
+}
+
+/** The shared library, the handbook's entries (CC BY): the whole of /explore. With nothing searched or
  * chosen it is a front page: a few featured articles, the topics, some more to read. A topic (?topic=) or every
  * article (?all) is a list of its own, a page at a time, and so is a search. Picking an article reads it here
  * (?read=), at the level the reader chooses; only a signed-in reader's pick with no Quick Read goes straight to
@@ -222,7 +263,12 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
   const [data, setData] = useState<Catalog | null>(null);
   const [q, setQ] = useState("");
   const topic = params.get("topic") ?? "";
-  const everything = params.has("all");
+  const chapterParam = Number(params.get("chapter"));
+  const chapter = Number.isInteger(chapterParam) && chapterParam > 0 ? chapterParam : null;
+  const gradeParam = params.get("grade") ?? "";
+  const grade = (GRADES as readonly string[]).includes(gradeParam) ? (gradeParam as Grade) : "";
+  const picked = params.has("featured");
+  const everything = params.has("all") || picked || chapter !== null || grade !== "";
   const read = params.get("read");
   const [offset, setOffset] = useState(0);
   // What the articles on screen were fetched as, which may lag the filters while the next answer is on its way.
@@ -232,13 +278,20 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
   const [loading, setLoading] = useState(false);
   const browsing = !q.trim() && !topic && !everything;
 
-  useEffect(() => { setOffset(0); }, [topic, everything]);
+  useEffect(() => { setOffset(0); }, [topic, everything, chapter, grade, picked]);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     const timer = setTimeout(() => {
-      const query = new URLSearchParams({ q, topic, offset: String(offset), limit: String(browsing ? BROWSE_LIMIT : PAGE_SIZE) });
+      const query = new URLSearchParams(
+        browsing
+          ? { featured: "true", limit: String(FRONT_LIMIT) }
+          : {
+              q, topic, grade, offset: String(offset), limit: String(PAGE_SIZE),
+              ...(chapter ? { chapter: String(chapter) } : {}), ...(picked ? { featured: "true" } : {}),
+            },
+      );
       fetch(`${API_URL}/api/catalog?${query}`, { signal: controller.signal })
         .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
         .then((value: Catalog) => { setData(value); setFrontPage(browsing); setError(""); })
@@ -246,7 +299,7 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
         .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     }, 250);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [q, topic, offset, browsing]);
+  }, [q, topic, chapter, grade, picked, offset, browsing]);
 
   useEffect(() => {
     setArticle(null);
@@ -313,6 +366,22 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
 
   const goTo = (query: string) => { setQ(""); router.push(`/explore${query}`); };
   const pickTopic = (name: string) => goTo(name ? `?topic=${encodeURIComponent(name)}` : "?all");
+  /** The same list with one filter changed and the search kept. */
+  const filterBy = (change: { topic?: string; chapter?: number | null; grade?: Grade | ""; picked?: boolean }) => {
+    const to = "topic" in change ? change.topic : topic;
+    // Another topic has other chapters.
+    const c = "topic" in change ? null : "chapter" in change ? change.chapter : chapter;
+    const g = "grade" in change ? change.grade : grade;
+    const p = "picked" in change ? change.picked : picked;
+    const parts = [to ? `topic=${encodeURIComponent(to)}` : p ? "featured" : "all"];
+    if (to && p) parts.push("featured");
+    if (c) parts.push(`chapter=${c}`);
+    if (g) parts.push(`grade=${g}`);
+    router.push(`/explore?${parts.join("&")}`);
+  };
+  const size = Object.values(data?.topic_counts ?? {}).reduce((sum, n) => sum + n, 0);
+  const chapters = (data?.chapters ?? []).filter((c) => !topic || c.topic === topic);
+  const chapterTitle = chapters.find((c) => c.number === chapter)?.title;
 
   // A failed load keeps its key, so the message follows the language; a server's message is shown as it came.
   const errorText = error.startsWith("catalog.") ? t(error as Key) : error;
@@ -323,7 +392,7 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
     if (!reading) {
       return (
         <div className="mx-auto flex max-w-3xl flex-col items-start gap-4">
-          <button type="button" onClick={() => router.push(hrefReading(null))} className="btn-ghost -ml-3 px-3 text-sm text-accent">{t("catalog.back")}</button>
+          <button type="button" onClick={() => router.push(hrefReading(null))} className="btn-ghost -ml-3 px-3 text-sm text-accent-text">{t("catalog.back")}</button>
           {error ? <p role="alert" className="text-red-600">{errorText}</p> : <p role="status" className="text-muted">{t("catalog.loadingText")}</p>}
         </div>
       );
@@ -344,16 +413,21 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
     );
   }
 
-  const heading = topic ? topicName(topic) : everything ? t("catalog.everything") : "";
+  const heading = topic ? topicName(topic) : picked ? t("catalog.picked") : everything ? t("catalog.everything") : "";
   return (
     <div className="flex flex-col gap-10 sm:gap-14">
       {/* One box in one place whatever the page shows: typing the first letter must not take the focus from it. */}
       <div className="flex flex-col gap-6">
         {heading ? (
           <div className="flex flex-col items-start gap-3">
-            <button type="button" onClick={() => goTo("")} className="btn-ghost -ml-3 h-10 px-3 text-sm text-accent">{t("catalog.backHome")}</button>
+            <button type="button" onClick={() => goTo("")} className="btn-ghost -ml-3 h-10 px-3 text-sm text-accent-text">{t("catalog.backHome")}</button>
             <h1 className="page-title">{heading}</h1>
-            {topic && <p className="max-w-3xl text-base leading-relaxed text-muted sm:text-[17px]">{TOPICS.find((item) => item.name === topic)?.about[lang]}</p>}
+            {(topic || picked) && (
+              <p className="max-w-3xl text-base leading-relaxed text-muted sm:text-[17px]">
+                {topic ? TOPICS.find((item) => item.name === topic)?.about[lang] : t("catalog.pickedAbout")}
+              </p>
+            )}
+            {chapterTitle && <p className="font-display text-lg font-semibold leading-snug">{t("catalog.chapterOf", { n: chapter ?? 0, title: chapterTitle })}</p>}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
@@ -364,7 +438,7 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
         )}
         <div className="relative max-w-3xl">
           <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-          <input aria-label={t("catalog.searchLabel")} placeholder={t("catalog.searchPlaceholder")} value={q} onChange={(e) => { setQ(e.target.value); setOffset(0); }} className="h-12 w-full rounded-full border border-line bg-surface pl-11 pr-4 text-[15px] text-ink shadow-card outline-none focus:border-accent" />
+          <input aria-label={t("catalog.searchLabel")} placeholder={t("catalog.searchPlaceholder")} value={q} onChange={(e) => { setQ(e.target.value); setOffset(0); }} className="h-12 w-full rounded-full border border-line bg-surface pl-11 pr-4 text-[15px] text-ink shadow-card outline-none focus:border-focus" />
         </div>
       </div>
 
@@ -372,15 +446,15 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
 
       {browsing ? (
         frontPage === true ? (
-          data?.total === 0 ? <p>{t("catalog.empty")}</p> : (
+          size === 0 ? <p>{t("catalog.empty")}</p> : (
             <>
-              <Featured picks={picks} actions={actions} />
-              <TopicDoors topics={topics} counts={(name) => articles.filter((a) => a.topic === name).length} actions={actions} onPick={pickTopic} />
+              <Featured picks={picks} total={data?.total ?? 0} actions={actions} onSeeAll={() => goTo("?featured")} />
+              <TopicDoors topics={topics} counts={data?.topic_counts ?? {}} actions={actions} onPick={pickTopic} />
               {more.length > 0 && (
                 <section aria-labelledby="explore-more" className="flex flex-col gap-4">
                   <div className="flex items-center justify-between gap-3">
                     <h2 id="explore-more" className="font-display text-2xl font-semibold leading-tight tracking-[-0.01em]">{t("catalog.more")}</h2>
-                    <button type="button" className="btn-ghost shrink-0 px-3 text-sm text-accent" onClick={() => pickTopic("")}>{t("catalog.seeAll", { n: data?.total ?? 0 })}</button>
+                    <button type="button" className="btn-ghost shrink-0 px-3 text-sm text-accent-text" onClick={() => pickTopic("")}>{t("catalog.seeAll", { n: size })}</button>
                   </div>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {/* A phone's page is long enough with three of them, and the rest are a tap away. */}
@@ -394,11 +468,21 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
       ) : (
         <div className="flex flex-col gap-6">
           <div role="group" aria-label={t("catalog.topicLabel")} className="-mx-4 flex gap-2 overflow-x-auto px-4 py-0.5 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-            <button type="button" className="chip" aria-pressed={!topic} onClick={() => pickTopic("")}>{t("catalog.allTopics")}</button>
+            <button type="button" className="chip" aria-pressed={!topic} onClick={() => filterBy({ topic: "" })}>{t("catalog.allTopics")}</button>
             {topics.map((name) => (
-              <button key={name} type="button" className="chip" aria-pressed={topic === name} onClick={() => pickTopic(name)}>{topicName(name)}</button>
+              <button key={name} type="button" className="chip" aria-pressed={topic === name} onClick={() => filterBy({ topic: name })}>{topicName(name)}</button>
             ))}
           </div>
+          <Filters
+            chapters={chapters}
+            chapter={chapter}
+            grade={grade}
+            grades={data?.grades}
+            picked={picked}
+            onChapter={(c) => filterBy({ chapter: c })}
+            onGrade={(g) => filterBy({ grade: g })}
+            onPicked={(p) => filterBy({ picked: p })}
+          />
           <p role="status" className="text-sm text-muted">{loading || frontPage !== false ? t("catalog.loading") : t("catalog.count", { n: data?.total ?? 0 })}</p>
           {frontPage === false && (
             <>

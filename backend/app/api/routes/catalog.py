@@ -2,6 +2,7 @@
 
 import json
 import logging
+from collections import Counter
 from collections.abc import AsyncIterator, Collection
 from datetime import UTC, datetime
 from functools import lru_cache
@@ -80,6 +81,19 @@ async def _taken_down(session) -> set[str]:
     return {*hidden, *deleted}
 
 
+def _chapters(articles: list[dict]) -> list[dict]:
+    """The handbook's chapters among the articles, in the book's order, each with its topic and size."""
+    found: dict[int, dict] = {}
+    for a in articles:
+        if a.get("chapter"):
+            row = found.setdefault(
+                a["chapter"],
+                {"number": a["chapter"], "title": a["chapter_title"], "topic": a["topic"], "count": 0},
+            )
+            row["count"] += 1
+    return [found[n] for n in sorted(found)]
+
+
 def list_articles(
     q: str = "",
     topic: str = "",
@@ -87,16 +101,24 @@ def list_articles(
     offset: int = 0,
     limit: int = 24,
     taken_down: Collection[str] = frozenset(),
+    chapter: int | None = None,
+    grade: str = "",
+    featured: bool = False,
 ):
+    """A page of the articles that pass the filters, with what the whole catalog holds: its topics and their
+    sizes and its chapters, so a page can offer them all; and how many of the articles that pass the other filters
+    have each grade of evidence, so a grade can say what choosing it leaves."""
     data = catalog()
     articles = [a for a in data["articles"] if a.get("url") not in taken_down]
     topics = sorted({a["topic"] for a in articles})
     needle = q.strip().casefold()
-    filtered = [
+    matching = [
         a
         for a in articles
         if (not topic or a["topic"] == topic)
         and (not kind or a["kind"] == kind)
+        and (chapter is None or a.get("chapter") == chapter)
+        and (not featured or "headline" in a)
         and (
             not needle
             or needle
@@ -109,15 +131,25 @@ def list_articles(
                 + " "
                 + a["authors"]
                 + " "
+                + a.get("chapter_title", "")
+                + " "
+                + a.get("headline", "")
+                + " "
                 + a.get("quick", {}).get("title", "")
                 + " "
                 + a.get("vi", {}).get("title", "")
             ).casefold()
         )
     ]
+    grades = Counter(a["grade"] for a in matching if a.get("grade"))
+    filtered = [a for a in matching if not grade or a.get("grade") == grade]
     return {
         "total": len(filtered),
         "topics": topics,
+        "topic_counts": dict(Counter(a["topic"] for a in articles)),
+        # Among the picks, only the chapters that have one, so choosing a chapter never leaves an empty list.
+        "chapters": _chapters([a for a in articles if not featured or "headline" in a]),
+        "grades": dict(grades),
         "updated_at": data["updated_at"],
         "articles": [
             {k: v for k, v in a.items() if k not in {"content", "abstract", "license_statement"}}
@@ -134,8 +166,11 @@ async def browse(
     kind: str = "",
     offset: int = Query(0, ge=0),
     limit: int = Query(24, ge=1, le=200),
+    chapter: int | None = Query(None, ge=1),
+    grade: Literal["", "A", "B", "C"] = "",
+    featured: bool = False,
 ):
-    return list_articles(q, topic, kind, offset, limit, await _taken_down(session))
+    return list_articles(q, topic, kind, offset, limit, await _taken_down(session), chapter, grade, featured)
 
 
 def get_article(article_id: str):

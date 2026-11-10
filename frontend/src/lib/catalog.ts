@@ -14,8 +14,25 @@ export type Article = {
   vi?: { title: string; description: string };
   /** Whether its text can be read in Vietnamese: the short reads. */
   translatable?: boolean;
+  /** A handbook entry's place in the book: its chapter, the chapter's title and the entry's number ("4.1"). */
+  chapter?: number; chapter_title?: string; ref?: string;
+  /** How strong the evidence behind a handbook entry is, by the book's own scale. */
+  grade?: Grade | "";
+  /** Our own headline for an entry chosen to lead the page, in Vietnamese. */
+  headline?: string;
 };
-export type Catalog = { total: number; topics: string[]; articles: Article[] };
+
+export type Grade = "A" | "B" | "C";
+export const GRADES: readonly Grade[] = ["A", "B", "C"];
+
+/** A chapter of the handbook, with the topic it belongs to and how many of its entries the catalog has. */
+export type Chapter = { number: number; title: string; topic: string; count: number };
+
+export type Catalog = {
+  total: number; topics: string[]; articles: Article[];
+  /** What the whole catalog holds, whatever the filters: each topic's size, the chapters, each grade's size. */
+  topic_counts?: Record<string, number>; chapters?: Chapter[]; grades?: Partial<Record<Grade, number>>;
+};
 
 export type ReadingLevel = "quick" | "full";
 
@@ -24,43 +41,32 @@ export function startingLevel(article: Article, lang: "vi" | "en"): ReadingLevel
   return article.quick && lang === "vi" ? "quick" : "full";
 }
 
-/** The catalog names its topics in Vietnamese. In the order the page lists them, whichever the language. */
+/** The catalog names its topics in Vietnamese: the handbook's chapters in six groups. In the order the page lists
+ * them, whichever the language. */
 export const TOPICS = [
   {
-    name: "Tâm lý và các mối quan hệ", en: "Mind and relationships",
-    about: { vi: "Cô đơn, tình bạn, tình yêu và cách ta gắn kết với nhau", en: "Loneliness, friendship, love and how we connect" },
+    name: "Sức khỏe và an toàn", en: "Health and safety",
+    about: { vi: "Sống lâu, ít bệnh, cấp cứu, thuốc men, mang thai và đi khám", en: "Living longer, staying well, first aid, medicines, pregnancy and seeing a doctor" },
   },
   {
-    name: "Mạng xã hội và công nghệ", en: "Social media and technology",
-    about: { vi: "Điều màn hình và mạng xã hội làm với đời sống của ta", en: "What screens and social media do to our lives" },
+    name: "Tâm lý và năng suất", en: "Mind and energy",
+    about: { vi: "Giữ sức lực, dùng thời gian, nghỉ ngơi và đứng dậy sau cú sốc", en: "Saving your energy and time, resting, and getting through a hard blow" },
   },
   {
-    name: "Gia đình và nuôi dạy con", en: "Family and parenting",
-    about: { vi: "Làm cha mẹ, tình thân và cách trẻ lớn lên", en: "Being a parent, family bonds and growing up" },
+    name: "Tiền bạc và công việc", en: "Money and work",
+    about: { vi: "Tiêu tiền khỏi oan, vay nợ, nhà ở, kinh doanh nhỏ và quyền lợi khi đi làm", en: "Spending wisely, debt, housing, small business and your rights at work" },
   },
   {
-    name: "Công việc và kinh tế", en: "Work and the economy",
-    about: { vi: "Động lực, áp lực và những cách làm việc mới", en: "Motivation, pressure and new ways of working" },
+    name: "Pháp luật và quyền lợi", en: "Law and your rights",
+    about: { vi: "Những ranh giới pháp luật dễ vấp, tài khoản, dữ liệu và luật giao thông", en: "Legal lines that are easy to cross, accounts, data and traffic rules" },
   },
   {
-    name: "Di cư và hòa nhập", en: "Migration and belonging",
-    about: { vi: "Rời quê hương và tìm chỗ đứng ở một nơi mới", en: "Leaving home and finding a place somewhere new" },
+    name: "Gia đình và đời sống", en: "Family and life",
+    about: { vi: "Yêu và cưới, nuôi con, chăm người già, ra nước ngoài và lúc người thân mất", en: "Love and marriage, raising children, caring for the old, going abroad and when someone dies" },
   },
   {
-    name: "Đô thị và cộng đồng", en: "Cities and communities",
-    about: { vi: "Khu phố, công viên và ai được sống tốt trong thành phố", en: "Neighbourhoods, parks and who gets to live well in a city" },
-  },
-  {
-    name: "Giáo dục", en: "Education",
-    about: { vi: "Lớp học, người thầy và việc học trong thời AI", en: "Classrooms, teachers and learning in the age of AI" },
-  },
-  {
-    name: "Sức khỏe cộng đồng", en: "Public health",
-    about: { vi: "Công bằng sức khỏe và cách một xã hội chăm lo cho nhau", en: "Health equity and how a society looks after itself" },
-  },
-  {
-    name: "Môi trường", en: "Environment",
-    about: { vi: "Rác nhựa, rừng, đa dạng sinh học và khí hậu đang đổi thay", en: "Plastic, forests, biodiversity and a changing climate" },
+    name: "Học tập và phát triển", en: "Learning and growing",
+    about: { vi: "Học gì thì đáng, cách học cho nhớ, các con đường sau 18 tuổi và du học", en: "What is worth learning, how to remember it, paths after 18 and studying abroad" },
   },
 ] as const;
 
@@ -73,37 +79,17 @@ export function orderTopics(names: string[]): string[] {
   ];
 }
 
-/** Where to start reading: short reads chosen by hand, named by the end of their address, which outlives a new
- * choosing. The Vietnamese headline and dek are ours, saying what the article is about in our own words: most of
- * these may be shown only as written, so neither translates its text. */
-const FEATURED = [
-  {
-    ending: "around-half-of-people-will-experience-a-mental-health-issue-in-their-lifetime",
-    title: "Cứ hai người thì có một người sẽ gặp vấn đề sức khỏe tâm thần trong đời",
-    dek: "Khảo sát hơn 150.000 người ở 29 quốc gia: khoảng một nửa sẽ mắc ít nhất một trong các rối loạn được nghiên cứu trước tuổi 75, và con số thật có thể còn cao hơn.",
-  },
-  {
-    ending: "the-ick-the-psychology-of-why-a-romantic-partner-can-suddenly-repulse-you-293266",
-    title: "“The ick”: vì sao đang thích một người, bỗng dưng thấy phát ngán?",
-    dek: "Một nhà tâm lý học điểm qua các cách giải thích, từ tiến hóa đến kiểu gắn bó, và cho rằng câu trả lời tùy từng người.",
-  },
-  {
-    ending: "what-an-exhibition-by-artists-of-the-vietnamese-diaspora-says-about-home-and-belonging-204471",
-    title: "Ghế nhựa và bát cơm: với người Việt xa xứ, “nhà” là gì?",
-    dek: "Từ triển lãm của tám nghệ sĩ gốc Việt ở London, một nhà ngôn ngữ học kể về những góc Việt Nam ẩn mình ở Anh, Đức, Pháp, Canada và Mỹ.",
-  },
-];
-
 /** A featured article, with its Vietnamese headline and dek when it was chosen by hand. */
 export type Pick = { article: Article; title?: string; dek?: string };
 
-/** The hand-chosen articles still in the catalog; if a new choosing dropped some, others fill in from topics not
- * yet shown. */
+/** The articles chosen by hand to lead, those with a headline of ours, in the catalog's order; if there are too
+ * few, others fill in from topics not yet shown. A chosen one's dek is what the entry says in plain words. */
 export function featuredOf(articles: Article[], count = 3): Pick[] {
   const picks: Pick[] = [];
-  for (const { ending, title, dek } of FEATURED) {
-    const article = articles.find((a) => a.url.endsWith(`/${ending}`));
-    if (article) picks.push({ article, title, dek });
+  for (const article of articles) {
+    if (article.headline && picks.length < count && !picks.some((p) => p.article.topic === article.topic)) {
+      picks.push({ article, title: article.headline, dek: article.description });
+    }
   }
   for (const article of readNext(articles, picks.map((p) => p.article), count)) {
     if (picks.length >= count) break;

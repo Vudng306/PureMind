@@ -3,8 +3,9 @@ with its cost, a plain summary, the benefit, the Vietnamese law, an evidence gra
 CC BY 4.0, rewritten from eternity4719's 高性价比人生指南 under the same licence.
 
 The repository is read at the commit `data/hlb-picks.json` pins, so a crawl brings the same text every time
-and a new version only arrives when someone moves that pin and reads the changes. Only the picked entries
-are collected; an admin can add any other entry by its link. Each entry becomes one article, under an
+and a new version only arrives when someone moves that pin and reads the changes. With `"scope": "all"` in
+that file every entry of the book is collected, the picked ones keeping their topic and brief; without it only
+the picked entries are, and an admin can add any other by its link. Each entry becomes one article, under an
 address without the commit, so a newer version updates it instead of adding a second copy.
 """
 
@@ -91,6 +92,7 @@ class Pin:
     commit: str
     date: datetime
     picks: dict[str, list[str]]  # entry id -> its topics
+    everything: bool = False  # every entry of the book, not only the picked ones
 
 
 @dataclass(frozen=True)
@@ -109,6 +111,7 @@ def read_pin(path: Path = PICKS) -> Pin:
         commit=data["commit"],
         date=datetime.fromisoformat(data["commit_date"]).replace(tzinfo=UTC),
         picks={p["entry"]: [p["topic"]] if p.get("topic") else [] for p in data["picks"]},
+        everything=data.get("scope") == "all",
     )
 
 
@@ -231,8 +234,18 @@ async def _files(pin: Pin, contact: str) -> dict[str, str]:
     return {e["id"]: e["file"] for e in index["entries"]}
 
 
-async def _items(wanted: dict[str, list[str]], pin: Pin, contact: str) -> list[Item]:
-    files = await _files(pin, contact)
+async def entries(pin: Pin, contact: str) -> list[tuple[Entry, str]]:
+    """Every entry of the book at the pin, with its chapter file, in the book's order."""
+    found = []
+    for path in sorted(set((await _files(pin, contact)).values())):
+        found += [(entry, path) for entry in parse_chapter(await _text(path, pin, contact), path)]
+    return found
+
+
+async def _items(
+    wanted: dict[str, list[str]], pin: Pin, contact: str, files: dict[str, str] | None = None
+) -> list[Item]:
+    files = files or await _files(pin, contact)
     by_file: dict[str, list[str]] = {}
     for entry_id in wanted:
         if entry_id in files:
@@ -254,7 +267,10 @@ async def _items(wanted: dict[str, list[str]], pin: Pin, contact: str) -> list[I
 
 async def collect(contact: str, channels: dict | None = None) -> list[Item]:
     pin = read_pin()
-    return await _items(pin.picks, pin, contact)
+    if not pin.everything:
+        return await _items(pin.picks, pin, contact)
+    files = await _files(pin, contact)
+    return await _items({entry_id: pin.picks.get(entry_id, []) for entry_id in files}, pin, contact, files)
 
 
 def entry_id_in(url: str) -> str | None:
