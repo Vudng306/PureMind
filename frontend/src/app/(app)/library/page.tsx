@@ -33,6 +33,7 @@ import {
   type LibraryFilters,
 } from "@/lib/library";
 import { MSG, messageFor } from "@/lib/messages";
+import { COMMUNITY } from "@/lib/features";
 import { useCreatePost, useDeletePost, useMyPosts, useUnpublishPost, type Post, type PostKind } from "@/lib/posts";
 import { toneOf } from "@/lib/tone";
 import type { DocumentListItem } from "@/lib/types";
@@ -131,14 +132,18 @@ function CardMenu({ doc, actions }: { doc: DocumentListItem; actions: CardAction
             <Icon name="note" size={16} />
             {t("library.addToNotebook")}
           </button>
-          <button type="button" role="menuitem" className={item} onClick={choose(actions.onCreatePost)}>
-            <Icon name="pencil" size={16} />
-            {t("library.createPost")}
-          </button>
-          <button type="button" role="menuitem" className={item} onClick={choose(actions.onShareOriginal)}>
-            <Icon name="link" size={16} />
-            {t("library.shareOriginal")}
-          </button>
+          {COMMUNITY && (
+            <>
+              <button type="button" role="menuitem" className={item} onClick={choose(actions.onCreatePost)}>
+                <Icon name="pencil" size={16} />
+                {t("library.createPost")}
+              </button>
+              <button type="button" role="menuitem" className={item} onClick={choose(actions.onShareOriginal)}>
+                <Icon name="link" size={16} />
+                {t("library.shareOriginal")}
+              </button>
+            </>
+          )}
           <span role="separator" className="my-1 border-t border-line" />
           <span className="px-3 pb-0.5 text-xs font-semibold text-muted">{t("library.manage")}</span>
           <button type="button" role="menuitem" className={item} onClick={choose(actions.onRename)}>
@@ -666,11 +671,13 @@ function Sidebar({
         <span className="flex-1 truncate">{t("library.highlights")}</span>
         <span className={count}>{highlights}</span>
       </Link>
-      <button type="button" className={row(place.kind === "shared")} aria-pressed={place.kind === "shared"} onClick={() => onPlace({ kind: "shared" })}>
-        <Icon name="link" size={16} className="shrink-0" />
-        <span className="flex-1 truncate">{t("library.sharedByMe")}</span>
-        <span className={count}>{shared}</span>
-      </button>
+      {COMMUNITY && (
+        <button type="button" className={row(place.kind === "shared")} aria-pressed={place.kind === "shared"} onClick={() => onPlace({ kind: "shared" })}>
+          <Icon name="link" size={16} className="shrink-0" />
+          <span className="flex-1 truncate">{t("library.sharedByMe")}</span>
+          <span className={count}>{shared}</span>
+        </button>
+      )}
       <div className="mt-3 flex items-center gap-1 px-2.5">
         <span className="eyebrow flex-1">{t("library.collections")}</span>
         <button type="button" className="icon-btn h-8 w-8" aria-label={t("library.newCollection")} title={t("library.newCollection")} onClick={onNew}>
@@ -734,7 +741,7 @@ export default function LibraryPage() {
 
   // Read here rather than with useSearchParams, which would make the whole page wait for the client.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("view") === "shared") setPlace({ kind: "shared" });
+    if (COMMUNITY && new URLSearchParams(window.location.search).get("view") === "shared") setPlace({ kind: "shared" });
   }, []);
 
   const docs = useMemo(() => data ?? [], [data]);

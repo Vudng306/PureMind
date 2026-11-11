@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ArticleReading } from "@/components/article-reading";
+import { ExploreChat } from "@/components/explore-chat";
 import { Icon } from "@/components/icons";
 import { API_URL, api } from "@/lib/api";
 import { GRADES, TOPICS, featuredOf, orderTopics, readNext, type Article, type Catalog, type Grade, type Pick } from "@/lib/catalog";
@@ -269,6 +270,8 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
   const picked = params.has("featured");
   const everything = params.has("all") || picked || chapter !== null || grade !== "";
   const read = params.get("read");
+  // The AI that suggests what to read (?ask): it answers from these articles only, and needs an account.
+  const asking = signedIn && params.has("ask");
   const [offset, setOffset] = useState(0);
   // What the articles on screen were fetched as, which may lag the filters while the next answer is on its way.
   const [frontPage, setFrontPage] = useState<boolean | null>(null);
@@ -412,6 +415,15 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
     );
   }
 
+  if (asking) {
+    return (
+      <div className="mx-auto flex max-w-3xl flex-col gap-4">
+        <button type="button" onClick={() => goTo("")} className="btn-ghost -ml-3 h-10 self-start px-3 text-sm text-accent-text">{t("catalog.backHome")}</button>
+        <ExploreChat />
+      </div>
+    );
+  }
+
   const heading = topic ? topicName(topic) : picked ? t("catalog.picked") : everything ? t("catalog.everything") : "";
   return (
     <div className="flex flex-col gap-10 sm:gap-14">
@@ -434,9 +446,17 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
             <h1 className="page-title max-w-4xl">{t("explore.headline")}</h1>
           </div>
         )}
-        <div className="relative max-w-3xl">
-          <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-          <input aria-label={t("catalog.searchLabel")} placeholder={t("catalog.searchPlaceholder")} value={q} onChange={(e) => { setQ(e.target.value); setOffset(0); }} className="h-12 w-full rounded-full border border-line bg-surface pl-11 pr-4 text-[15px] text-ink shadow-card outline-none focus:border-focus" />
+        <div className="flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Icon name="search" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
+            <input aria-label={t("catalog.searchLabel")} placeholder={t("catalog.searchPlaceholder")} value={q} onChange={(e) => { setQ(e.target.value); setOffset(0); }} className="h-12 w-full rounded-full border border-line bg-surface pl-11 pr-4 text-[15px] text-ink shadow-card outline-none focus:border-focus" />
+          </div>
+          {signedIn && (
+            <button type="button" className="btn-outline h-12 shrink-0 self-start px-4 sm:self-auto" onClick={() => goTo("?ask")}>
+              <Icon name="spark" size={16} />
+              {t("feedChat.titleShort")}
+            </button>
+          )}
         </div>
       </div>
 

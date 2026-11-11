@@ -11,6 +11,7 @@ import { MarkdownView } from "@/components/notebook-markdown";
 import { Alert, Spinner } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/documents";
+import { FEED } from "@/lib/features";
 import { readingMinutes, useFeedArticle, useSave, type FeedArticle } from "@/lib/feed";
 import { useT, type Key } from "@/lib/i18n";
 import { parseMarkdown } from "@/lib/markdown";
@@ -26,7 +27,7 @@ export default function FeedArticlePage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <Link href="/feed" className="btn-ghost -ml-3 h-10 self-start px-3 text-sm">
+      <Link href={FEED ? "/feed" : "/explore"} className="btn-ghost -ml-3 h-10 self-start px-3 text-sm">
         <Icon name="back" size={16} />
         {t("feed.back")}
       </Link>
@@ -99,7 +100,7 @@ function Reading({ article }: { article: FeedArticle }) {
         className="break-words font-serif text-lg leading-[1.8] text-body"
       />
       <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-6">
-        <button type="button" className="btn-primary h-11 px-5" onClick={() => router.push("/feed")}>
+        <button type="button" className="btn-primary h-11 px-5" onClick={() => router.push(FEED ? "/feed" : "/explore")}>
           {t("feed.back")}
           <Icon name="arrow" size={16} />
         </button>

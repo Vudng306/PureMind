@@ -34,6 +34,7 @@ import {
   type NotebookVersion,
   type SourceGroup,
 } from "@/lib/notebooks";
+import { COMMUNITY } from "@/lib/features";
 import { useCreatePost } from "@/lib/posts";
 import { usePreferences } from "@/lib/preferences";
 import { useUi } from "@/lib/ui-store";
@@ -496,10 +497,12 @@ function Editor({ notebook }: { notebook: Notebook }) {
           >
             <Icon name="trash" />
           </button>
-          <button type="button" className="btn-outline h-10" onClick={() => void writePost()} disabled={!valid || createPost.isPending}>
-            <Icon name="pencil" size={16} />
-            {t("nb.writePost")}
-          </button>
+          {COMMUNITY && (
+            <button type="button" className="btn-outline h-10" onClick={() => void writePost()} disabled={!valid || createPost.isPending}>
+              <Icon name="pencil" size={16} />
+              {t("nb.writePost")}
+            </button>
+          )}
           <button type="button" className="btn-primary h-10" onClick={() => void send("save")} disabled={!valid || saving !== null}>
             {t(saving === "save" ? "common.saving" : "common.save")}
           </button>

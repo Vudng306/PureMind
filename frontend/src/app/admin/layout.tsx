@@ -10,12 +10,13 @@ import { Icon } from "@/components/icons";
 import { LanguageToggle } from "@/components/language-toggle";
 import { Alert, Spinner, Wordmark } from "@/components/ui";
 import { ApiError } from "@/lib/api";
+import { COMMUNITY } from "@/lib/features";
 import { useMsg, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { useAccount } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 
-const TABS = [
+const ALL_TABS = [
   { href: "/admin/traffic", label: "admin.tabTraffic" },
   { href: "/admin/users", label: "admin.tabUsers" },
   { href: "/admin/articles", label: "admin.tabArticles" },
@@ -23,6 +24,7 @@ const TABS = [
   { href: "/admin/crawl", label: "admin.tabCrawl" },
   { href: "/admin/audit", label: "admin.tabAudit" },
 ] as const;
+const TABS = ALL_TABS.filter((tab) => COMMUNITY || tab.href !== "/admin/posts");
 
 function signOut() {
   // FR-AUTH-04: network errors never block clearing the local session
