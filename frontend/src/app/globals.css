@@ -213,6 +213,13 @@ body {
   .btn-danger {
     @apply btn bg-danger font-semibold text-on-danger hover:bg-danger/90;
   }
+  /* Round buttons beside the feed's stage, and on its dark cards. */
+  .round-btn {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink shadow-card transition-colors duration-150 hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .round-btn-glass {
+    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition-colors duration-150 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-30;
+  }
   .icon-btn {
     @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent text-ink transition-colors duration-150 hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40;
   }
@@ -276,7 +283,7 @@ body {
   /* The feed's card fills what is left of the screen, down to where its text would no longer fit: under it are the
      action bar and, below lg, the app's dock. --feed-chips: the row of topics, when it takes a line of its own. */
   .feed-card {
-    height: max(430px, min(760px, calc(100dvh - 300px - var(--feed-chips, 0px))));
+    height: max(440px, min(780px, calc(100dvh - 236px - var(--feed-chips, 0px))));
   }
   @media (min-width: 1024px) {
     .feed-card {

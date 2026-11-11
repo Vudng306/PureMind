@@ -173,7 +173,7 @@ function Featured({ picks, total, actions, onSeeAll }: { picks: Pick[]; total: n
     <section aria-labelledby="explore-featured" className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <h2 id="explore-featured" className="font-display text-2xl font-semibold leading-tight tracking-[-0.01em]">{t("catalog.featured")}</h2>
-        {total > picks.length && <button type="button" className="btn-ghost shrink-0 px-3 text-sm text-accent-text" onClick={onSeeAll}>{t("catalog.pickedAll", { n: total })}</button>}
+        {total > picks.length && <button type="button" className="btn-ghost shrink-0 px-3 text-sm text-accent-text" onClick={onSeeAll}>{t("catalog.seeMore")}</button>}
       </div>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
         <FeaturedStory pick={lead} lead actions={actions} />
@@ -186,8 +186,8 @@ function Featured({ picks, total, actions, onSeeAll }: { picks: Pick[]; total: n
 }
 
 /** Every topic as a door into its own list, in place of a row of articles for each. */
-function TopicDoors({ topics, counts, actions, onPick }: {
-  topics: string[]; counts: Record<string, number>; actions: CardActions; onPick: (name: string) => void;
+function TopicDoors({ topics, actions, onPick }: {
+  topics: string[]; actions: CardActions; onPick: (name: string) => void;
 }) {
   const t = useT();
   const lang = useLang();
@@ -200,7 +200,6 @@ function TopicDoors({ topics, counts, actions, onPick }: {
             <span className="flex items-center gap-2.5">
               <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full bg-tone" />
               <span className="min-w-0 flex-1 font-display text-lg font-semibold leading-snug group-hover:underline group-hover:decoration-tone group-hover:underline-offset-4">{actions.label(name)}</span>
-              <span className="shrink-0 text-xs font-medium text-muted">{t("catalog.count", { n: counts[name] ?? 0 })}</span>
             </span>
             <span className="pl-5 text-sm leading-relaxed text-muted">{TOPICS.find((topic) => topic.name === name)?.about[lang]}</span>
           </button>
@@ -212,8 +211,8 @@ function TopicDoors({ topics, counts, actions, onPick }: {
 
 /** Narrowing a list: a chapter of the book (of the topic, when one is chosen), a grade of evidence, and the
  * picks alone. */
-function Filters({ chapters, chapter, grade, grades, picked, onChapter, onGrade, onPicked }: {
-  chapters: NonNullable<Catalog["chapters"]>; chapter: number | null; grade: Grade | ""; grades: Catalog["grades"];
+function Filters({ chapters, chapter, grade, picked, onChapter, onGrade, onPicked }: {
+  chapters: NonNullable<Catalog["chapters"]>; chapter: number | null; grade: Grade | "";
   picked: boolean; onChapter: (chapter: number | null) => void; onGrade: (grade: Grade | "") => void; onPicked: (picked: boolean) => void;
 }) {
   const t = useT();
@@ -225,7 +224,7 @@ function Filters({ chapters, chapter, grade, grades, picked, onChapter, onGrade,
           {t("catalog.chapter")}
           <select className="input h-11 w-[min(100%,26rem)] py-0" value={chapter ?? ""} onChange={(e) => onChapter(e.target.value ? Number(e.target.value) : null)}>
             <option value="">{t("catalog.allChapters")}</option>
-            {chapters.map((c) => <option key={c.number} value={c.number}>{c.number}. {c.title} ({c.count})</option>)}
+            {chapters.map((c) => <option key={c.number} value={c.number}>{c.number}. {c.title}</option>)}
           </select>
         </label>
       )}
@@ -235,7 +234,7 @@ function Filters({ chapters, chapter, grade, grades, picked, onChapter, onGrade,
           <button type="button" className="chip" aria-pressed={!grade} onClick={() => onGrade("")}>{t("catalog.allGrades")}</button>
           {GRADES.map((g) => (
             <button key={g} type="button" className="chip" aria-pressed={grade === g} title={t(`catalog.grade${g}` as Key)} onClick={() => onGrade(g)}>
-              {g}{grades && <span className="ml-1.5 font-normal opacity-70">{grades[g] ?? 0}</span>}
+              {g}
             </button>
           ))}
         </div>
@@ -433,7 +432,6 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
           <div className="flex flex-col gap-3">
             <p className="eyebrow uppercase">{t("explore.title")}</p>
             <h1 className="page-title max-w-4xl">{t("explore.headline")}</h1>
-            <p className="max-w-3xl text-base leading-relaxed text-muted sm:text-[17px]">{t("explore.lead")}</p>
           </div>
         )}
         <div className="relative max-w-3xl">
@@ -449,12 +447,12 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
           size === 0 ? <p>{t("catalog.empty")}</p> : (
             <>
               <Featured picks={picks} total={data?.total ?? 0} actions={actions} onSeeAll={() => goTo("?featured")} />
-              <TopicDoors topics={topics} counts={data?.topic_counts ?? {}} actions={actions} onPick={pickTopic} />
+              <TopicDoors topics={topics} actions={actions} onPick={pickTopic} />
               {more.length > 0 && (
                 <section aria-labelledby="explore-more" className="flex flex-col gap-4">
                   <div className="flex items-center justify-between gap-3">
                     <h2 id="explore-more" className="font-display text-2xl font-semibold leading-tight tracking-[-0.01em]">{t("catalog.more")}</h2>
-                    <button type="button" className="btn-ghost shrink-0 px-3 text-sm text-accent-text" onClick={() => pickTopic("")}>{t("catalog.seeAll", { n: size })}</button>
+                    <button type="button" className="btn-ghost shrink-0 px-3 text-sm text-accent-text" onClick={() => pickTopic("")}>{t("catalog.seeMore")}</button>
                   </div>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {/* A phone's page is long enough with three of them, and the rest are a tap away. */}
@@ -477,13 +475,12 @@ export function SharedLibrary({ signedIn }: { signedIn: boolean }) {
             chapters={chapters}
             chapter={chapter}
             grade={grade}
-            grades={data?.grades}
             picked={picked}
             onChapter={(c) => filterBy({ chapter: c })}
             onGrade={(g) => filterBy({ grade: g })}
             onPicked={(p) => filterBy({ picked: p })}
           />
-          <p role="status" className="text-sm text-muted">{loading || frontPage !== false ? t("catalog.loading") : t("catalog.count", { n: data?.total ?? 0 })}</p>
+          <p role="status" className="text-sm text-muted">{(loading || frontPage !== false) && t("catalog.loading")}</p>
           {frontPage === false && (
             <>
               {!loading && data?.total === 0 && <p>{t("catalog.empty")}</p>}

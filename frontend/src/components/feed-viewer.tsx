@@ -11,7 +11,6 @@ import { Alert, Spinner } from "@/components/ui";
 import { progressOf } from "@/lib/doc-view";
 import { useDocuments } from "@/lib/documents";
 import {
-  TOPICS,
   readingKey,
   readingMinutes,
   resumeAt,
@@ -33,7 +32,6 @@ import { useLang, useT, type Key } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { useAccount } from "@/lib/queries";
 import { useSignIn } from "@/lib/sign-in";
-import { toneAt } from "@/lib/tone";
 import { useUi } from "@/lib/ui-store";
 
 /** A card counts as read after this long, so one passed on the way to another does not move the reader's place. */
@@ -129,7 +127,6 @@ export function FeedViewer({
     return [...pinned, ...(loaded ?? []).filter((s) => !first.has(s.id))].filter((s) => !hidden.includes(s.id));
   }, [pinned, loaded, hidden]);
   const current = list[index] as ShortCard | undefined;
-  const total = Math.max((feed.data?.pages.at(-1)?.total ?? 0) - hidden.length, list.length);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = feed;
 
   // Open where asked, or on the first one not finished yet.
@@ -252,26 +249,9 @@ export function FeedViewer({
     );
 
   return (
-    <div className="min-[1200px]:grid min-[1200px]:grid-cols-[minmax(0,1fr)_minmax(460px,540px)_minmax(0,1fr)] min-[1200px]:gap-x-6">
-      <div className="hidden flex-col items-end justify-center gap-2 min-[1200px]:flex">
-        {placed && list.length > 0 && (
-          <>
-            <button type="button" className="btn-ghost h-10 px-3 text-sm" disabled={index === 0} onClick={() => go(-1)}>
-              <Icon name="up" size={18} />
-              {t("feed.short.prev")}
-            </button>
-            <span className="px-3 text-sm tabular-nums text-muted">
-              {t("feed.short.position", { i: Math.min(index + 1, total), n: total })}
-            </span>
-            <button type="button" className="btn-ghost h-10 px-3 text-sm" disabled={index >= list.length} onClick={() => go(1)}>
-              <Icon name="down" size={18} />
-              {t("feed.short.next")}
-            </button>
-          </>
-        )}
-      </div>
-
-      <div className="relative mx-auto flex w-full min-w-0 max-w-[560px] flex-col gap-2">
+    // A tall card on a phone; on a wide screen a wide stage, with what can be done with it in a column beside it.
+    <div className="mx-auto w-full max-w-[1240px] lg:grid lg:grid-cols-[minmax(0,1fr)_200px] lg:gap-6 xl:grid-cols-[minmax(0,1fr)_232px]">
+      <div className="relative mx-auto flex w-full min-w-0 max-w-[560px] flex-col gap-2 lg:max-w-none">
         {undo && (
           <div role="status" className="absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-menu px-4 py-2 text-sm text-menu-fg shadow-float">
             {t("feed.short.hidden")}
@@ -293,7 +273,7 @@ export function FeedViewer({
             onKeyDown={onKey}
             tabIndex={0}
             aria-label={t("feed.mode.shorts")}
-            className="feed-card snap-y snap-mandatory overflow-y-auto rounded-[20px] border border-line bg-surface shadow-card [scrollbar-width:none] focus-visible:outline-offset-2 sm:rounded-[24px]"
+            className="feed-card snap-y snap-mandatory overflow-y-auto rounded-[22px] bg-surface shadow-raised [scrollbar-width:none] focus-visible:outline-offset-2 sm:rounded-[28px]"
           >
             {list.map((s, i) => (
               <ShortSlide
@@ -306,11 +286,12 @@ export function FeedViewer({
                 failure={translation.failed?.id === s.id ? translation.failed.message : null}
                 onRetry={translation.retry}
                 text={translation.textOf(s)}
-                canGoBack={i > 0}
+                upNext={list[i + 1] ? translation.textOf(list[i + 1]).title : null}
                 onArticle={go}
+                onHide={() => void hide(s)}
               />
             ))}
-            <section className="h-full snap-start snap-always">
+            <section className="h-full snap-start snap-always border border-line">
               {hasNextPage ? (
                 <div className="grid h-full place-items-center">
                   <Spinner />
@@ -321,15 +302,20 @@ export function FeedViewer({
             </section>
           </div>
         )}
-        {placed && current && (
-          <div className="min-[1200px]:hidden">
-            <ShortActions key={current.id} short={current} variant="bar" onHide={() => void hide(current)} />
-          </div>
-        )}
       </div>
 
-      <aside className="hidden max-w-[270px] flex-col gap-4 min-[1200px]:flex" aria-label={t("feed.rail.aria")}>
+      <aside className="hidden min-w-0 flex-col justify-center gap-6 lg:flex" aria-label={t("feed.rail.aria")}>
         {placed && current && <ShortActions key={current.id} short={current} variant="rail" onHide={() => void hide(current)} />}
+        {placed && list.length > 0 && (
+          <div className="flex gap-2" role="group" aria-label={t("feed.mode.shorts")}>
+            <button type="button" className="round-btn" disabled={index === 0} onClick={() => go(-1)} aria-label={t("feed.short.prev")} title={t("feed.short.prev")}>
+              <Icon name="up" size={20} />
+            </button>
+            <button type="button" className="round-btn" disabled={index >= list.length} onClick={() => go(1)} aria-label={t("feed.short.next")} title={t("feed.short.next")}>
+              <Icon name="down" size={20} />
+            </button>
+          </div>
+        )}
         {session && <KeepReading current={current?.id} onOpen={open} />}
       </aside>
 
@@ -409,7 +395,42 @@ function useCardLanguage(current: ShortCard | undefined, uiLang: "vi" | "en") {
   };
 }
 
-/** One article's cards. */
+// A figure and the unit after it: "30 phút", "2,54%", "1971". Not the digits inside a name such as "omega-3" or "B12".
+const FIGURE =
+  /((?<![\p{L}\-\d])\d+(?:[.,]\d+)*(?:\s?%|\s(?:phút|giờ|giây|ngày|tuần|tháng|năm|tuổi|lần|người|đồng|nghìn|triệu|tỷ|kg|mg|ml|lít|km|kcal|bước|min|minutes|hours|days|weeks|months|years|times|people)(?![\p{L}]))?)/u;
+
+/** The text with its figures lifted out, so a reader skimming the card still catches them. Only how it looks changes. */
+function withFigures(text: string) {
+  return text.split(FIGURE).map((part, i) =>
+    i % 2 ? (
+      <mark key={i} className="rounded-[6px] bg-white/15 px-1 font-semibold text-white [box-decoration-break:clone]">
+        {part}
+      </mark>
+    ) : (
+      part
+    ),
+  );
+}
+
+/** What the article is: its topic, how long it takes, and that the AI wrote it. */
+function ShortMeta({ short, text, language }: { short: ShortCard; text: ShortText; language: "vi" | "en" }) {
+  const t = useT();
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-white/75">
+      {short.topics[0] && (
+        <span className="min-w-0 truncate rounded-full bg-white/15 px-2.5 py-1 font-semibold text-white">{t(topicLabel(short.topics[0]))}</span>
+      )}
+      <span className="shrink-0 tabular-nums">{t("feed.short.minutes", { n: shortMinutes(text) })}</span>
+      <span className="inline-flex shrink-0 items-center gap-1 font-medium">
+        <Icon name="spark" size={12} />
+        {t(language === "en" ? "feed.short.aiTranslated" : "feed.short.ai")}
+      </span>
+    </div>
+  );
+}
+
+/** One article: a cover with its title, and its cards to turn. On a phone the cover is the first card; on a wide
+ * screen it stays on the left while the cards turn on the right. */
 function ShortSlide({
   short,
   active,
@@ -419,8 +440,9 @@ function ShortSlide({
   failure,
   onRetry,
   text,
-  canGoBack,
+  upNext,
   onArticle,
+  onHide,
 }: {
   short: ShortCard;
   active: boolean;
@@ -430,8 +452,9 @@ function ShortSlide({
   failure: string | null;
   onRetry: () => void;
   text: ShortText;
-  canGoBack: boolean;
+  upNext: string | null;
   onArticle: (step: number) => void;
+  onHide: () => void;
 }) {
   const t = useT();
   const qc = useQueryClient();
@@ -441,7 +464,6 @@ function ShortSlide({
   const [page, setPage] = useState(0);
   const saved = useRef(short.card_index);
   const signedIn = Boolean(useAuth().session); // a visitor's place in it is not kept
-  const tone = short.topics[0] ? toneAt(TOPICS.indexOf(short.topics[0])) : "";
 
   // Back where they stopped: this card, not the first.
   useLayoutEffect(() => {
@@ -478,165 +500,176 @@ function ShortSlide({
   }
 
   const last = page === n - 1;
+  const source = (
+    <a
+      href={short.original_url}
+      target="_blank"
+      rel="noreferrer"
+      title={short.original_title}
+      className="block truncate text-xs text-white/65 hover:text-white hover:underline"
+    >
+      {t("feed.short.source", { source: short.source_name, title: short.original_title })} ↗
+    </a>
+  );
 
   return (
-    <section className="flex h-full snap-start snap-always flex-col" aria-label={text.title} inert={!active}>
-      <header className="flex items-center gap-2 px-4 pt-3 sm:px-5 sm:pt-4">
-        <div className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted">
-          {short.topics[0] && (
-            <span className={`min-w-0 truncate rounded-full bg-tone-bg px-2.5 py-1 font-semibold text-tone-fg ${tone}`}>
-              {t(topicLabel(short.topics[0]))}
-            </span>
-          )}
-          <span className="shrink-0 tabular-nums">{t("feed.short.minutes", { n: shortMinutes(text) })}</span>
-          <span className="inline-flex shrink-0 items-center gap-1 font-medium">
-            <Icon name="spark" size={12} />
-            {t(language === "en" ? "feed.short.aiTranslated" : "feed.short.ai")}
-          </span>
-        </div>
-        <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-soft p-0.5" role="group" aria-label={t("feed.short.language")}>
-          {(["vi", "en"] as const).map((l) => (
-            <button
-              key={l}
-              type="button"
-              aria-pressed={language === l}
-              onClick={() => onLanguage(l)}
-              className={`relative h-7 min-w-11 rounded-full px-2.5 text-xs font-semibold before:absolute before:-inset-y-2 before:inset-x-0 sm:min-w-0 ${
-                language === l ? "bg-surface text-ink shadow-card" : "text-muted hover:text-ink"
-              }`}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </header>
-
-      <div className="flex items-center gap-3 px-4 pt-2 sm:px-5">
-        <div className="flex flex-1 gap-1" role="group" aria-label={t("feed.short.card", { i: page + 1, n })}>
-          {cards.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => show(i)}
-              aria-label={t("feed.short.cardN", { i: i + 1 })}
-              aria-current={i === page}
-              className="flex h-5 flex-1 items-center"
-            >
-              <span
-                className={`h-1 w-full rounded-full transition-colors motion-reduce:transition-none ${
-                  i === page ? "bg-accent" : i < page ? "bg-accent/40" : "bg-line"
-                }`}
-              />
-            </button>
-          ))}
-        </div>
-        <span className="shrink-0 text-xs tabular-nums text-muted" aria-hidden>
-          {page + 1} / {n}
-        </span>
-        {active && (
-          <span className="sr-only" aria-live="polite">
-            {t("feed.short.card", { i: page + 1, n })}
-          </span>
-        )}
+    <section
+      className="relative flex h-full snap-start snap-always text-white"
+      style={{ background: backdrop(short.topics[0], short.id) }}
+      aria-label={text.title}
+      inert={!active}
+    >
+      <div className="hidden w-[42%] shrink-0 flex-col gap-6 p-9 lg:flex xl:p-11">
+        <ShortMeta short={short} text={text} language={language} />
+        <h2 className="mt-auto font-display text-[36px] font-semibold leading-[1.08] [text-wrap:balance] xl:text-[46px]">{text.title}</h2>
+        {source}
       </div>
 
-      {(translating || failure) && (
-        <div role="status" className="flex items-center gap-2 px-4 pt-1 text-xs text-muted sm:px-5">
-          {translating ? (
-            <>
-              <span aria-hidden className="h-1 w-10 animate-pulse rounded-full bg-accent/50 motion-reduce:animate-none" />
-              {t("feed.short.translating")}
-            </>
-          ) : (
-            <>
-              <span className="min-w-0 flex-1">{failure}</span>
-              <button type="button" className="shrink-0 font-semibold underline underline-offset-2" onClick={onRetry}>
-                {t("common.retry")}
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      <div
-        ref={pager}
-        data-pager
-        onScroll={(e) => setPage(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none]"
-      >
-        {cards.map((card, i) => (
-          <div key={i} inert={i !== page} className="flex h-full w-full shrink-0 snap-start snap-always flex-col px-3 py-3 sm:px-4">
-            {card.role === "hook" ? (
-              <div
-                data-card-text
-                className="safe-center flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto rounded-[18px] p-6 text-white [scrollbar-width:thin] sm:p-8"
-                style={{ background: backdrop(short.topics[0], short.id) }}
+      <div className="flex min-w-0 flex-1 flex-col lg:my-4 lg:mr-4 lg:rounded-[22px] lg:border lg:border-white/10 lg:bg-black/25 lg:backdrop-blur-sm">
+        <header className="flex items-center gap-2 px-5 pt-4 lg:px-7 lg:pt-5">
+          <div className="min-w-0 flex-1">
+            <div className="lg:hidden">
+              <ShortMeta short={short} text={text} language={language} />
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-white/10 p-0.5" role="group" aria-label={t("feed.short.language")}>
+            {(["vi", "en"] as const).map((l) => (
+              <button
+                key={l}
+                type="button"
+                aria-pressed={language === l}
+                onClick={() => onLanguage(l)}
+                className={`relative h-7 min-w-11 rounded-full px-2.5 text-xs font-semibold before:absolute before:-inset-y-2 before:inset-x-0 sm:min-w-0 ${
+                  language === l ? "bg-white text-[#141414]" : "text-white/75 hover:text-white"
+                }`}
               >
-                <h2 className="font-serif text-[27px] font-semibold leading-[1.18] [text-wrap:balance] sm:text-[33px]">{card.title}</h2>
-                <p className="text-[17px] leading-[1.55] text-white/90 sm:text-[18px]">{card.body}</p>
-              </div>
-            ) : card.role === "insight" ? (
-              <div data-card-text className="safe-center flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 [scrollbar-width:thin] sm:px-5">
-                <p className="eyebrow uppercase">{t("feed.short.insight", { i: card.point ?? 1 })}</p>
-                <p className="font-serif text-[23px] leading-[1.38] text-ink sm:text-[27px]">{card.body}</p>
-              </div>
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {(translating || failure) && (
+          <div role="status" className="flex items-center gap-2 px-5 pt-2 text-xs text-white/80 lg:px-7">
+            {translating ? (
+              <>
+                <span aria-hidden className="h-1 w-10 animate-pulse rounded-full bg-white/50 motion-reduce:animate-none" />
+                {t("feed.short.translating")}
+              </>
             ) : (
-              <div data-card-text className="safe-center flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 [scrollbar-width:thin] sm:px-5">
-                <p className="eyebrow uppercase">{t("feed.short.keep")}</p>
-                <p className="font-serif text-[21px] leading-[1.35] text-ink sm:text-[25px]">{card.body}</p>
-                <LastCardActions short={short} />
-              </div>
+              <>
+                <span className="min-w-0 flex-1">{failure}</span>
+                <button type="button" className="shrink-0 font-semibold underline underline-offset-2" onClick={onRetry}>
+                  {t("common.retry")}
+                </button>
+              </>
             )}
           </div>
-        ))}
-      </div>
+        )}
 
-      <footer className="flex flex-col gap-1 px-3 pb-2 sm:px-4 sm:pb-3">
-        <a
-          href={short.original_url}
-          target="_blank"
-          rel="noreferrer"
-          title={short.original_title}
-          className="block truncate px-1 text-xs text-muted hover:text-ink hover:underline"
+        <div
+          ref={pager}
+          data-pager
+          onScroll={(e) => setPage(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
+          className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none]"
         >
-          {t("feed.short.source", { source: short.source_name, title: short.original_title })} ↗
-        </a>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            className="icon-btn min-[1200px]:hidden"
-            disabled={!canGoBack}
-            onClick={() => onArticle(-1)}
-            aria-label={t("feed.short.prev")}
-          >
-            <Icon name="up" size={20} />
-          </button>
-          <div className="flex flex-1 items-center justify-center gap-1">
+          {cards.map((card, i) => (
+            <div
+              key={i}
+              inert={i !== page}
+              className={`flex h-full w-full shrink-0 snap-start snap-always flex-col px-5 py-4 lg:px-9 lg:py-6 ${card.role === "hook" ? "max-lg:pr-[76px]" : ""}`}
+            >
+              <div data-card-text className="safe-center flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto [scrollbar-width:thin]">
+                {card.role === "hook" ? (
+                  <div className="flex flex-col gap-5">
+                    <h2 className="font-display text-[32px] font-semibold leading-[1.1] [text-wrap:balance] lg:hidden">{card.title}</h2>
+                    <p className="text-[17px] leading-[1.6] text-white/90 lg:font-serif lg:text-[25px] lg:leading-[1.5] lg:text-white">{withFigures(card.body)}</p>
+                  </div>
+                ) : card.role === "insight" ? (
+                  <div className="flex flex-col gap-3 rounded-[18px] border border-white/10 border-l-[3px] border-l-accent bg-white/10 p-5 backdrop-blur-sm lg:p-7">
+                    <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-white/75">
+                      <Icon name="spark" size={13} />
+                      {t("feed.short.insight", { i: card.point ?? 1 })}
+                    </p>
+                    <p className="font-serif text-[21px] leading-[1.45] lg:text-[26px]">{withFigures(card.body)}</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-5">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-white/75">{t("feed.short.keep")}</p>
+                    <p className="font-serif text-[21px] leading-[1.42] lg:text-[26px]">{withFigures(card.body)}</p>
+                    <LastCardActions short={short} />
+                    {upNext && (
+                      <button
+                        type="button"
+                        onClick={() => onArticle(1)}
+                        className="group flex items-center gap-3 rounded-[16px] border border-white/10 bg-white/10 p-3.5 text-left transition-colors hover:bg-white/15"
+                      >
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="text-xs font-semibold uppercase tracking-[0.08em] text-white/60">{t("feed.short.upNext")}</span>
+                          <span className="line-clamp-2 font-medium leading-snug">{upNext}</span>
+                        </span>
+                        <Icon name="down" size={18} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <footer className="flex flex-col gap-2 px-5 pb-4 lg:px-7 lg:pb-5">
+          <div className="lg:hidden">{source}</div>
+          <div className="flex items-center gap-3">
+            <div className="flex flex-1 items-center gap-1.5" role="group" aria-label={t("feed.short.card", { i: page + 1, n })}>
+              {cards.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => show(i)}
+                  aria-label={t("feed.short.cardN", { i: i + 1 })}
+                  aria-current={i === page}
+                  className="flex h-6 items-center"
+                >
+                  <span
+                    className={`block h-2 rounded-full transition-all motion-reduce:transition-none ${
+                      i === page ? "w-6 bg-white" : i < page ? "w-2 bg-white/60" : "w-2 bg-white/30"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+            {active && (
+              <span className="sr-only" aria-live="polite">
+                {t("feed.short.card", { i: page + 1, n })}
+              </span>
+            )}
             <button
               type="button"
-              className="btn-ghost h-11 min-w-11 px-3 text-sm"
+              className="round-btn-glass"
               disabled={page === 0}
               onClick={() => turn(-1)}
               aria-label={t("feed.short.prevCardAria")}
             >
-              <Icon name="back" size={16} />
-              <span className="hidden min-[400px]:inline">{t("feed.short.prevCard")}</span>
+              <Icon name="back" size={18} />
             </button>
             <button
               type="button"
-              className="btn-ghost h-11 min-w-11 px-3 text-sm font-semibold text-accent-text hover:text-accent-text"
+              className="round-btn-glass bg-white text-[#141414] hover:bg-white/90"
               onClick={() => (last ? onArticle(1) : turn(1))}
               aria-label={t(last ? "feed.short.next" : "feed.short.nextCardAria")}
             >
-              <span className={last ? "" : "hidden min-[400px]:inline"}>{t(last ? "feed.short.next" : "feed.short.nextCard")}</span>
-              <Icon name={last ? "down" : "next"} size={16} />
+              <Icon name={last ? "down" : "next"} size={18} />
             </button>
           </div>
-          <button type="button" className="icon-btn min-[1200px]:hidden" onClick={() => onArticle(1)} aria-label={t("feed.short.next")}>
-            <Icon name="down" size={20} />
-          </button>
+        </footer>
+      </div>
+
+      {active && page === 0 && (
+        <div className="absolute bottom-[92px] right-3 lg:hidden">
+          <ShortActions short={short} variant="float" onHide={onHide} />
         </div>
-      </footer>
+      )}
     </section>
   );
 }
@@ -647,6 +680,7 @@ function LastCardActions({ short }: { short: ShortCard }) {
   const { read, opened, pending, error } = useRead(short.read_id, short.document_id);
   const { save, saved, saving } = useSave(short.read_id, short.document_id);
   const minutes = readingMinutes(short.read_words);
+  const glass = "btn h-11 border border-white/15 bg-white/10 px-2 text-sm text-white hover:bg-white/20";
   return (
     <div className="flex flex-col gap-2">
       {error && <Alert>{error}</Alert>}
@@ -659,17 +693,17 @@ function LastCardActions({ short }: { short: ShortCard }) {
         <Icon name="arrow" size={16} />
       </button>
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" className="btn-outline h-11 px-2 text-sm" disabled={saving || saved} aria-pressed={saved} onClick={() => void save()}>
+        <button type="button" className={glass} disabled={saving || saved} aria-pressed={saved} onClick={() => void save()}>
           <Icon name={saved ? "check" : "bookmark"} size={16} />
           {t(saved ? "feed.savedShort" : "feed.short.saveLibrary")}
         </button>
-        <button type="button" className="btn-outline h-11 px-2 text-sm" disabled={pending} onClick={() => void read("?panel=chat")}>
+        <button type="button" className={glass} disabled={pending} onClick={() => void read("?panel=chat")}>
           <Icon name="spark" size={16} />
           {t("feed.short.askAi")}
         </button>
       </div>
-      <p className="text-xs leading-relaxed text-muted">
-        <a href={short.license_url || short.original_url} target="_blank" rel="noreferrer" className="hover:text-ink hover:underline">
+      <p className="text-xs leading-relaxed text-white/65">
+        <a href={short.license_url || short.original_url} target="_blank" rel="noreferrer" className="hover:text-white hover:underline">
           {t("feed.short.from", { title: short.original_title, source: short.source_name, license: short.license })}
         </a>
       </p>
@@ -677,8 +711,9 @@ function LastCardActions({ short }: { short: ShortCard }) {
   );
 }
 
-/** What can be done with the article on show: down the side of a wide screen, a bar under the card otherwise. */
-function ShortActions({ short, variant, onHide }: { short: ShortCard; variant: "rail" | "bar"; onHide: () => void }) {
+/** What can be done with the article on show: round buttons over the cover on a phone, a column beside the stage on
+ * a wide screen. */
+function ShortActions({ short, variant, onHide }: { short: ShortCard; variant: "rail" | "float"; onHide: () => void }) {
   const t = useT();
   const { showToast } = useUi();
   const { read, opened, pending, error } = useRead(short.read_id, short.document_id);
@@ -702,57 +737,72 @@ function ShortActions({ short, variant, onHide }: { short: ShortCard; variant: "
     }
   }
 
-  const actions: { icon: IconName; label: string; onClick: () => void; disabled?: boolean; pressed?: boolean }[] = [
+  const actions: { key: string; icon: IconName; label: string; onClick: () => void; disabled?: boolean; pressed?: boolean }[] = [
     {
+      key: "read",
       icon: "file",
       label: pending ? t("feed.opening") : opened ? t("feed.continue") : t(short.read_kind === "guide" ? "feed.short.readGuideShort" : "feed.short.readShort"),
       onClick: () => void read(),
       disabled: pending,
     },
     {
+      key: "save",
       icon: saved ? "check" : "bookmark",
       label: t(saved ? "feed.savedShort" : "feed.save"),
       onClick: () => void save(),
       disabled: saving || saved,
       pressed: saved,
     },
-    { icon: "spark", label: t("feed.short.askAi"), onClick: () => void read("?panel=chat"), disabled: pending },
-    { icon: copied ? "check" : "upload", label: t("feed.short.share"), onClick: () => void share() },
-    { icon: "x", label: t("feed.short.notInterested"), onClick: onHide },
+    { key: "ask", icon: "spark", label: t("feed.short.askAi"), onClick: () => void read("?panel=chat"), disabled: pending },
+    { key: "share", icon: copied ? "check" : "upload", label: t("feed.short.share"), onClick: () => void share() },
+    { key: "hide", icon: "x", label: t("feed.short.notInterested"), onClick: onHide },
   ];
 
-  if (variant === "bar")
+  if (variant === "float")
+    // Reading the original waits on the last card; over the cover there is room for four.
     return (
-      <div className="grid grid-cols-5 rounded-[16px] border border-line bg-surface shadow-card">
-        {actions.map((a) => (
-          <button
-            key={a.icon}
-            type="button"
-            disabled={a.disabled}
-            aria-pressed={a.pressed}
-            onClick={a.onClick}
-            className="flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-[14px] px-0.5 text-center text-[11px] font-medium leading-[1.1] text-body transition-colors hover:bg-soft disabled:opacity-60"
-          >
-            <Icon name={a.icon} size={18} />
-            <span className="line-clamp-2">{a.label}</span>
-          </button>
-        ))}
+      <div className="flex flex-col items-center gap-3">
+        {actions
+          .filter((a) => a.key !== "read")
+          .map((a) => (
+            <button
+              key={a.key}
+              type="button"
+              disabled={a.disabled}
+              aria-pressed={a.pressed}
+              onClick={a.onClick}
+              className="flex w-14 flex-col items-center gap-1 text-center text-[11px] font-medium leading-[1.15] text-white"
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-black/30 backdrop-blur-sm transition-colors hover:bg-black/40">
+                <Icon name={a.icon} size={19} />
+              </span>
+              <span className="line-clamp-2 [text-shadow:0_1px_2px_rgb(0_0_0/0.4)]">{a.label}</span>
+            </button>
+          ))}
       </div>
     );
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2.5">
       {actions.map((a, i) => (
         <button
-          key={a.icon}
+          key={a.key}
           type="button"
           disabled={a.disabled}
           aria-pressed={a.pressed}
           onClick={a.onClick}
-          className={i === 0 ? "btn-primary mb-1 h-11 justify-start px-4 text-sm" : `btn-ghost h-10 justify-start px-3 text-sm ${i === 4 ? "text-muted" : ""}`}
+          className={`group flex items-center gap-3 text-left text-sm font-medium disabled:cursor-not-allowed ${i === 4 ? "text-muted" : "text-ink"}`}
         >
-          <Icon name={a.icon} size={16} />
-          {a.label}
+          <span
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-full transition-colors ${
+              i === 0
+                ? "bg-accent text-on-accent group-hover:bg-accent-hover"
+                : "border border-line bg-surface shadow-card group-hover:bg-soft"
+            } ${a.disabled && !a.pressed ? "opacity-60" : ""}`}
+          >
+            <Icon name={a.icon} size={18} />
+          </span>
+          <span className="min-w-0 group-hover:underline group-hover:underline-offset-4">{a.label}</span>
         </button>
       ))}
     </div>

@@ -76,7 +76,6 @@ export default function FeedPage() {
       <div className={`mx-auto flex w-full flex-col ${immersive ? "max-w-[1280px] gap-2 lg:gap-3" : "max-w-[820px] gap-7"}`}>
         <div className={immersive || community || (reading && view === "chat") ? "sr-only" : "flex flex-col gap-2"}>
           <h1 className="page-title">{t("feed.title")}</h1>
-          <p className="max-w-2xl text-base leading-relaxed text-muted">{t("feed.lede")}</p>
         </div>
 
         {/* Readers' posts ask for no topics, so a reader who has not chosen any can still open them. */}
