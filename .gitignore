@@ -2,6 +2,7 @@
 .env.local
 .idea/
 .vscode/
+backups/
 
 # backend
 .venv/

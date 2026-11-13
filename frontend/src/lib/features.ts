@@ -8,3 +8,8 @@ export const FEED = false;
 
 /** Community posts and the publishing studio (/community, /publish), and the admin's post moderation. */
 export const COMMUNITY = false;
+
+/** The catalog of articles PureMind collected itself, managed from the admin's Articles and Crawl pages
+ * (/admin/articles, /admin/crawl). Explore no longer reads it: the AI finds documents on the web, and the
+ * catalog is empty. */
+export const CATALOG = false;

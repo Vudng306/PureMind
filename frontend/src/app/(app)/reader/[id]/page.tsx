@@ -23,7 +23,7 @@ import {
 } from "@/lib/annotations";
 import type { ChatImage } from "@/lib/chat";
 import { KIND_LABEL, origin } from "@/lib/doc-view";
-import { documentsKey, updateDocument, useCharts, useDocument, useSourceMap, type SourceBox } from "@/lib/documents";
+import { documentsKey, updateDocument, useCharts, useDocument, useDocuments, useSourceMap, type SourceBox } from "@/lib/documents";
 import { currentLang, translate, useLang, useT, type Key } from "@/lib/i18n";
 import { parseMarkdown, type Inline } from "@/lib/markdown";
 import { MSG, messageFor } from "@/lib/messages";
@@ -36,7 +36,7 @@ import {
 } from "@/lib/preferences";
 import { useAccount } from "@/lib/queries";
 import { looksEnglish } from "@/lib/translate";
-import type { Theme } from "@/lib/types";
+import type { DocumentListItem, Theme } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
 
 const PdfViewer = dynamic(() => import("@/components/pdf-viewer").then((m) => m.PdfViewer), {
@@ -65,7 +65,10 @@ const WIDTHS: [ColumnWidth, Key][] = [
   [680, "settings.widthMedium"],
   [780, "settings.widthWide"],
 ];
-const TOOLBAR_SPACE = 120;
+// Whether each column beside the text was left open, on this device.
+const SIDE_KEY = "puremind-reader-side";
+const PANEL_KEY = "puremind-reader-panel";
+const WIDE = "(min-width: 1280px)";
 const inlineText = (nodes: Inline[]): string => nodes.map((n) => ("v" in n ? n.v : "c" in n ? inlineText(n.c) : " ")).join("");
 const modeKey = (id: string) => `puremind-reader-mode:${id}`;
 
@@ -78,10 +81,32 @@ function readStoredMode(id: string): Mode | null {
   }
 }
 
+function readFlag(key: string): boolean | null {
+  try {
+    const v = localStorage.getItem(key);
+    return v === "1" ? true : v === "0" ? false : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeFlag(key: string, on: boolean) {
+  try {
+    localStorage.setItem(key, on ? "1" : "0");
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+/** Going from one document to the next keeps the route, so the reader is made anew for each document. */
 export default function ReaderPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  return <Reader key={id} id={id} />;
+}
+
+function Reader({ id }: { id: string }) {
   const t = useT();
   const lang = useLang();
-  const { id } = use(params);
   const { data: doc, isLoading, isError, error } = useDocument(id);
   const { theme, fontSize, lineHeight, width, defaultMode, colorLabels, set: setPrefs } = usePreferences();
   const showToast = useUi((s) => s.showToast);
@@ -89,6 +114,8 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   const { data: highlights, isPending: highlightsPending } = useHighlights(id);
   const { addHighlight, updateHighlight } = useHighlightActions();
   const { data: account } = useAccount();
+  // The library's own order, for the buttons that step to the document before and after this one.
+  const { data: shelf } = useDocuments("created_desc");
   const accountLoaded = Boolean(account);
   const consented = Boolean(account?.reading_preferences.ai_consent);
   // Without consent, the first English selection asks for it once; turning that down stops asking until
@@ -104,8 +131,13 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   const [matchTotal, setMatchTotal] = useState(0);
   const [focus, setFocus] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [panelTab, setPanelTab] = useState<PanelTab>("highlights");
-  const [tocOpen, setTocOpen] = useState(false);
+  const [panelTab, setPanelTab] = useState<PanelTab>("info");
+  // The column of pages or contents on the left. Like the panel, it starts open only where there is room.
+  const [sideOpen, setSideOpen] = useState(false);
+  // Places in this layout that the PDF viewer fills: its page field, its zoom, its thumbnails.
+  const [pagerSlot, setPagerSlot] = useState<HTMLElement | null>(null);
+  const [zoomSlot, setZoomSlot] = useState<HTMLElement | null>(null);
+  const [thumbsSlot, setThumbsSlot] = useState<HTMLElement | null>(null);
   // FR-RDR-03: the reading options live behind this gear, so the toolbar stays short.
   const [optsOpen, setOptsOpen] = useState(false);
   const [activeHl, setActiveHl] = useState<string | null>(null);
@@ -181,6 +213,22 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   }, [readingTheme, theme]);
 
   useEffect(() => {
+    const wide = window.matchMedia(WIDE).matches;
+    setSideOpen(wide && (readFlag(SIDE_KEY) ?? true));
+    setPanelOpen((open) => open || (wide && (readFlag(PANEL_KEY) ?? true)));
+  }, []);
+
+  function toggleSide() {
+    writeFlag(SIDE_KEY, !sideOpen);
+    setSideOpen(!sideOpen);
+  }
+
+  function showPanel(open: boolean) {
+    writeFlag(PANEL_KEY, open);
+    setPanelOpen(open);
+  }
+
+  useEffect(() => {
     if (modeChosen.current) return;
     const params = new URLSearchParams(window.location.search);
     const hlId = params.get("hl");
@@ -239,7 +287,6 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
   function chooseMode(next: Mode) {
     setMode(next);
     setSelection(null);
-    setTocOpen(false);
     restored.current = false;
     try {
       localStorage.setItem(modeKey(id), next); // FR-RDR-05 step 4: remembered per document on this device
@@ -248,14 +295,14 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
     }
   }
 
-  // Keyboard: Ctrl+F opens in-document search; Esc leaves focus mode / closes the table of contents.
+  // Keyboard: Ctrl+F opens in-document search; Esc leaves focus mode / closes the reading options.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f") {
         e.preventDefault();
         setFindOpen(true);
       } else if (e.key === "Escape") {
-        setTocOpen(false);
+        setOptsOpen(false);
         setFocus(false);
       }
     }
@@ -572,382 +619,418 @@ export default function ReaderPage({ params }: { params: Promise<{ id: string }>
     </>
   );
 
-  const toolBtn = "flex h-11 items-center gap-2 rounded-[10px] px-3 text-sm text-ink hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40";
-  const divider = <span className="hidden h-6 w-px bg-line sm:block" />;
+  const original = effectiveMode === "original";
+  const progressText = original || hasPages ? [`${Math.round(pct * 100)}%`, pageLabel].filter(Boolean).join(" · ") : pageLabel;
+
+  const tool =
+    "flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-ink hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40";
+  const toolIcon = "icon-btn h-9 w-9 rounded-lg";
+  const divider = <span className="mx-1 hidden h-5 w-px shrink-0 bg-line sm:block" />;
+
+  const at = shelf?.findIndex((d) => d.id === id) ?? -1;
+  const stepTo = (to: DocumentListItem | undefined, icon: "up" | "down", label: Key) =>
+    to ? (
+      <Link
+        href={`/reader/${to.id}`}
+        className="grid h-9 w-9 place-items-center rounded-full text-ink hover:bg-line"
+        aria-label={t(label)}
+        title={`${t(label)}: ${to.title}`}
+      >
+        <Icon name={icon} size={18} />
+      </Link>
+    ) : (
+      <span aria-hidden className="grid h-9 w-9 place-items-center text-muted opacity-40">
+        <Icon name={icon} size={18} />
+      </span>
+    );
 
   return (
-    <div className="flex h-screen flex-col bg-bg text-ink">
-      <div aria-hidden className="h-[3px] shrink-0 bg-line">
-        <div className="h-[3px] bg-accent transition-[width] duration-200" style={{ width: `${Math.round(pct * 100)}%` }} />
-      </div>
+    <div className="flex h-screen bg-bg text-ink">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div aria-hidden className="h-[3px] shrink-0 bg-line">
+          <div className="h-[3px] bg-accent transition-[width] duration-200" style={{ width: `${Math.round(pct * 100)}%` }} />
+        </div>
 
-      {!focus && (
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-line px-2 sm:gap-3.5 sm:px-5">
-          <Link href="/library" className="flex h-11 items-center gap-1 rounded-[10px] pl-1.5 pr-3 text-[15px] hover:bg-soft" aria-label={t("reader.backToLibrary")}>
-            <Icon name="back" size={20} />
-            <span className="hidden sm:inline">{t("nav.library")}</span>
-          </Link>
-          <span className="hidden h-6 w-px bg-line sm:block" />
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5 lg:max-w-[360px]">
-            <span className="truncate text-[15px] font-semibold">{doc.title}</span>
-            <span className="truncate text-xs text-muted">
-              {KIND_LABEL[doc.file_type]}
-              {pageLabel ? ` · ${pageLabel}` : ""}
-            </span>
-          </div>
-          <span className="hidden flex-1 lg:block" />
-          {isPdf && (
-            <div className="hidden h-11 gap-0.5 rounded-xl bg-soft p-1 md:flex" role="group" aria-label={t("reader.modeAria")}>
-              {(["clean", "original"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  aria-pressed={effectiveMode === m}
-                  disabled={m === "clean" && !hasClean}
-                  title={m === "clean" && !hasClean ? messageFor(doc.extraction_error) : undefined}
-                  onClick={() => chooseMode(m)}
-                  className={`h-9 rounded-[9px] px-4 text-sm disabled:cursor-not-allowed disabled:opacity-40 ${
-                    effectiveMode === m ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"
-                  }`}
-                >
-                  {t(m === "original" ? "reader.original" : "reader.clean")}
-                </button>
-              ))}
+        {!focus && (
+          <header className="flex h-14 shrink-0 items-center gap-1 border-b border-line px-2 sm:px-3">
+            <Link href="/library" className={toolIcon} aria-label={t("reader.backToLibrary")} title={t("reader.backToLibrary")}>
+              <Icon name="back" size={20} />
+            </Link>
+            <div className="hidden h-9 shrink-0 items-center rounded-full bg-soft sm:flex">
+              {stepTo(at > 0 ? shelf?.[at - 1] : undefined, "up", "reader.prevDoc")}
+              {stepTo(at >= 0 ? shelf?.[at + 1] : undefined, "down", "reader.nextDoc")}
             </div>
-          )}
-          <span className="hidden flex-1 lg:block" />
-          <div className="flex justify-end gap-2 lg:w-[360px]">
             <button
               type="button"
-              onClick={() => {
-                const open = !(panelOpen && panelTab === "ai");
-                setPanelOpen(open);
-                if (open) setPanelTab("ai");
-              }}
-              aria-pressed={panelOpen && panelTab === "ai"}
-              className={`flex h-11 items-center gap-2 rounded-[10px] border border-line px-3.5 text-sm font-medium ${panelOpen && panelTab === "ai" ? "bg-soft" : "hover:bg-soft"}`}
+              className={`${toolIcon} ${sideOpen ? "bg-soft" : ""}`}
+              aria-pressed={sideOpen}
+              aria-label={t("reader.toggleSide")}
+              title={t("reader.toggleSide")}
+              onClick={toggleSide}
             >
-              <Icon name="spark" />
-              <span className="hidden sm:inline">{t("panel.tabAi")}</span>
+              <Icon name="panelLeft" />
+            </button>
+            {divider}
+            <button
+              type="button"
+              className={`${toolIcon} font-serif text-[17px] font-semibold ${optsOpen ? "bg-soft" : ""}`}
+              aria-expanded={optsOpen}
+              aria-label={t("settings.readingOptions")}
+              title={t("settings.readingOptions")}
+              onClick={() => setOptsOpen((o) => !o)}
+            >
+              Aa
             </button>
             <button
               type="button"
-              onClick={() => {
-                const open = !(panelOpen && panelTab !== "ai");
-                setPanelOpen(open);
-                if (open && panelTab === "ai") setPanelTab("highlights");
-              }}
-              aria-pressed={panelOpen && panelTab !== "ai"}
-              className={`flex h-11 items-center gap-2 rounded-[10px] border border-line px-3.5 text-sm font-medium ${panelOpen && panelTab !== "ai" ? "bg-soft" : "hover:bg-soft"}`}
+              className={toolIcon}
+              aria-label={t("reader.findCtrlF")}
+              title={t("reader.findCtrlF")}
+              onClick={() => setFindOpen((o) => !o)}
+              aria-expanded={findOpen}
             >
-              <Icon name="highlighter" />
-              <span className="hidden sm:inline">{t("reader.highlightsShort")}</span> {highlights.length}
+              <Icon name="search" />
             </button>
-          </div>
-        </header>
-      )}
+            {isPdf && (
+              <div className="ml-1 hidden h-9 shrink-0 gap-0.5 rounded-[10px] bg-soft p-[3px] md:flex" role="group" aria-label={t("reader.modeAria")}>
+                {(["clean", "original"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    aria-pressed={effectiveMode === m}
+                    disabled={m === "clean" && !hasClean}
+                    title={m === "clean" && !hasClean ? messageFor(doc.extraction_error) : undefined}
+                    onClick={() => chooseMode(m)}
+                    className={`rounded-[7px] px-3 text-[13px] disabled:cursor-not-allowed disabled:opacity-40 ${
+                      effectiveMode === m ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"
+                    }`}
+                  >
+                    {t(m === "original" ? "reader.original" : "reader.clean")}
+                  </button>
+                ))}
+              </div>
+            )}
+            {original && <div ref={setZoomSlot} className="ml-1 hidden shrink-0 lg:block" />}
 
-      <div className="flex min-h-0 flex-1">
-        <div className="relative flex min-w-0 flex-1 flex-col">
-          {effectiveMode === "original" ? (
-            <>
-              {doc.extraction_status === "failed" && (
-                <div className="mx-auto w-full max-w-[640px] px-4 pt-4">
-                  <Alert>{messageFor(doc.extraction_error)}</Alert>
-                </div>
+            <span className="flex-1" />
+            {original ? (
+              <div ref={setPagerSlot} className="shrink-0" />
+            ) : (
+              <span className="truncate text-[13px] tabular-nums text-muted">{pageLabel}</span>
+            )}
+            <span className="flex-1" />
+
+            <button
+              type="button"
+              className={tool}
+              title={t("reader.focus")}
+              onClick={() => {
+                setFocus(true);
+                setOptsOpen(false);
+                setSelection(null);
+              }}
+            >
+              <Icon name="focus" />
+              <span className="hidden xl:inline">{t("reader.focus")}</span>
+            </button>
+            {!panelOpen && (
+              <>
+                <button
+                  type="button"
+                  className={tool}
+                  title={t("panel.aria")}
+                  onClick={() => {
+                    setPanelTab("highlights");
+                    showPanel(true);
+                  }}
+                >
+                  <Icon name="highlighter" />
+                  <span className="tabular-nums">{highlights.length}</span>
+                  <span className="sr-only">{t("panel.aria")}</span>
+                </button>
+                <button
+                  type="button"
+                  className={toolIcon}
+                  aria-label={t("reader.togglePanel")}
+                  title={t("reader.togglePanel")}
+                  onClick={() => showPanel(true)}
+                >
+                  <Icon name="panelRight" />
+                </button>
+              </>
+            )}
+          </header>
+        )}
+
+        <div className="flex min-h-0 flex-1">
+          {sideOpen && !focus && (
+            <aside
+              aria-label={t(original ? "reader.pagesHeading" : "reader.outline")}
+              className="fixed inset-y-0 left-0 z-20 flex w-[232px] shrink-0 flex-col border-r border-line bg-surface shadow-pop lg:static lg:z-auto lg:bg-transparent lg:shadow-none"
+            >
+              <div className="flex h-11 shrink-0 items-center justify-between pl-4 pr-1.5">
+                <span className="eyebrow">{t(original ? "reader.pagesHeading" : "reader.outline").toLocaleUpperCase(lang)}</span>
+                <button type="button" className="icon-btn h-9 w-9 text-muted lg:hidden" aria-label={t("reader.toggleSide")} onClick={toggleSide}>
+                  <Icon name="x" size={16} />
+                </button>
+              </div>
+              {original ? (
+                <div ref={setThumbsSlot} className="min-h-0 flex-1 overflow-y-auto" />
+              ) : (
+                <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-4">
+                  {headings.length === 0 ? (
+                    <p className="px-2 py-1 text-[13px] leading-relaxed text-muted">{t("reader.noHeadings")}</p>
+                  ) : (
+                    headings.map((hd) => (
+                      <button
+                        key={hd.id}
+                        type="button"
+                        onClick={() => {
+                          readerRef.current?.scrollToBlock(hd.id);
+                          // Over a narrow page the column covers the text it just scrolled to.
+                          if (!window.matchMedia("(min-width: 1024px)").matches) setSideOpen(false);
+                        }}
+                        className="flex min-h-9 items-start justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] leading-snug text-body hover:bg-soft hover:text-ink"
+                        style={{ paddingLeft: hd.t === "heading" ? 8 + (hd.level - 1) * 12 : 8 }}
+                      >
+                        <span className={`line-clamp-2 ${hd.t === "heading" && hd.level === 1 ? "font-semibold text-ink" : ""}`}>
+                          {hd.t === "heading" && inlineText(hd.c)}
+                        </span>
+                        {hasPages && <span className="shrink-0 text-xs tabular-nums text-muted">{blockPage.get(hd.id)}</span>}
+                      </button>
+                    ))
+                  )}
+                </nav>
               )}
-              {isPdf && (
-                <div className="flex justify-center border-b border-line py-2 md:hidden">
-                  <button type="button" className="chip h-9" onClick={() => chooseMode("clean")} disabled={!hasClean}>
-                    {t("reader.switchClean")}
-                  </button>
-                </div>
-              )}
-              <PdfViewer
-                handleRef={pdfRef}
-                documentId={doc.id}
-                initialPage={hlTarget?.page ?? doc.last_read_page ?? 1}
-                onPageChange={onPageChange}
-                onError={() => setViewerError(true)}
-                reloadKey={reloadKey}
-                search={search}
-                bottomInset={focus ? 24 : TOOLBAR_SPACE}
-                highlights={highlights}
-                activeHighlightId={activeHl}
-                flashHighlightId={flashHl}
-                onSelect={onSelect}
-                onHighlightClick={onHighlightClick}
-              />
-            </>
-          ) : hasClean ? (
-            <>
-              {isPdf && (
-                <div className="flex justify-center border-b border-line py-2 md:hidden">
-                  <button type="button" className="chip h-9" onClick={() => chooseMode("original")}>
-                    {t("reader.viewOriginal")}
-                  </button>
-                </div>
-              )}
-              <div className="min-h-0 flex-1">
-                <CleanReader
-                  handleRef={readerRef}
+            </aside>
+          )}
+
+          <div className="relative flex min-w-0 flex-1 flex-col">
+            {original ? (
+              <>
+                {doc.extraction_status === "failed" && (
+                  <div className="mx-auto w-full max-w-[640px] px-4 pt-4">
+                    <Alert>{messageFor(doc.extraction_error)}</Alert>
+                  </div>
+                )}
+                {isPdf && (
+                  <div className="flex justify-center border-b border-line py-2 md:hidden">
+                    <button type="button" className="chip h-9" onClick={() => chooseMode("clean")} disabled={!hasClean}>
+                      {t("reader.switchClean")}
+                    </button>
+                  </div>
+                )}
+                <PdfViewer
+                  handleRef={pdfRef}
                   documentId={doc.id}
-                  header={header}
-                  blocks={blocks}
-                  fontSize={fontSize}
-                  lineHeight={lineHeight}
-                  width={width}
+                  initialPage={hlTarget?.page ?? doc.last_read_page ?? 1}
+                  onPageChange={onPageChange}
+                  onError={() => setViewerError(true)}
+                  reloadKey={reloadKey}
                   search={search}
+                  bottomInset={24}
                   highlights={highlights}
                   activeHighlightId={activeHl}
                   flashHighlightId={flashHl}
                   onSelect={onSelect}
                   onHighlightClick={onHighlightClick}
-                  onUnanchored={onUnanchored}
-                  onScrollProgress={onScrollProgress}
-                  onExplainImage={explainImage}
-                  onViewSource={isPdf ? viewSource : undefined}
-                  hasSource={hasSource}
-                  charts={charts}
-                  bottomPadding={focus ? 80 : 170}
+                  pagerSlot={pagerSlot}
+                  zoomSlot={zoomSlot}
+                  thumbsSlot={thumbsSlot}
                 />
-              </div>
-            </>
-          ) : doc.extraction_status === "failed" ? (
-            <div className="mx-auto flex max-w-md flex-1 flex-col justify-center gap-4 px-4">
-              <Alert>{messageFor(doc.extraction_error)}</Alert>
-              <Link href="/library" className="btn-outline self-start">
-                {t("reader.backToLibrary")}
-              </Link>
-            </div>
-          ) : (
-            <div className="flex flex-1 items-center justify-center">
-              <Spinner label={t("reader.extracting")} />
-            </div>
-          )}
-
-          {findOpen && (
-            <FindBar
-              query={query}
-              onQuery={onQuery}
-              index={matchIndex}
-              total={matchTotal}
-              onIndex={setMatchIndex}
-              onClose={() => setFindOpen(false)}
-            />
-          )}
-
-          {optsOpen && !focus && (
-            <div
-              role="dialog"
-              aria-label={t("settings.readingOptions")}
-              className="absolute bottom-[96px] left-1/2 z-20 flex w-[min(360px,calc(100%-24px))] -translate-x-1/2 flex-col gap-4 rounded-[14px] border border-line bg-surface p-4 shadow-float"
-            >
-              <div className="flex flex-col gap-2">
-                <span className="text-[13px] font-semibold text-muted">{t("reader.themeAria")}</span>
-                <div className="flex items-center gap-1" role="radiogroup" aria-label={t("reader.themeAria")}>
-                  {THEMES.map((th) => (
-                    <button
-                      key={th.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={readingTheme === th.value}
-                      title={t(th.label)}
-                      onClick={() => setReadingTheme(th.value)}
-                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[10px] border border-line text-[13px] text-ink hover:bg-soft"
-                      style={{ borderColor: readingTheme === th.value ? "rgb(var(--accent))" : undefined }}
-                    >
-                      <span className="h-[18px] w-[18px] rounded-full border border-line" style={{ background: th.swatch }} />
-                      {t(th.label)}
+              </>
+            ) : hasClean ? (
+              <>
+                {isPdf && (
+                  <div className="flex justify-center border-b border-line py-2 md:hidden">
+                    <button type="button" className="chip h-9" onClick={() => chooseMode("original")}>
+                      {t("reader.viewOriginal")}
                     </button>
-                  ))}
+                  </div>
+                )}
+                <div className="min-h-0 flex-1">
+                  <CleanReader
+                    handleRef={readerRef}
+                    documentId={doc.id}
+                    header={header}
+                    blocks={blocks}
+                    fontSize={fontSize}
+                    lineHeight={lineHeight}
+                    width={width}
+                    search={search}
+                    highlights={highlights}
+                    activeHighlightId={activeHl}
+                    flashHighlightId={flashHl}
+                    onSelect={onSelect}
+                    onHighlightClick={onHighlightClick}
+                    onUnanchored={onUnanchored}
+                    onScrollProgress={onScrollProgress}
+                    onExplainImage={explainImage}
+                    onViewSource={isPdf ? viewSource : undefined}
+                    hasSource={hasSource}
+                    charts={charts}
+                    bottomPadding={80}
+                  />
                 </div>
+              </>
+            ) : doc.extraction_status === "failed" ? (
+              <div className="mx-auto flex max-w-md flex-1 flex-col justify-center gap-4 px-4">
+                <Alert>{messageFor(doc.extraction_error)}</Alert>
+                <Link href="/library" className="btn-outline self-start">
+                  {t("reader.backToLibrary")}
+                </Link>
               </div>
-              {clean && (
-                <>
-                  <div className="flex flex-col gap-2">
-                    <span className="text-[13px] font-semibold text-muted">{t("settings.lineHeight")}</span>
-                    <div className="flex gap-1.5" role="radiogroup" aria-label={t("settings.lineHeight")}>
-                      {LINE_HEIGHTS.map(([v, l]) => (
-                        <button
-                          key={v}
-                          type="button"
-                          role="radio"
-                          aria-checked={lineHeight === v}
-                          className="chip flex-1"
-                          onClick={() => setPrefs({ lineHeight: v })}
-                        >
-                          {t(l)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <span className="text-[13px] font-semibold text-muted">{t("settings.columnWidth")}</span>
-                    <div className="flex gap-1.5" role="radiogroup" aria-label={t("settings.columnWidth")}>
-                      {WIDTHS.map(([v, l]) => (
-                        <button
-                          key={v}
-                          type="button"
-                          role="radio"
-                          aria-checked={width === v}
-                          className="chip flex-1"
-                          onClick={() => setPrefs({ width: v })}
-                        >
-                          {t(l)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-              <Link href="/settings" className="flex items-center gap-1.5 text-[13px] text-accent-text hover:underline">
-                <Icon name="gear" size={14} />
-                {t("settings.allOptions")}
-              </Link>
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-1 items-center justify-center">
+                <Spinner label={t("reader.extracting")} />
+              </div>
+            )}
 
-          {tocOpen && !focus && (
-            <div
-              role="dialog"
-              aria-label={t("reader.outline")}
-              className="absolute bottom-[96px] left-1/2 z-20 flex max-h-[60vh] w-[min(360px,calc(100%-24px))] -translate-x-1/2 flex-col gap-0.5 overflow-y-auto rounded-[14px] border border-line bg-surface p-2.5 shadow-float"
-            >
-              <span className="px-2.5 py-2 text-xs font-semibold tracking-[0.08em] text-muted">{t("reader.outlineHeading")}</span>
-              {headings.length === 0 ? (
-                <p className="px-2.5 pb-2 text-sm text-muted">{t("reader.noHeadings")}</p>
-              ) : (
-                headings.map((hd) => (
-                  <button
-                    key={hd.id}
-                    type="button"
-                    onClick={() => {
-                      readerRef.current?.scrollToBlock(hd.id);
-                      setTocOpen(false);
-                    }}
-                    className="flex min-h-11 items-center justify-between gap-3 rounded-[9px] px-2.5 py-2 text-left text-sm text-ink hover:bg-soft"
-                    style={{ paddingLeft: hd.t === "heading" ? 10 + (hd.level - 1) * 14 : 10 }}
-                  >
-                    <span className="line-clamp-2">
-                      {hd.t === "heading" && inlineText(hd.c)}
-                    </span>
-                    {hasPages && <span className="shrink-0 text-[13px] text-muted">{blockPage.get(hd.id)}</span>}
-                  </button>
-                ))
-              )}
-            </div>
-          )}
+            {findOpen && (
+              <FindBar
+                query={query}
+                onQuery={onQuery}
+                index={matchIndex}
+                total={matchTotal}
+                onIndex={setMatchIndex}
+                onClose={() => setFindOpen(false)}
+              />
+            )}
 
-          {!focus ? (
-            <nav
-              aria-label={t("reader.tools")}
-              className="absolute bottom-3 left-1/2 z-10 flex h-[60px] w-[min(640px,calc(100%-16px))] -translate-x-1/2 items-center justify-between gap-0.5 rounded-[18px] border border-line bg-surface px-2 shadow-float sm:bottom-6"
-            >
-              <button
-                type="button"
-                className={toolBtn}
-                onClick={() => {
-                  setTocOpen((o) => !o);
-                  setOptsOpen(false);
-                }}
-                disabled={!clean}
-                aria-expanded={tocOpen}
-              >
-                <Icon name="toc" />
-                <span className="hidden sm:inline">{t("reader.outline")}</span>
-              </button>
-              <button type="button" className="icon-btn" aria-label={t("reader.findCtrlF")} onClick={() => setFindOpen((o) => !o)} aria-expanded={findOpen}>
-                <Icon name="search" />
-              </button>
-              {divider}
-              {clean && (
-                <>
-                  <div className="flex items-center">
-                    <button
-                      type="button"
-                      aria-label={t("reader.textSmaller")}
-                      className="icon-btn font-serif text-[15px]"
-                      disabled={fontSize <= 14}
-                      onClick={() => setPrefs({ fontSize: fontSize - 1 })}
-                    >
-                      A
-                    </button>
-                    <span className="w-[34px] text-center text-[13px] text-muted" aria-live="polite">
-                      {fontSize}
-                    </span>
-                    <button
-                      type="button"
-                      aria-label={t("reader.textBigger")}
-                      className="icon-btn font-serif text-[21px]"
-                      disabled={fontSize >= 28}
-                      onClick={() => setPrefs({ fontSize: fontSize + 1 })}
-                    >
-                      A
-                    </button>
-                  </div>
-                  {divider}
-                </>
-              )}
-              <button
-                type="button"
-                className="icon-btn"
+            {optsOpen && !focus && (
+              <div
+                role="dialog"
                 aria-label={t("settings.readingOptions")}
-                onClick={() => {
-                  setOptsOpen((o) => !o);
-                  setTocOpen(false);
-                }}
-                aria-expanded={optsOpen}
+                className="absolute left-3 top-3 z-20 flex w-[min(340px,calc(100%-24px))] flex-col gap-4 rounded-[14px] border border-line bg-surface p-4 shadow-float"
               >
-                <Icon name="gear" />
-              </button>
-              {divider}
+                {clean && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] font-semibold text-muted">{t("reader.textSize")}</span>
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        aria-label={t("reader.textSmaller")}
+                        className="icon-btn h-10 w-10 font-serif text-[15px]"
+                        disabled={fontSize <= 14}
+                        onClick={() => setPrefs({ fontSize: fontSize - 1 })}
+                      >
+                        A
+                      </button>
+                      <span className="w-[34px] text-center text-[13px] tabular-nums text-muted" aria-live="polite">
+                        {fontSize}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={t("reader.textBigger")}
+                        className="icon-btn h-10 w-10 font-serif text-[21px]"
+                        disabled={fontSize >= 28}
+                        onClick={() => setPrefs({ fontSize: fontSize + 1 })}
+                      >
+                        A
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  <span className="text-[13px] font-semibold text-muted">{t("reader.themeAria")}</span>
+                  <div className="flex items-center gap-1" role="radiogroup" aria-label={t("reader.themeAria")}>
+                    {THEMES.map((th) => (
+                      <button
+                        key={th.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={readingTheme === th.value}
+                        title={t(th.label)}
+                        onClick={() => setReadingTheme(th.value)}
+                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[10px] border border-line text-[13px] text-ink hover:bg-soft"
+                        style={{ borderColor: readingTheme === th.value ? "rgb(var(--accent))" : undefined }}
+                      >
+                        <span className="h-[18px] w-[18px] rounded-full border border-line" style={{ background: th.swatch }} />
+                        {t(th.label)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {clean && (
+                  <>
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[13px] font-semibold text-muted">{t("settings.lineHeight")}</span>
+                      <div className="flex gap-1.5" role="radiogroup" aria-label={t("settings.lineHeight")}>
+                        {LINE_HEIGHTS.map(([v, l]) => (
+                          <button
+                            key={v}
+                            type="button"
+                            role="radio"
+                            aria-checked={lineHeight === v}
+                            className="chip flex-1"
+                            onClick={() => setPrefs({ lineHeight: v })}
+                          >
+                            {t(l)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[13px] font-semibold text-muted">{t("settings.columnWidth")}</span>
+                      <div className="flex gap-1.5" role="radiogroup" aria-label={t("settings.columnWidth")}>
+                        {WIDTHS.map(([v, l]) => (
+                          <button
+                            key={v}
+                            type="button"
+                            role="radio"
+                            aria-checked={width === v}
+                            className="chip flex-1"
+                            onClick={() => setPrefs({ width: v })}
+                          >
+                            {t(l)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+                <Link href="/settings" className="flex items-center gap-1.5 text-[13px] text-accent-text hover:underline">
+                  <Icon name="gear" size={14} />
+                  {t("settings.allOptions")}
+                </Link>
+              </div>
+            )}
+
+            {focus && (
               <button
                 type="button"
-                className={toolBtn}
-                onClick={() => {
-                  setFocus(true);
-                  setTocOpen(false);
-                  setSelection(null);
-                }}
+                onClick={() => setFocus(false)}
+                className="absolute right-4 top-4 z-10 flex h-11 items-center gap-2 rounded-full border border-line bg-surface px-4 text-sm text-muted opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100"
               >
-                <Icon name="focus" />
-                <span className="hidden sm:inline">{t("reader.focus")}</span>
+                <Icon name="x" size={16} />
+                {t("reader.exitFocus")}
               </button>
-            </nav>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setFocus(false)}
-              className="absolute right-4 top-4 z-10 flex h-11 items-center gap-2 rounded-full border border-line bg-surface px-4 text-sm text-muted opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100"
-            >
-              <Icon name="x" size={16} />
-              {t("reader.exitFocus")}
-            </button>
-          )}
+            )}
+          </div>
         </div>
-
-        {panelOpen && !focus && (
-          <ReaderPanel
-            docId={id}
-            highlights={highlights}
-            tab={panelTab}
-            onTab={setPanelTab}
-            onClose={() => setPanelOpen(false)}
-            activeId={activeHl}
-            editingId={editingHl}
-            onEditing={setEditingHl}
-            onJump={openHighlight}
-            aiQuote={aiQuote}
-            onClearQuote={() => setAiQuote(null)}
-            aiImage={aiImage}
-            onClearImage={() => setAiImage(null)}
-            onKeyword={findKeyword}
-            canHighlight={clean || isPdf}
-            lostIds={clean ? lostHl : []}
-          />
-        )}
       </div>
+
+      {panelOpen && !focus && (
+        <ReaderPanel
+          docId={id}
+          highlights={highlights}
+          tab={panelTab}
+          onTab={setPanelTab}
+          onClose={() => showPanel(false)}
+          activeId={activeHl}
+          editingId={editingHl}
+          onEditing={setEditingHl}
+          onJump={openHighlight}
+          aiQuote={aiQuote}
+          onClearQuote={() => setAiQuote(null)}
+          aiImage={aiImage}
+          onClearImage={() => setAiImage(null)}
+          onKeyword={findKeyword}
+          canHighlight={clean || isPdf}
+          lostIds={clean ? lostHl : []}
+          progress={progressText}
+        />
+      )}
 
       {selection && (clean || "rects" in selection) && (
         <SelectionMenu

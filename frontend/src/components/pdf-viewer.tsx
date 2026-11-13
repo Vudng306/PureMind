@@ -2,6 +2,7 @@
 
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import "pdfjs-dist/web/pdf_viewer.css";
 
@@ -25,6 +26,8 @@ const GAP = 16;
 const PAD = 16;
 const RENDER_RADIUS = 2; // FR-RDR-01 step 3: only pages within ±2 of the visible one are rendered
 const ZOOM_LEVELS = Array.from({ length: 26 }, (_, i) => Math.round((0.5 + i * 0.1) * 10) / 10);
+const THUMB_WIDTH = 108;
+const THUMB_MARGIN = 600; // thumbnails this far outside the column are drawn ahead of being scrolled to
 
 const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(z * 10) / 10));
 
@@ -160,6 +163,142 @@ function PageView({
   );
 }
 
+/** One page, small. It is drawn only while it is near the visible part of the column, so a long PDF stays light. */
+function Thumb({
+  pdf,
+  page,
+  size,
+  active,
+  near,
+  onPick,
+}: {
+  pdf: PDFDocumentProxy;
+  page: number;
+  size: Size;
+  active: boolean;
+  near: boolean;
+  onPick: (page: number) => void;
+}) {
+  const t = useT();
+  const hostRef = useRef<HTMLSpanElement>(null);
+  // Until the page itself has been opened, its shape is taken to be the first page's.
+  const [shape, setShape] = useState<Size | null>(null);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host || !near) return;
+    let cancelled = false;
+    let task: RenderTask | null = null;
+    (async () => {
+      const pdfPage = await pdf.getPage(page);
+      if (cancelled) return;
+      const base = pdfPage.getViewport({ scale: 1 });
+      setShape({ w: base.width, h: base.height });
+      const ratio = Math.min(2, window.devicePixelRatio || 1);
+      const viewport = pdfPage.getViewport({ scale: (THUMB_WIDTH / base.width) * ratio });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      canvas.className = "block h-full w-full";
+      task = pdfPage.render({ canvas, viewport });
+      try {
+        await task.promise;
+      } catch {
+        return; // cancelled
+      }
+      if (!cancelled) host.replaceChildren(canvas);
+    })().catch(() => undefined);
+    return () => {
+      cancelled = true;
+      task?.cancel();
+      host.replaceChildren();
+    };
+  }, [pdf, page, near]);
+
+  const { w, h } = shape ?? size;
+  return (
+    <button
+      type="button"
+      data-thumb={page}
+      onClick={() => onPick(page)}
+      aria-label={t("reader.goToPage", { n: page })}
+      aria-current={active ? "page" : undefined}
+      className={`relative shrink-0 rounded-lg border-2 bg-white p-0.5 transition-colors ${
+        active ? "border-accent shadow-card" : "border-transparent shadow-sm hover:border-field"
+      }`}
+      style={{ width: THUMB_WIDTH + 8, height: Math.round((h / w) * THUMB_WIDTH) + 8 }}
+    >
+      <span ref={hostRef} className="block h-full w-full overflow-hidden rounded-[5px]" />
+      <span
+        className={`absolute bottom-1.5 left-1/2 grid h-5 min-w-5 -translate-x-1/2 place-items-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums ${
+          active ? "bg-accent text-white" : "bg-black/55 text-white"
+        }`}
+      >
+        {page}
+      </span>
+    </button>
+  );
+}
+
+/** Every page as a small picture, in a column beside the document; the page being read is marked and kept in view. */
+function Thumbnails({
+  pdf,
+  sizes,
+  current,
+  onPick,
+}: {
+  pdf: PDFDocumentProxy;
+  sizes: Size[];
+  current: number;
+  onPick: (page: number) => void;
+}) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState<Set<number>>(() => new Set([current]));
+
+  useEffect(() => {
+    const list = listRef.current;
+    const scroller = list?.parentElement;
+    if (!list || !scroller) return;
+    const io = new IntersectionObserver(
+      (entries) =>
+        setNear((prev) => {
+          const next = new Set(prev);
+          for (const e of entries) {
+            const page = Number((e.target as HTMLElement).dataset.thumb);
+            if (e.isIntersecting) next.add(page);
+            else next.delete(page);
+          }
+          return next;
+        }),
+      { root: scroller, rootMargin: `${THUMB_MARGIN}px 0px` },
+    );
+    list.querySelectorAll("[data-thumb]").forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [pdf, sizes.length]);
+
+  // Scrolled by hand rather than with scrollIntoView, which would also move the page around the column.
+  useEffect(() => {
+    const list = listRef.current;
+    const scroller = list?.parentElement;
+    const el = list?.querySelector<HTMLElement>(`[data-thumb="${current}"]`);
+    if (!scroller || !el) return;
+    const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    const pad = 20;
+    if (top - pad < scroller.scrollTop) scroller.scrollTop = top - pad;
+    else if (top + el.offsetHeight + pad > scroller.scrollTop + scroller.clientHeight) {
+      scroller.scrollTop = top + el.offsetHeight + pad - scroller.clientHeight;
+    }
+  }, [current]);
+
+  return (
+    <div ref={listRef} className="flex flex-col items-center gap-5 px-3 py-5">
+      {sizes.map((size, i) => (
+        <Thumb key={i} pdf={pdf} page={i + 1} size={size} active={current === i + 1} near={near.has(i + 1)} onPick={onPick} />
+      ))}
+    </div>
+  );
+}
+
 interface Props {
   documentId: string;
   initialPage: number;
@@ -175,6 +314,14 @@ interface Props {
   flashHighlightId: string | null;
   onSelect: (selection: PdfSelection | null) => void;
   onHighlightClick: (id: string) => void;
+  /**
+   * Places in the reader's own layout for the viewer's controls. When a slot is given (even null, while its
+   * element is not there yet) the control is drawn in it instead of in the viewer's own bar.
+   */
+  pagerSlot?: HTMLElement | null;
+  zoomSlot?: HTMLElement | null;
+  /** Where the column of page thumbnails goes; without it there are none. */
+  thumbsSlot?: HTMLElement | null;
 }
 
 /** FR-RDR-01..04, FR-HL-01/02: continuous PDF.js viewer with virtualized pages, navigation, zoom, find and highlights. */
@@ -192,6 +339,9 @@ export function PdfViewer({
   flashHighlightId,
   onSelect,
   onHighlightClick,
+  pagerSlot,
+  zoomSlot,
+  thumbsSlot,
 }: Props) {
   const t = useT();
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -615,67 +765,88 @@ export function PdfViewer({
   const last = Math.min(total, current + RENDER_RADIUS);
   const zoomValue = typeof zoom === "number" ? String(zoom) : zoom;
 
+  const inSlots = pagerSlot !== undefined || zoomSlot !== undefined;
+  const step = inSlots ? "icon-btn hidden h-9 w-9 sm:inline-flex" : "icon-btn h-10 w-10";
+
+  const pager = (
+    <div className="flex items-center gap-1 text-sm">
+      <button type="button" className={step} onClick={() => goTo(current - 1)} disabled={current <= 1} aria-label={t("pdf.previousPage")}>
+        <Icon name="back" />
+      </button>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const n = parseInt(pageInput, 10);
+          if (Number.isNaN(n)) setPageInput(String(current));
+          else goTo(n);
+        }}
+        className="flex items-center gap-1.5"
+      >
+        <label className="sr-only" htmlFor="page-input">
+          {t("pdf.pageNumber")}
+        </label>
+        <input
+          id="page-input"
+          className={inSlots ? "input h-8 w-12 px-1 text-center text-[13px] tabular-nums" : "input h-9 w-14 px-2 text-center text-sm"}
+          inputMode="numeric"
+          value={pageInput}
+          onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ""))}
+          onBlur={() => setPageInput(String(current))}
+        />
+        <span className="whitespace-nowrap tabular-nums text-muted" aria-live="polite">
+          / {total || "…"}
+        </span>
+      </form>
+      <button type="button" className={step} onClick={() => goTo(current + 1)} disabled={!total || current >= total} aria-label={t("pdf.nextPage")}>
+        <Icon name="next" />
+      </button>
+    </div>
+  );
+
+  const zoomer = (
+    <div className="flex items-center gap-1 text-sm">
+      <button type="button" className={step} onClick={() => zoomBy(-STEP)} disabled={scale <= MIN_ZOOM} aria-label={t("pdf.zoomOut")}>
+        <Icon name="minus" />
+      </button>
+      <select
+        className={inSlots ? "input h-8 w-auto py-0 pl-2 pr-7 text-[13px]" : "input h-9 w-auto px-2 text-sm"}
+        aria-label={t("pdf.zoomLevel")}
+        value={zoomValue}
+        onChange={(e) => {
+          const v = e.target.value;
+          setZoom(v === "fit-width" || v === "fit-page" ? v : Number(v));
+        }}
+      >
+        <option value="fit-width">{t("pdf.fitWidth")}</option>
+        <option value="fit-page">{t("pdf.fitPage")}</option>
+        {typeof zoom === "number" && !ZOOM_LEVELS.includes(zoom) && <option value={zoomValue}>{Math.round(zoom * 100)}%</option>}
+        {ZOOM_LEVELS.map((z) => (
+          <option key={z} value={String(z)}>
+            {Math.round(z * 100)}%
+          </option>
+        ))}
+      </select>
+      <button type="button" className={step} onClick={() => zoomBy(STEP)} disabled={scale >= MAX_ZOOM} aria-label={t("pdf.zoomIn")}>
+        <Icon name="plus" />
+      </button>
+    </div>
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center justify-center gap-1.5 border-b border-line px-3 py-1.5 text-sm">
-        <button type="button" className="icon-btn h-10 w-10" onClick={() => goTo(current - 1)} disabled={current <= 1} aria-label={t("pdf.previousPage")}>
-          <Icon name="back" />
-        </button>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const n = parseInt(pageInput, 10);
-            if (Number.isNaN(n)) setPageInput(String(current));
-            else goTo(n);
-          }}
-          className="flex items-center gap-1"
-        >
-          <label className="sr-only" htmlFor="page-input">
-            {t("pdf.pageNumber")}
-          </label>
-          <input
-            id="page-input"
-            className="input h-9 w-14 px-2 text-center text-sm"
-            inputMode="numeric"
-            value={pageInput}
-            onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ""))}
-            onBlur={() => setPageInput(String(current))}
-          />
-          <span className="text-muted" aria-live="polite">
-            / {total || "…"}
-          </span>
-        </form>
-        <button type="button" className="icon-btn h-10 w-10" onClick={() => goTo(current + 1)} disabled={!total || current >= total} aria-label={t("pdf.nextPage")}>
-          <Icon name="next" />
-        </button>
-
-        <span className="mx-2 hidden h-5 w-px bg-line sm:block" />
-
-        <button type="button" className="icon-btn h-10 w-10" onClick={() => zoomBy(-STEP)} disabled={scale <= MIN_ZOOM} aria-label={t("pdf.zoomOut")}>
-          <Icon name="minus" />
-        </button>
-        <select
-          className="input h-9 w-auto px-2 text-sm"
-          aria-label={t("pdf.zoomLevel")}
-          value={zoomValue}
-          onChange={(e) => {
-            const v = e.target.value;
-            setZoom(v === "fit-width" || v === "fit-page" ? v : Number(v));
-          }}
-        >
-          <option value="fit-width">{t("pdf.fitWidth")}</option>
-          <option value="fit-page">{t("pdf.fitPage")}</option>
-          {typeof zoom === "number" && !ZOOM_LEVELS.includes(zoom) && <option value={zoomValue}>{Math.round(zoom * 100)}%</option>}
-          {ZOOM_LEVELS.map((z) => (
-            <option key={z} value={String(z)}>
-              {Math.round(z * 100)}%
-            </option>
-          ))}
-        </select>
-        <button type="button" className="icon-btn h-10 w-10" onClick={() => zoomBy(STEP)} disabled={scale >= MAX_ZOOM} aria-label={t("pdf.zoomIn")}>
-          <Icon name="plus" />
-        </button>
-      </div>
+      {inSlots ? (
+        <>
+          {pagerSlot && createPortal(pager, pagerSlot)}
+          {zoomSlot && createPortal(zoomer, zoomSlot)}
+        </>
+      ) : (
+        <div className="flex flex-wrap items-center justify-center gap-1.5 border-b border-line px-3 py-1.5">
+          {pager}
+          <span className="mx-2 hidden h-5 w-px bg-line sm:block" />
+          {zoomer}
+        </div>
+      )}
+      {pdf && thumbsSlot && createPortal(<Thumbnails pdf={pdf} sizes={sizes} current={current} onPick={goTo} />, thumbsSlot)}
 
       <div
         ref={scrollerRef}

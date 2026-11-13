@@ -139,3 +139,25 @@ export function filterDocuments(docs: DocumentListItem[], f: LibraryFilters): Do
     .filter((d) => !f.topic || d.topics.includes(f.topic))
     .filter((d) => !q || normalize(`${d.title} ${origin(d)}`).includes(q));
 }
+
+/** How many documents are in each reading state: the numbers on the list's tabs. */
+export function readCounts(docs: DocumentListItem[]): Record<ReadState | "all", number> {
+  const counts = { all: docs.length, unread: 0, reading: 0, read: 0 };
+  for (const d of docs) counts[readStateOf(d)] += 1;
+  return counts;
+}
+
+/** The row a keystroke moves to: one up or down the list, stopping at its ends. With none chosen, the first. */
+export function stepSelection(ids: string[], current: string | null, delta: 1 | -1): string | null {
+  if (!ids.length) return null;
+  const at = current === null ? -1 : ids.indexOf(current);
+  if (at < 0) return ids[0];
+  return ids[Math.min(ids.length - 1, Math.max(0, at + delta))];
+}
+
+/** Who wrote it, short enough for one line of a list: "Nguyen", "Nguyen & Tran", "Nguyen et al.". */
+export function authorsShort(doc: DocumentListItem): string {
+  const names = (doc.citation?.authors ?? []).map((a) => a.family.trim()).filter(Boolean);
+  if (names.length <= 2) return names.join(" & ");
+  return `${names[0]} et al.`;
+}

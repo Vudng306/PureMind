@@ -100,6 +100,18 @@ const PATHS = {
       <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
     </>
   ),
+  panelLeft: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <path d="M9.5 4.5v15" />
+    </>
+  ),
+  panelRight: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <path d="M14.5 4.5v15" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof PATHS;

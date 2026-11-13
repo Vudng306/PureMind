@@ -8,10 +8,11 @@ import { AddToNotebookDialog } from "@/components/add-to-notebook";
 import { CitationDialog } from "@/components/citation-dialog";
 import { Icon } from "@/components/icons";
 import { kindLabel } from "@/components/post-cards";
-import { Alert, ConfirmDialog, PageHeader, Spinner, useModal } from "@/components/ui";
+import { DocumentRow, InfoPanel, ReadTabs, type DocActions } from "@/components/library-list";
+import { Alert, ConfirmDialog, Spinner, useModal } from "@/components/ui";
 import { useHighlights } from "@/lib/annotations";
 import { BIBTEX_MIME, bibFileName, bibtex } from "@/lib/citation";
-import { KIND_LABEL, isProcessing, origin, progressLabel, progressOf, relativeTime, type ReadState } from "@/lib/doc-view";
+import { progressLabel, progressOf, relativeTime } from "@/lib/doc-view";
 import { MAX_DOCUMENT_TITLE, useDeleteDocument, useDocuments, useUpdateDocument } from "@/lib/documents";
 import { downloadText } from "@/lib/export";
 import type { Topic } from "@/lib/feed";
@@ -22,7 +23,8 @@ import {
   continueReading,
   filterDocuments,
   noDerivatives,
-  recentDocuments,
+  readCounts,
+  stepSelection,
   useCollections,
   useCreateCollection,
   useDeleteCollection,
@@ -32,10 +34,9 @@ import {
   type Collection,
   type LibraryFilters,
 } from "@/lib/library";
-import { MSG, messageFor } from "@/lib/messages";
+import { MSG } from "@/lib/messages";
 import { COMMUNITY } from "@/lib/features";
 import { useCreatePost, useDeletePost, useMyPosts, useUnpublishPost, type Post, type PostKind } from "@/lib/posts";
-import { toneOf } from "@/lib/tone";
 import type { DocumentListItem } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
 
@@ -49,29 +50,21 @@ const SORT_LABEL: Record<Sort, Key> = {
   progress: "library.sortProgress",
 };
 const SORT_NEXT: Record<Sort, Sort> = { recent: "title", title: "progress", progress: "recent" };
-const READ_LABEL: Record<ReadState | "all", Key> = {
-  all: "library.readAll",
-  unread: "library.readUnread",
-  reading: "library.readReading",
-  read: "library.readDone",
+const FILE_TYPES = ["web", "pdf", "epub"] as const;
+type FileType = (typeof FILE_TYPES)[number];
+/** The kinds of document, as the sidebar names them. */
+const TYPE_ROW: Record<FileType, { label: Key; icon: "link" | "file" | "bookmark" }> = {
+  web: { label: "library.typeWeb", icon: "link" },
+  pdf: { label: "library.typePdf", icon: "file" },
+  epub: { label: "library.typeEpub", icon: "bookmark" },
 };
-const FILE_TYPES = ["pdf", "epub", "web"] as const;
 const FILTER_SELECT =
-  "h-10 rounded-full border border-line bg-surface pl-3.5 pr-8 text-sm font-medium text-ink shadow-card outline-none focus:border-focus";
+  "h-9 rounded-full border border-line bg-surface pl-3 pr-8 text-[13px] font-medium text-ink outline-none focus:border-focus";
 
-interface CardActions {
-  onAddToNotebook: () => void;
-  onCreatePost: () => void;
-  onShareOriginal: () => void;
-  onRename: () => void;
-  onMove: () => void;
-  onCite: () => void;
-  onToggleRead: () => void;
-  onDelete: () => void;
-}
+type CardActions = DocActions;
 
 /** F-16: the card's "⋯" menu. Closes on Escape, on a click outside and after a choice. */
-function CardMenu({ doc, actions }: { doc: DocumentListItem; actions: CardActions }) {
+function CardMenu({ doc, actions, row = false }: { doc: DocumentListItem; actions: CardActions; row?: boolean }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -106,7 +99,7 @@ function CardMenu({ doc, actions }: { doc: DocumentListItem; actions: CardAction
   const item = "flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm hover:bg-soft focus:bg-soft focus:outline-none";
 
   return (
-    <div ref={root} className="absolute right-1.5 top-1.5 z-10" onKeyDown={onKeyDown}>
+    <div ref={root} className={row ? "relative" : "absolute right-1.5 top-1.5 z-10"} onKeyDown={onKeyDown}>
       <button
         ref={button}
         type="button"
@@ -114,7 +107,9 @@ function CardMenu({ doc, actions }: { doc: DocumentListItem; actions: CardAction
         aria-label={t("library.cardMenu", { title: doc.title })}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-11 w-11 items-center justify-center rounded-[10px] opacity-70 transition hover:bg-surface/60 hover:opacity-100 aria-expanded:bg-surface/60 aria-expanded:opacity-100"
+        className={`flex items-center justify-center rounded-[10px] opacity-70 transition hover:opacity-100 aria-expanded:opacity-100 ${
+          row ? "h-9 w-9 hover:bg-soft aria-expanded:bg-soft" : "h-11 w-11 hover:bg-surface/60 aria-expanded:bg-surface/60"
+        }`}
       >
         <Icon name="more" />
       </button>
@@ -122,7 +117,9 @@ function CardMenu({ doc, actions }: { doc: DocumentListItem; actions: CardAction
         <div
           role="menu"
           aria-label={doc.title}
-          className="absolute right-0 top-12 flex w-60 flex-col gap-0.5 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-float"
+          className={`absolute right-0 z-20 flex w-60 flex-col gap-0.5 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-float ${
+            row ? "top-10" : "top-12"
+          }`}
         >
           <Link href={`/reader/${doc.id}`} role="menuitem" className={item}>
             <Icon name="book" size={16} />
@@ -390,136 +387,23 @@ function RemoveDialog({
   );
 }
 
-function DocumentCard({ doc, actions }: { doc: DocumentListItem; actions: CardActions }) {
+/** Where the reader left off, in one line above the list. */
+function ContinueStrip({ doc }: { doc: DocumentListItem }) {
   const t = useT();
   const pct = progressOf(doc);
-  const failed = doc.extraction_status === "failed";
-  const processing = isProcessing(doc);
-  const initial = doc.title.trim().charAt(0).toUpperCase() || "?";
-
   return (
-    <article className={`card group relative flex flex-col transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-float ${toneOf(doc.title)}`}>
-      <div className="cover-art relative flex h-[132px] items-end rounded-t-[17px] px-5 pb-3">
-        <span aria-hidden className="font-display text-[76px] font-semibold leading-none">
-          {initial}
-        </span>
-        <span className="absolute left-3 top-3 flex h-6 items-center rounded-full bg-surface px-2.5 text-xs font-bold text-ink">
-          {KIND_LABEL[doc.file_type]}
-        </span>
-        <CardMenu doc={doc} actions={actions} />
-      </div>
-      <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <Link
-          href={`/reader/${doc.id}`}
-          className="line-clamp-2 font-display text-[19px] font-semibold leading-[1.3] after:absolute after:inset-0 hover:underline"
-        >
-          {doc.title}
-        </Link>
-        <span className="truncate text-[13px] text-muted">
-          {origin(doc)} · {relativeTime(doc.updated_at)}
-        </span>
-        <span className="min-h-2.5 flex-1" />
-        {processing ? (
-          <div role="status" className="flex flex-col gap-2.5 pb-3">
-            <span className="relative h-1 overflow-hidden rounded-sm bg-soft">
-              <span className="absolute left-0 top-0 h-1 w-2/5 animate-pm-slide rounded-sm bg-accent" />
-            </span>
-            <span className="text-[13px] text-muted">{t("library.extracting")}</span>
-          </div>
-        ) : failed && doc.file_type !== "pdf" ? (
-          <span className="text-[13px] leading-snug text-danger">{messageFor(doc.extraction_error)}</span>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {failed ? (
-              <span className="text-[13px] leading-snug text-danger">{messageFor(doc.extraction_error)}</span>
-            ) : (
-              <span className="h-1 rounded-sm bg-soft">
-                <span
-                  className={`block h-1 rounded-sm ${pct >= 100 ? "bg-success" : "bg-accent"}`}
-                  style={{ width: `${Math.min(100, pct)}%` }}
-                />
-              </span>
-            )}
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-[13px] text-muted">{failed ? "" : progressLabel(doc, pct)}</span>
-              <span className="btn-outline pointer-events-none h-10 px-4 text-sm font-semibold group-hover:border-accent group-hover:text-accent-text">{t(failed ? "library.viewOriginal" : "library.readAction")}</span>
-            </div>
-          </div>
-        )}
-      </div>
-    </article>
-  );
-}
-
-/** Where the reader left off: the latest large, a couple more beside it. Each reopens at its own position. */
-function ContinueReading({ docs }: { docs: DocumentListItem[] }) {
-  const t = useT();
-  const [first, ...rest] = docs;
-  const pct = progressOf(first);
-  return (
-    <section aria-label={t("library.continue")} className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
-      <div className="relative overflow-hidden rounded-[22px] bg-ink text-bg shadow-float">
-        <span aria-hidden className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-accent/90" />
-        <span aria-hidden className="absolute -bottom-28 right-40 h-56 w-56 rounded-full bg-accent/30" />
-        <div className="relative flex flex-col gap-3 px-6 py-7 sm:max-w-[72%] sm:px-8 sm:py-8">
-          <span className="text-xs font-bold tracking-[0.1em] text-white/80">{t("library.continue")}</span>
-          <span className="line-clamp-3 font-display text-3xl font-semibold leading-[1.1] tracking-[-0.01em] sm:text-[36px]">{first.title}</span>
-          <span className="text-[15px] text-bg/70">
-            {KIND_LABEL[first.file_type]} · {origin(first)} · {progressLabel(first, pct)}
-          </span>
-          <span className="h-1.5 w-full max-w-[360px] rounded-full bg-bg/20">
-            <span className="block h-1.5 rounded-full bg-accent" style={{ width: `${pct}%` }} />
-          </span>
-          <Link href={`/reader/${first.id}`} className="btn-primary mt-1 h-12 self-start px-[22px]">
-            {t(pct > 0 ? "library.continueRead" : "library.startReading")}
-            <Icon name="arrow" />
-          </Link>
-        </div>
-      </div>
-      {rest.length > 0 && (
-        <ul className="flex flex-col gap-3">
-          {rest.map((d) => {
-            const p = progressOf(d);
-            return (
-              <li key={d.id} className="flex-1">
-                <Link href={`/reader/${d.id}`} className={`card flex h-full flex-col justify-center gap-2 p-4 hover:shadow-float ${toneOf(d.title)}`}>
-                  <span className="line-clamp-2 font-display text-[17px] font-semibold leading-snug text-ink">{d.title}</span>
-                  <span className="h-1 rounded-sm bg-soft">
-                    <span className="block h-1 rounded-sm bg-accent" style={{ width: `${p}%` }} />
-                  </span>
-                  <span className="truncate text-[13px] text-muted">{progressLabel(d, p)}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-/** What just came in, in one short row. */
-function RecentDocuments({ docs }: { docs: DocumentListItem[] }) {
-  const t = useT();
-  return (
-    <section className="flex flex-col gap-2.5">
-      <h2 className="eyebrow">{t("library.recent")}</h2>
-      <ul className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-        {docs.map((d) => (
-          <li key={d.id}>
-            <Link href={`/reader/${d.id}`} className="flex h-full items-center gap-2.5 rounded-xl border border-line bg-surface p-3 hover:border-accent">
-              <span className="flex h-6 w-11 shrink-0 items-center justify-center rounded-[5px] bg-soft text-[11px] font-bold text-ink">
-                {KIND_LABEL[d.file_type]}
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-semibold text-ink">{d.title}</span>
-                <span className="truncate text-xs text-muted">{relativeTime(d.created_at)}</span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Link
+      href={`/reader/${doc.id}`}
+      className="group flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-2.5 shadow-card transition-colors hover:border-accent"
+    >
+      <span className="eyebrow shrink-0">{t("library.continue")}</span>
+      <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink">{doc.title}</span>
+      <span className="hidden shrink-0 text-[13px] text-muted md:inline">{progressLabel(doc, pct)}</span>
+      <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-accent-text">
+        {t("library.continueRead")}
+        <Icon name="arrow" size={16} />
+      </span>
+    </Link>
   );
 }
 
@@ -635,6 +519,9 @@ function SharedByMe() {
 function Sidebar({
   place,
   onPlace,
+  fileType,
+  onFileType,
+  types,
   total,
   highlights,
   shared,
@@ -645,6 +532,10 @@ function Sidebar({
 }: {
   place: Place;
   onPlace: (place: Place) => void;
+  /** The kind being shown, within "all documents". */
+  fileType: FileType | "all";
+  onFileType: (type: FileType) => void;
+  types: { type: FileType; count: number }[];
   total: number;
   highlights: number;
   shared: number;
@@ -661,11 +552,27 @@ function Sidebar({
   const count = "text-xs text-muted";
   return (
     <nav aria-label={t("library.sections")} className="flex flex-col gap-1 lg:sticky lg:top-[96px] lg:self-start">
-      <button type="button" className={row(place.kind === "all")} aria-pressed={place.kind === "all"} onClick={() => onPlace({ kind: "all" })}>
+      <button
+        type="button"
+        className={row(place.kind === "all" && fileType === "all")}
+        aria-pressed={place.kind === "all" && fileType === "all"}
+        onClick={() => onPlace({ kind: "all" })}
+      >
         <Icon name="book" size={16} className="shrink-0" />
         <span className="flex-1 truncate">{t("library.allDocuments")}</span>
         <span className={count}>{total}</span>
       </button>
+      {types.length > 1 &&
+        types.map(({ type, count: n }) => {
+          const active = place.kind === "all" && fileType === type;
+          return (
+            <button key={type} type="button" className={`${row(active)} pl-6`} aria-pressed={active} onClick={() => onFileType(type)}>
+              <Icon name={TYPE_ROW[type].icon} size={15} className="shrink-0" />
+              <span className="flex-1 truncate">{t(TYPE_ROW[type].label)}</span>
+              <span className={count}>{n}</span>
+            </button>
+          );
+        })}
       <Link href="/highlights" className={row(false)}>
         <Icon name="highlighter" size={16} className="shrink-0" />
         <span className="flex-1 truncate">{t("library.highlights")}</span>
@@ -735,6 +642,9 @@ export default function LibraryPage() {
   const { setAddOpen, showToast } = useUi();
   const { data: highlights } = useHighlights();
   const [actionError, setActionError] = useState<string | null>(null);
+  // The row the panel is about: where the pointer is, or where the arrow keys have gone.
+  const [picked, setPicked] = useState<string | null>(null);
+  const keyAt = useRef(0);
   const t: T = useT();
   const msg = useMsg();
   const lang = useLang();
@@ -746,11 +656,6 @@ export default function LibraryPage() {
 
   const docs = useMemo(() => data ?? [], [data]);
   const shelves = useMemo(() => collections.data ?? [], [collections.data]);
-  const counts = {
-    all: docs.length,
-    upload: docs.filter((d) => d.source_type === "upload").length,
-    manual: docs.filter((d) => d.source_type === "manual").length,
-  };
   const readingCount = docs.filter((d) => {
     const p = progressOf(d);
     return p > 0 && p < 100;
@@ -758,26 +663,40 @@ export default function LibraryPage() {
   const docIds = new Set(docs.map((d) => d.id));
   const hlCount = highlights.filter((h) => docIds.has(h.docId)).length;
   const topics = useMemo(() => [...new Set(docs.flatMap((d) => d.topics))].sort(), [docs]);
-  const fileTypes = FILE_TYPES.filter((x) => docs.some((d) => d.file_type === x));
+  const types = FILE_TYPES.map((type) => ({ type, count: docs.filter((d) => d.file_type === type).length })).filter((x) => x.count > 0);
 
   // A shelf that was just deleted is no longer somewhere to be.
   const shelf = place.kind === "collection" ? shelves.find((c) => c.id === place.id) ?? null : null;
   const collectionId = shelf?.id ?? null;
-  const view = filterDocuments(docs, { ...filters, collection: collectionId }).sort((a, b) => {
+  // Everything narrowed down but the reading state: what the tabs count.
+  const scoped = filterDocuments(docs, { ...filters, collection: collectionId, readState: "all" });
+  const tabCounts = readCounts(scoped);
+  const view = filterDocuments(scoped, { ...NO_FILTERS, readState: filters.readState }).sort((a, b) => {
     if (sort === "title") return a.title.localeCompare(b.title, lang);
     if (sort === "progress") return progressOf(b) - progressOf(a);
     return b.updated_at.localeCompare(a.updated_at);
   });
-  const filtered =
-    filters.source !== "all" || filters.readState !== "all" || filters.fileType !== "all" || Boolean(filters.topic) || Boolean(filters.query.trim());
+  // Narrowed by something other than a tab: an empty list then means "no match", not "nothing here yet".
+  const narrowed = filters.fileType !== "all" || Boolean(filters.topic) || Boolean(filters.query.trim());
+  const filtered = narrowed || filters.readState !== "all";
   const atHome = place.kind === "all" && !filtered;
-  const continuing = atHome ? continueReading(docs) : [];
-  const recent = atHome && docs.length > 4 ? recentDocuments(docs) : [];
+  const continuing = atHome ? continueReading(docs, 1).filter((d) => progressOf(d) > 0) : [];
+  const selectedId = picked !== null && view.some((d) => d.id === picked) ? picked : (view[0]?.id ?? null);
+  const selected = view.find((d) => d.id === selectedId) ?? null;
 
   const patchFilters = (patch: Partial<LibraryFilters>) => setFilters((f) => ({ ...f, ...patch }));
   const goTo = (next: Place) => {
     setPlace(next);
+    patchFilters({ fileType: "all" });
     window.history.replaceState(null, "", next.kind === "shared" ? "/library?view=shared" : "/library");
+  };
+  const showType = (type: FileType) => {
+    setPlace({ kind: "all" });
+    patchFilters({ fileType: type });
+  };
+  /** The pointer chooses a row, unless the list has just moved under it because of the keyboard. */
+  const pickByPointer = (id: string) => {
+    if (Date.now() - keyAt.current > 500) setPicked(id);
   };
 
   async function confirmDelete() {
@@ -814,6 +733,41 @@ export default function LibraryPage() {
       setActionError(err instanceof Error ? err.message : MSG["MSG-99"]);
     }
   }
+
+  // The list answers the keyboard: ↑ ↓ (or J K) choose a row, Enter (or O) opens it, E marks it read or unread.
+  // Set up again on each render so that it always sees the list as it is now.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.ctrlKey || e.metaKey || e.altKey || place.kind === "shared" || document.querySelector("dialog[open]")) return;
+      const el = e.target instanceof HTMLElement ? e.target : null;
+      if (el?.closest("input, textarea, select, [role=menu], [contenteditable=true]")) return;
+      const step = e.key === "ArrowDown" || e.key === "j" ? 1 : e.key === "ArrowUp" || e.key === "k" ? -1 : 0;
+      if (step) {
+        const next = stepSelection(
+          view.map((d) => d.id),
+          selectedId,
+          step,
+        );
+        if (next === null) return;
+        e.preventDefault();
+        keyAt.current = Date.now();
+        setPicked(next);
+        document.querySelector(`[data-doc="${next}"]`)?.scrollIntoView({ block: "nearest" });
+        return;
+      }
+      // On a button or a link, Enter and letters belong to it.
+      if (!selected || el?.closest("button, a")) return;
+      if (e.key === "Enter" || e.key === "o") {
+        e.preventDefault();
+        router.push(`/reader/${selected.id}`);
+      } else if (e.key === "e") {
+        e.preventDefault();
+        void toggleRead(selected);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   /** A private draft, opened in the Studio. Nothing is public until the author publishes it there. */
   async function startPost(doc: DocumentListItem, kind: PostKind) {
@@ -874,25 +828,56 @@ export default function LibraryPage() {
   });
 
   return (
-    <div className="mx-auto flex max-w-[1280px] flex-col gap-6">
-      <PageHeader
-        title={t("library.title")}
-        lead={docs.length > 0 ? t("library.stats", { docs: docs.length, reading: readingCount, hl: hlCount }) : undefined}
-        actions={
-          // On a wide screen the menu column already has this button.
-          <button type="button" className="btn-primary lg:hidden" onClick={() => setAddOpen(true)}>
-            <Icon name="plus" />
-            {t("nav.addDocument")}
-          </button>
-        }
-      />
+    <div className="mx-auto flex max-w-[1440px] flex-col gap-5">
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        <h1 className="page-title">{t("nav.library")}</h1>
+        {docs.length > 0 && (
+          <p className="pb-1.5 text-sm text-muted">{t("library.stats", { docs: docs.length, reading: readingCount, hl: hlCount })}</p>
+        )}
+        <span className="flex-1" />
+        {place.kind !== "shared" && docs.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {topics.length > 0 && (
+              <label>
+                <span className="sr-only">{t("library.filterTopic")}</span>
+                <select value={filters.topic} onChange={(e) => patchFilters({ topic: e.target.value })} className={FILTER_SELECT}>
+                  <option value="">{t("library.allTopics")}</option>
+                  {topics.map((x) => (
+                    <option key={x} value={x}>
+                      {t(`feed.topic.${x as Topic}` as Key)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className="flex h-9 w-full items-center gap-2 rounded-full border border-line bg-surface px-3 text-muted focus-within:border-focus sm:w-[260px]">
+              <Icon name="search" size={15} />
+              <span className="sr-only">{t("library.filterName")}</span>
+              <input
+                value={filters.query}
+                onChange={(e) => patchFilters({ query: e.target.value })}
+                placeholder={t("library.filterPlaceholder")}
+                className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none"
+              />
+            </label>
+          </div>
+        )}
+        {/* On a wide screen the menu column already has this button. */}
+        <button type="button" className="btn-primary lg:hidden" onClick={() => setAddOpen(true)}>
+          <Icon name="plus" />
+          {t("nav.addDocument")}
+        </button>
+      </div>
 
       {actionError && <Alert>{actionError}</Alert>}
 
-      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-8">
+      <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-7 min-[1400px]:grid-cols-[200px_minmax(0,1fr)_300px]">
         <Sidebar
           place={place}
           onPlace={goTo}
+          fileType={filters.fileType}
+          onFileType={showType}
+          types={types}
           total={docs.length}
           highlights={hlCount}
           shared={posts.data?.length ?? 0}
@@ -908,96 +893,41 @@ export default function LibraryPage() {
           onDelete={setShelfToDelete}
         />
 
-        <div className="flex min-w-0 flex-col gap-7">
+        <div className={`flex min-w-0 flex-col gap-4 ${place.kind === "shared" ? "min-[1400px]:col-span-2" : ""}`}>
           {place.kind === "shared" ? (
             <SharedByMe />
           ) : (
             <>
               {shelf && <h2 className="font-display text-2xl font-semibold">{shelf.name}</h2>}
-              {continuing.length > 0 && <ContinueReading docs={continuing} />}
-              {recent.length > 0 && <RecentDocuments docs={recent} />}
+              {continuing.length > 0 && <ContinueStrip doc={continuing[0]} />}
 
-              <div className="flex flex-wrap items-center gap-2.5">
-                {(
-                  [
-                    ["all", "common.all"],
-                    ["upload", "library.sourceUpload"],
-                    ["manual", "library.sourceLink"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <button key={value} type="button" className="chip" aria-pressed={filters.source === value} onClick={() => patchFilters({ source: value })}>
-                    {t(label)} · {counts[value]}
-                  </button>
-                ))}
-                <label className="flex h-10 w-full items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-muted shadow-card focus-within:border-focus sm:w-[240px]">
-                  <Icon name="search" size={16} />
-                  <span className="sr-only">{t("library.filterName")}</span>
-                  <input
-                    value={filters.query}
-                    onChange={(e) => patchFilters({ query: e.target.value })}
-                    placeholder={t("library.filterPlaceholder")}
-                    className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none"
-                  />
-                </label>
-                {topics.length > 0 && (
-                  <label>
-                    <span className="sr-only">{t("library.filterTopic")}</span>
-                    <select value={filters.topic} onChange={(e) => patchFilters({ topic: e.target.value })} className={FILTER_SELECT}>
-                      <option value="">{t("library.allTopics")}</option>
-                      {topics.map((x) => (
-                        <option key={x} value={x}>
-                          {t(`feed.topic.${x as Topic}` as Key)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                <label>
-                  <span className="sr-only">{t("library.readStatus")}</span>
-                  <select
-                    value={filters.readState}
-                    onChange={(e) => patchFilters({ readState: e.target.value as ReadState | "all" })}
-                    className={FILTER_SELECT}
+              <div className="flex items-end gap-x-4 border-b border-line">
+                <ReadTabs value={filters.readState} counts={tabCounts} onChange={(readState) => patchFilters({ readState })} />
+                <span className="flex-1" />
+                <div className="flex shrink-0 items-center gap-2 py-1.5">
+                  <button
+                    type="button"
+                    className="chip h-9 px-3 text-[13px]"
+                    onClick={() => setSort(SORT_NEXT[sort])}
+                    aria-label={t("library.sortLabel", { sort: t(SORT_LABEL[sort]) })}
+                    title={t("library.sortLabel", { sort: t(SORT_LABEL[sort]) })}
                   >
-                    {(Object.keys(READ_LABEL) as (ReadState | "all")[]).map((value) => (
-                      <option key={value} value={value}>
-                        {t(READ_LABEL[value])}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {fileTypes.length > 1 && (
-                  <label>
-                    <span className="sr-only">{t("library.filterType")}</span>
-                    <select
-                      value={filters.fileType}
-                      onChange={(e) => patchFilters({ fileType: e.target.value as LibraryFilters["fileType"] })}
-                      className={FILTER_SELECT}
-                    >
-                      <option value="all">{t("library.allTypes")}</option>
-                      {fileTypes.map((x) => (
-                        <option key={x} value={x}>
-                          {KIND_LABEL[x]}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                <button
-                  type="button"
-                  className="chip"
-                  onClick={() => setSort(SORT_NEXT[sort])}
-                  aria-label={t("library.sortLabel", { sort: t(SORT_LABEL[sort]) })}
-                >
-                  <Icon name="sort" size={16} />
-                  {t(SORT_LABEL[sort])}
-                </button>
-                {view.length > 0 && (
-                  <button type="button" className="chip" onClick={exportBibtex} title={t("library.exportBibHint", { n: view.length })}>
-                    <Icon name="download" size={16} />
-                    {t("library.exportBib")}
+                    <Icon name="sort" size={15} />
+                    {/* Beside the panel the list is narrow, and the tabs need the room more than this word does. */}
+                    <span className="min-[1400px]:max-[1599px]:hidden">{t(SORT_LABEL[sort])}</span>
                   </button>
-                )}
+                  {view.length > 0 && (
+                    <button
+                      type="button"
+                      className="icon-btn h-9 w-9 border border-line bg-surface"
+                      onClick={exportBibtex}
+                      aria-label={t("library.exportBib")}
+                      title={t("library.exportBibHint", { n: view.length })}
+                    >
+                      <Icon name="download" size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {isLoading ? (
@@ -1015,39 +945,58 @@ export default function LibraryPage() {
                     <Icon name="book" size={26} />
                   </span>
                   <span className="font-display text-[28px] font-semibold">
-                    {filtered ? t("library.noMatch") : shelf ? t("library.shelfEmpty") : msg("MSG-30")}
+                    {narrowed ? t("library.noMatch") : filtered ? t("library.tabEmpty") : shelf ? t("library.shelfEmpty") : msg("MSG-30")}
                   </span>
                   <span className="max-w-md text-[15px] text-muted">
-                    {t(filtered ? "library.noMatchHint" : shelf ? "library.shelfEmptyHint" : "library.emptyHintLong")}
+                    {t(narrowed ? "library.noMatchHint" : filtered ? "library.tabEmptyHint" : shelf ? "library.shelfEmptyHint" : "library.emptyHintLong")}
                   </span>
                   <div className="flex gap-2.5">
                     {filtered && (
                       <button type="button" className="btn-outline" onClick={() => setFilters(NO_FILTERS)}>
-                        {t("library.clearFilters")}
+                        {t(narrowed ? "library.clearFilters" : "library.showAll")}
                       </button>
                     )}
-                    {!shelf && (
+                    {!shelf && !filtered && (
                       <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
                         {t("nav.addDocument")}
                       </button>
                     )}
                     {!filtered && !shelf && (
                       <Link href="/explore" className="btn-outline">
-                        {t("explore.tabPapers")}
+                        {t("nav.explore")}
                       </Link>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                  {view.map((doc) => (
-                    <DocumentCard key={doc.id} doc={doc} actions={actionsOf(doc)} />
-                  ))}
-                </div>
+                <ul aria-label={t("library.listAria")} className="-mt-4 flex flex-col">
+                  {view.map((doc) => {
+                    const actions = actionsOf(doc);
+                    return (
+                      <DocumentRow
+                        key={doc.id}
+                        doc={doc}
+                        selected={doc.id === selectedId}
+                        onSelect={() => pickByPointer(doc.id)}
+                        actions={actions}
+                        menu={<CardMenu doc={doc} actions={actions} row />}
+                      />
+                    );
+                  })}
+                </ul>
               )}
             </>
           )}
         </div>
+
+        {place.kind !== "shared" && (
+          <InfoPanel
+            doc={selected}
+            shelf={selected ? (shelves.find((c) => c.id === selected.collection_id)?.name ?? null) : null}
+            highlights={selected ? highlights.filter((h) => h.docId === selected.id).length : 0}
+            actions={selected ? actionsOf(selected) : null}
+          />
+        )}
       </div>
 
       <NameDialog

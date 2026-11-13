@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { NO_FILTERS, continueReading, filterDocuments, noDerivatives, recentDocuments } from "./library";
+import {
+  NO_FILTERS,
+  authorsShort,
+  continueReading,
+  filterDocuments,
+  noDerivatives,
+  readCounts,
+  recentDocuments,
+  stepSelection,
+} from "./library";
 import type { DocumentListItem } from "./types";
 
 function doc(over: Partial<DocumentListItem>): DocumentListItem {
@@ -93,5 +102,54 @@ describe("noDerivatives", () => {
     expect(noDerivatives("CC BY-ND 4.0")).toBe(true);
     expect(noDerivatives("CC BY 4.0")).toBe(false);
     expect(noDerivatives(null)).toBe(false);
+  });
+});
+
+describe("readCounts", () => {
+  it("counts each reading state for the tabs", () => {
+    const docs = [doc({ id: "a" }), doc({ id: "b", last_read_page: 4 }), doc({ id: "c", is_read: true }), doc({ id: "d" })];
+    expect(readCounts(docs)).toEqual({ all: 4, unread: 2, reading: 1, read: 1 });
+    expect(readCounts([])).toEqual({ all: 0, unread: 0, reading: 0, read: 0 });
+  });
+});
+
+describe("stepSelection", () => {
+  const ids = ["a", "b", "c"];
+
+  it("moves one row and stops at the ends", () => {
+    expect(stepSelection(ids, "a", 1)).toBe("b");
+    expect(stepSelection(ids, "b", -1)).toBe("a");
+    expect(stepSelection(ids, "a", -1)).toBe("a");
+    expect(stepSelection(ids, "c", 1)).toBe("c");
+  });
+
+  it("starts at the first row when nothing, or something no longer listed, is chosen", () => {
+    expect(stepSelection(ids, null, 1)).toBe("a");
+    expect(stepSelection(ids, "gone", -1)).toBe("a");
+    expect(stepSelection([], "a", 1)).toBeNull();
+  });
+});
+
+describe("authorsShort", () => {
+  const by = (...families: string[]) =>
+    doc({
+      citation: {
+        type: "article",
+        authors: families.map((family) => ({ family, given: "" })),
+        container: "",
+        publisher: "",
+        year: null,
+        volume: "",
+        issue: "",
+        pages: "",
+        doi: "",
+      },
+    });
+
+  it("names one or two authors and shortens the rest", () => {
+    expect(authorsShort(doc({}))).toBe("");
+    expect(authorsShort(by("Nguyen"))).toBe("Nguyen");
+    expect(authorsShort(by("Nguyen", "Tran"))).toBe("Nguyen & Tran");
+    expect(authorsShort(by("Nguyen", "Tran", "Le"))).toBe("Nguyen et al.");
   });
 });

@@ -13,7 +13,7 @@ import {
 } from "@/lib/annotations";
 import type { ChatImage } from "@/lib/chat";
 import { useDocument } from "@/lib/documents";
-import { useLang, useT } from "@/lib/i18n";
+import { useLang, useT, type Key } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { notebooksUsing } from "@/lib/notebooks";
 import { COLOR_DOT, HIGHLIGHT_COLORS, colorLabel, usePreferences, type HighlightColor } from "@/lib/preferences";
@@ -21,10 +21,20 @@ import { useUi } from "@/lib/ui-store";
 
 import { Icon } from "./icons";
 import { ChatPanel } from "./chat-panel";
+import { ReaderInfo } from "./reader-info";
 import { SummaryPanel } from "./summary-panel";
 import { ConfirmDialog } from "./ui";
 
-export type PanelTab = "highlights" | "notes" | "ai" | "chat";
+export type PanelTab = "info" | "highlights" | "notes" | "ai" | "chat";
+
+/** The panel's three tabs. Notes and AI each hold two of the views above, chosen inside the tab. */
+type Group = "info" | "notes" | "ai";
+const GROUP: Record<PanelTab, Group> = { info: "info", highlights: "notes", notes: "notes", ai: "ai", chat: "ai" };
+const GROUPS: [Group, Key][] = [
+  ["info", "reader.tabInfo"],
+  ["notes", "reader.tabNotes"],
+  ["ai", "reader.tabAi"],
+];
 
 function HighlightCard({
   h,
@@ -228,7 +238,7 @@ function HighlightCard({
   );
 }
 
-/** Right panel: highlights filtered by meaning, document note, AI summary. */
+/** Right panel: about the document, its highlights and note, and the AI summary and chat. */
 export function ReaderPanel({
   docId,
   highlights,
@@ -246,6 +256,7 @@ export function ReaderPanel({
   onKeyword,
   canHighlight,
   lostIds,
+  progress,
 }: {
   docId: string;
   highlights: Highlight[];
@@ -267,6 +278,8 @@ export function ReaderPanel({
   canHighlight: boolean;
   /** Highlights that could not be placed in the current text (FR-HL-02). */
   lostIds: string[];
+  /** How far the reader is right now, for the Info tab. */
+  progress: string;
 }) {
   const t = useT();
   const lang = useLang();
@@ -313,38 +326,65 @@ export function ReaderPanel({
   const shown = sorted.filter((h) => filter === "all" || h.color === filter);
   const lost = new Set(lostIds);
   const lostText = highlights.filter((h) => lost.has(h.id) && !h.rects).length;
-  const tabs: [PanelTab, string][] = [
-    ["highlights", t("panel.tabHighlights", { n: highlights.length })],
-    ["notes", t("panel.tabNotes")],
-    ["ai", t("panel.tabAi")],
-    ["chat", t("panel.tabChat")],
-  ];
+  const group = GROUP[tab];
+  // Coming back to Notes or AI shows the view that was open there last.
+  const lastIn = useRef<Record<Group, PanelTab>>({ info: "info", notes: "highlights", ai: "ai" });
+  lastIn.current[group] = tab;
+  const views: [PanelTab, string][] =
+    group === "notes"
+      ? [
+          ["highlights", t("panel.tabHighlights", { n: highlights.length })],
+          ["notes", t("reader.subDocNote")],
+        ]
+      : group === "ai"
+        ? [
+            ["ai", t("reader.subSummary")],
+            ["chat", t("panel.tabChat")],
+          ]
+        : [];
 
   return (
     <aside
       aria-label={t("panel.aria")}
       className="fixed inset-y-0 right-0 z-20 flex w-full min-h-0 flex-col border-l border-line bg-surface shadow-pop sm:w-[380px] lg:static lg:z-auto lg:shadow-none"
     >
-      <div className="flex h-[60px] shrink-0 items-center gap-1 border-b border-line pl-3 pr-2" role="tablist">
-        {tabs.map(([value, label]) => (
+      <div className="flex h-14 shrink-0 items-center gap-5 border-b border-line pl-4 pr-2" role="tablist">
+        {GROUPS.map(([value, label]) => (
           <button
             key={value}
             type="button"
             role="tab"
-            aria-selected={tab === value}
-            onClick={() => onTab(value)}
-            className={`h-10 rounded-[9px] px-3 text-sm ${tab === value ? "bg-soft font-semibold text-ink" : "text-muted hover:text-ink"}`}
+            aria-selected={group === value}
+            onClick={() => onTab(lastIn.current[value])}
+            className={`-mb-px flex h-14 items-center gap-1.5 border-b-2 text-[15px] ${
+              group === value ? "border-ink font-semibold text-ink" : "border-transparent text-muted hover:text-ink"
+            }`}
           >
-            {label}
+            {t(label)}
+            {value === "notes" && highlights.length > 0 && (
+              <span className="rounded-md bg-soft px-1.5 py-px text-xs font-medium tabular-nums text-body">{highlights.length}</span>
+            )}
           </button>
         ))}
         <span className="flex-1" />
-        <button type="button" aria-label={t("panel.closePanel")} onClick={onClose} className="icon-btn text-muted">
-          <Icon name="x" />
+        <button type="button" aria-label={t("panel.closePanel")} title={t("panel.closePanel")} onClick={onClose} className="icon-btn h-10 w-10 text-muted">
+          <Icon name="panelRight" />
         </button>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+        {views.length > 0 && (
+          <div className="flex shrink-0 gap-1.5">
+            {views.map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={tab === value} onClick={() => onTab(value)} className="chip h-[34px] px-3 text-[13px]">
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === "info" && doc && <ReaderInfo doc={doc} progress={progress} onSummary={() => onTab("ai")} />}
+
         {tab === "highlights" && (
           <>
             {highlights.length > 0 && (

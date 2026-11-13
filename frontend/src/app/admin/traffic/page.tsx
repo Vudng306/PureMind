@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Alert, Spinner } from "@/components/ui";
 import { AREAS, niceMax, useTraffic, type TrafficDay, type TrafficRange } from "@/lib/admin-content";
+import { CATALOG } from "@/lib/features";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
 
@@ -57,11 +58,16 @@ export default function AdminTrafficPage() {
           sub={t("traffic.errorRate", { rate: errorRate })}
           alert={totals.errors > 0}
         />
-        <Stat
-          label={t("traffic.articles")}
-          value={n(totals.articles)}
-          sub={`${t("traffic.hidden", { n: n(totals.hidden_articles) })} · ${t("traffic.documents", { n: n(totals.documents) })}`}
-        />
+        {CATALOG ? (
+          <Stat
+            label={t("traffic.articles")}
+            value={n(totals.articles)}
+            sub={`${t("traffic.hidden", { n: n(totals.hidden_articles) })} · ${t("traffic.documents", { n: n(totals.documents) })}`}
+          />
+        ) : (
+          // Without the catalog, what readers keep is the number worth showing here.
+          <Stat label={t("traffic.libraryDocs")} value={n(totals.documents)} sub={t("traffic.allLibraries")} />
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
