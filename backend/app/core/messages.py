@@ -26,6 +26,8 @@ VI: dict[str, str] = {
     "MSG-18": "Không truy cập được trang web. Kiểm tra lại đường link hoặc thử lại sau.",
     # MSG-18 when the site answers 401/403/429...: retrying will not help (not in SRS Appendix B).
     "MSG-18-REFUSED": "Trang web này không cho phép PureMind tải nội dung. Bạn có thể lưu trang thành PDF (Ctrl+P) rồi tải lên.",
+    "MSG-18-PAYWALL": "Trang này chỉ cho xem trước: toàn văn dành cho người có quyền truy cập, nên PureMind không lấy được bài đầy đủ. Nếu bạn có quyền, hãy tải bản PDF về rồi tải lên.",
+    "MSG-18-SHORT": "Trang này có quá ít nội dung để thành một bài đọc hoàn chỉnh (có thể chỉ là phần tóm tắt, trang danh mục, hoặc bài cần đăng nhập), nên PureMind không lưu. Nếu bài có bản PDF, hãy tải về rồi tải lên.",
     "MSG-19": "Không tìm thấy tài liệu.",
     # Import by DOI and citations (not in SRS Appendix B).
     "MSG-DOI-INVALID": "Mã DOI không hợp lệ. DOI có dạng 10.1038/nature14539.",
@@ -36,6 +38,8 @@ VI: dict[str, str] = {
     # Explore page: searching arXiv (not in SRS Appendix B).
     "MSG-PAPERS-LIMIT": "Bạn đã tìm kiếm quá nhiều lần trong một giờ. Vui lòng thử lại sau.",
     "MSG-PAPERS-UNAVAILABLE": "Chưa tìm được trên arXiv lúc này. Vui lòng thử lại sau ít phút.",
+    "MSG-EXPLORE-LIMIT": "Bạn đã tìm quá nhiều lần trong một giờ. Vui lòng thử lại sau.",
+    "MSG-EXPLORE-BUSY": "AI đang tìm cho yêu cầu trước của bạn. Vui lòng đợi.",
     # The feed (not in SRS Appendix B). The credit heads the copy of an article in the library.
     "MSG-FEED-404": "Không tìm thấy bài viết.",
     "MSG-FEED-CREDIT": "{credit} · Đăng lần đầu trên [{source}]({url}), giấy phép [{license}]({license_url}).",
@@ -122,6 +126,8 @@ EN: dict[str, str] = {
     "MSG-17": "This link cannot be saved.",
     "MSG-18": "The page could not be reached. Check the link or try again later.",
     "MSG-18-REFUSED": "This site does not let PureMind fetch its pages. You can save the page as a PDF (Ctrl+P) and upload it.",
+    "MSG-18-PAYWALL": "This page is only a preview: the full text is for readers with access, so PureMind cannot get the whole document. If you have access, download the PDF and upload it.",
+    "MSG-18-SHORT": "This page has too little text to be a whole article (it may be an abstract, a listing page, or a page that needs sign-in), so PureMind did not save it. If the article has a PDF, download it and upload it.",
     "MSG-19": "Document not found.",
     "MSG-DOI-INVALID": "That DOI is not valid. A DOI looks like 10.1038/nature14539.",
     "MSG-DOI-NOTFOUND": "Nothing was found for this DOI. Check it or try again later.",
@@ -130,6 +136,8 @@ EN: dict[str, str] = {
     "MSG-DOI-LIMIT": "You have looked up too many DOIs in an hour. Please try again later.",
     "MSG-PAPERS-LIMIT": "You have searched too many times in an hour. Please try again later.",
     "MSG-PAPERS-UNAVAILABLE": "arXiv cannot be searched right now. Please try again in a few minutes.",
+    "MSG-EXPLORE-LIMIT": "You have searched too many times in an hour. Please try again later.",
+    "MSG-EXPLORE-BUSY": "The AI is still working on your last request. Please wait.",
     "MSG-FEED-404": "Article not found.",
     "MSG-FEED-CREDIT": "{credit} · First published in [{source}]({url}) under [{license}]({license_url}).",
     "MSG-FEED-CREDIT-GUIDE": "Written by PureMind with AI from [{title}]({url}) by {credit} ({source}), "

@@ -58,6 +58,32 @@ export function MainNav({ items = NAV, className }: { items?: readonly (typeof N
   );
 }
 
+/** The signed-in app's menu on a wide screen: a column down the left edge, one row per page. */
+function SideNav() {
+  const pathname = usePathname();
+  const t = useT();
+  return (
+    <nav aria-label={t("nav.aria")} className="flex flex-col gap-1">
+      {NAV.map((item) => {
+        const active = isActive(pathname, item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+            className={`flex h-11 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors ${
+              active ? "bg-ink font-semibold text-bg" : "text-body hover:bg-soft hover:text-ink"
+            }`}
+          >
+            <Icon name={item.icon} size={19} />
+            <span className="min-w-0 truncate">{t(item.label)}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 /** FR-ADM-03: a locked account is refused by the API; sign it out here and say why on the login page. */
 export function useLockedOut() {
   const router = useRouter();
@@ -115,7 +141,8 @@ export function AppOverlays() {
   );
 }
 
-/** The signed-in app's frame: the bar on top, the dock on a phone. Explore uses it too once signed in, though
+/** The signed-in app's frame: the menu in a column on the left and a bar on top, or the bar and a dock on a
+ * phone. Explore uses it too once signed in, though
  * it lives outside the app's pages because visitors may browse it. */
 /** The pages a visitor can open without an account (Explore and the feed): what they can reach, and signing in,
  * which brings them back to the same page. */
@@ -155,12 +182,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useT();
 
   return (
-    <div className="app-backdrop min-h-screen">
+    <div className="app-backdrop min-h-screen lg:pl-[232px] print:pl-0">
       <AppOverlays />
+      <aside className="glass fixed inset-y-0 left-0 z-30 hidden w-[232px] flex-col gap-5 overflow-y-auto border-r px-4 pb-5 lg:flex print:hidden">
+        <div className="flex h-[68px] shrink-0 items-center px-1">
+          <Logo />
+        </div>
+        <button type="button" className="btn-primary shrink-0 justify-start pl-4" onClick={() => setAddOpen(true)}>
+          <Icon name="plus" />
+          {t("nav.addDocument")}
+        </button>
+        <SideNav />
+      </aside>
       <header className="glass sticky top-0 z-20 border-b print:hidden">
         <div className="flex h-[68px] items-center gap-2 px-4 sm:gap-4 sm:px-10 xl:gap-6">
-          <Logo word="hidden sm:inline" />
-          <MainNav className="hidden lg:flex" />
+          <Logo className="lg:hidden" word="hidden sm:inline" />
           <span className="flex-1" />
           <button
             type="button"
@@ -173,10 +209,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
           <button type="button" className="glass icon-btn border xl:hidden" aria-label={t("nav.quickSearch")} onClick={() => setPaletteOpen(true)}>
             <Icon name="search" />
-          </button>
-          <button type="button" className="btn-primary hidden shrink-0 pl-4 lg:inline-flex" onClick={() => setAddOpen(true)}>
-            <Icon name="plus" />
-            {t("nav.addDocument")}
           </button>
           <LanguageToggle className="glass rounded-full" />
           <UserMenu user={user} />

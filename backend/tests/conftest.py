@@ -64,6 +64,8 @@ def _reset_rate_limits():
     from app.core.ratelimit import (
         comment_limiter,
         doi_limiter,
+        explore_check_limiter,
+        explore_search_limiter,
         papers_search_limiter,
         publish_limiter,
         report_limiter,
@@ -82,6 +84,8 @@ def _reset_rate_limits():
     publish_limiter.reset()
     comment_limiter.reset()
     report_limiter.reset()
+    explore_search_limiter.reset()
+    explore_check_limiter.reset()
 
 
 @pytest.fixture

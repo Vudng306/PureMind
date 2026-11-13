@@ -879,7 +879,8 @@ export default function LibraryPage() {
         title={t("library.title")}
         lead={docs.length > 0 ? t("library.stats", { docs: docs.length, reading: readingCount, hl: hlCount }) : undefined}
         actions={
-          <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
+          // On a wide screen the menu column already has this button.
+          <button type="button" className="btn-primary lg:hidden" onClick={() => setAddOpen(true)}>
             <Icon name="plus" />
             {t("nav.addDocument")}
           </button>

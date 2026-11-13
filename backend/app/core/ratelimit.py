@@ -46,3 +46,6 @@ translate_article_day_limiter = RateLimiter(limit=50, window_seconds=24 * 3600)
 publish_limiter = RateLimiter(limit=20, window_seconds=3600)
 comment_limiter = RateLimiter(limit=30, window_seconds=3600)
 report_limiter = RateLimiter(limit=30, window_seconds=3600)
+# Explore: a search is two AI calls and a web search; a check is a visit to someone's site in PureMind's name.
+explore_search_limiter = RateLimiter(limit=20, window_seconds=3600)
+explore_check_limiter = RateLimiter(limit=200, window_seconds=3600)

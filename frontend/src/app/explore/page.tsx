@@ -1,16 +1,14 @@
 "use client";
 
-import { Suspense } from "react";
-
 import { AppShell, PublicShell, useLockedOut } from "@/components/app-shell";
 import { useAuth } from "@/components/auth-provider";
-import { SharedLibrary } from "@/components/shared-library";
+import { ExploreDiscover } from "@/components/explore-discover";
 import { TermsGate } from "@/components/terms-gate";
 import { Spinner } from "@/components/ui";
 import { useAccount } from "@/lib/queries";
 
-/** The site's front page, and public: a visitor browses the open articles; adding one to a library needs an account.
- * Signed in, it is one of the app's pages, inside the app's bar and dock. */
+/** The site's front page, and public: a visitor sees what Explore does; having the AI find documents, and adding
+ * one to a library, needs an account. Signed in, it is one of the app's pages, inside the app's bar and dock. */
 export default function ExplorePage() {
   const { session, loading } = useAuth();
 
@@ -48,9 +46,7 @@ function PublicExplore() {
 function Explore({ signedIn, className }: { signedIn: boolean; className: string }) {
   return (
     <div className={className}>
-      <Suspense fallback={<Spinner />}>
-        <SharedLibrary signedIn={signedIn} />
-      </Suspense>
+      <ExploreDiscover signedIn={signedIn} />
     </div>
   );
 }

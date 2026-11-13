@@ -99,7 +99,8 @@ async def list_documents(
         for url, topic in rows.all():
             topics.setdefault(url, []).append(topic)
     return [
-        DocumentListItem.model_validate(d).model_copy(update={"topics": topics.get(d.url or "", [])}) for d in docs
+        DocumentListItem.model_validate(d).model_copy(update={"topics": topics.get(d.url or "", [])})
+        for d in docs
     ]
 
 
@@ -394,7 +395,14 @@ async def save_url(
             raise HTTPException(422, MSG["MSG-18"])
         return await _save_fetched_pdf(fetched, normalized, user, session, settings, background)
     article = await run_in_threadpool(web.extract_article, fetched.body, fetched.url)
-    has_text = bool(article.content.strip())
+    if article.paywalled:
+        # What such a page shows is a preview: saving it would pass an abstract or a list of references off
+        # as the document.
+        raise HTTPException(422, MSG["MSG-18-PAYWALL"])
+    if article.word_count < web.MIN_ARTICLE_WORDS:
+        # Not a whole article: a teaser, an abstract, a page of links, or one a script fills in. Nothing is
+        # kept, so the Library never holds a fragment that passes for the document.
+        raise HTTPException(422, MSG["MSG-18-SHORT"])
     doc = Document(
         user_id=user.id,
         source_type=SourceType.manual,
@@ -403,8 +411,7 @@ async def save_url(
         content_clean=article.content,
         word_count=article.word_count,
         published_at=article.published_at,
-        extraction_status=ExtractionStatus.done if has_text else ExtractionStatus.failed,
-        extraction_error=None if has_text else "MSG-15",
+        extraction_status=ExtractionStatus.done,
     )
     if (dup := await _commit_new_link(session, doc, user, normalized)) is not None:
         return dup
@@ -476,7 +483,9 @@ async def import_doi(
         return await _save_fetched_pdf(fetched, url, user, session, settings, background, work)
     content = ""
     if fetched is not None and not web.is_pdf(fetched):
-        content = (await run_in_threadpool(web.extract_article, fetched.body, fetched.url)).content
+        article = await run_in_threadpool(web.extract_article, fetched.body, fetched.url)
+        # A page for subscribers shows a preview and its references: not the work's text, however long.
+        content = "" if article.paywalled else article.content
     if word_count(content) < word_count(work.abstract):
         content = work.abstract  # the page gave less than its own abstract: a paywall, or a cookie notice
     if not content.strip():

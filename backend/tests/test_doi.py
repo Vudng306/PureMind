@@ -194,6 +194,20 @@ async def test_paywalled_work_keeps_its_abstract_or_is_not_saved(client, auth, f
     assert len((await client.get("/api/documents", headers=h)).json()) == 1
 
 
+async def test_a_subscribers_page_gives_the_abstract_not_its_references(client, auth, fake_doi):
+    from tests.test_epub_web import PAYWALLED
+
+    abstract = "<jats:p>We show that reading slowly helps students remember what they read.</jats:p>"
+    fake_doi.csl["doi.org/10.1000/preview"] = {**CSL, "abstract": abstract}
+    fake_doi.pages["doi.org/10.1000/preview"] = httpx.Response(
+        200, headers={"content-type": "text/html"}, content=PAYWALLED
+    )
+    r = await client.post("/api/documents/import-doi", headers=auth(), json={"doi": "10.1000/preview"})
+    assert r.status_code == 201, r.text
+    # The page has hundreds of words, all of them references; the work's own abstract is what is kept.
+    assert r.json()["content_clean"] == "We show that reading slowly helps students remember what they read."
+
+
 async def test_import_rejects_bad_and_unknown_dois(client, auth, fake_doi):
     h = auth()
     r = await client.post("/api/documents/import-doi", headers=h, json={"doi": "not a doi"})

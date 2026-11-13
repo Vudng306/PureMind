@@ -19,6 +19,7 @@ from app.api.routes import (
     collections,
     community,
     documents,
+    explore,
     feed,
     highlights,
     notebooks,
@@ -188,3 +189,4 @@ app.include_router(admin_posts.router, prefix="/api")
 app.include_router(catalog.router, prefix="/api")
 app.include_router(papers.router, prefix="/api")
 app.include_router(feed.router, prefix="/api")
+app.include_router(explore.router, prefix="/api")

@@ -139,6 +139,18 @@ ARTICLE = b"""<html><head>
 </body></html>"""
 
 
+# The same page with a whole article's worth of text: what "save a link" keeps.
+FULL = ARTICLE.replace(
+    b"</article>",
+    b"".join(
+        b"<p>Doan %d: doc cham giup nguoi hoc ghi nho lau hon va hieu sau hon nhung gi da doc trong ngay.</p>"
+        % n
+        for n in range(20)
+    )
+    + b"</article>",
+)
+
+
 class FakeWeb:
     """Replaces DNS and the network transport for fetch_url."""
 
@@ -169,7 +181,7 @@ def fake_web(monkeypatch):
 async def test_save_article(client, auth, fake_web):
     fake_web.dns["blog.example.com"] = ["93.184.216.34"]
     fake_web.routes["blog.example.com/posts/1"] = httpx.Response(
-        200, headers={"content-type": "text/html; charset=utf-8"}, content=ARTICLE
+        200, headers={"content-type": "text/html; charset=utf-8"}, content=FULL
     )
     h = auth()
 
@@ -178,6 +190,7 @@ async def test_save_article(client, auth, fake_web):
     )
     assert r.status_code == 201, r.text
     doc = r.json()
+    assert doc["extraction_status"] == "done" and doc["word_count"] >= web.MIN_ARTICLE_WORDS
     assert doc["title"] == "Vi sao can doc cham"
     assert doc["file_type"] == "web" and doc["source_type"] == "manual"
     md = doc["content_clean"]
@@ -555,3 +568,116 @@ def test_managed_database_urls_are_normalised(given, expected):
     from app.core.config import Settings
 
     assert Settings(database_url=given).database_url == expected
+
+
+# A subscriber's page as a publisher serves it to everyone else: an abstract, then a long list of references.
+REFERENCES = b"".join(
+    b"<p>Author, A. A study of sleep and memory, number %d. Journal 12, 100-110.</p>" % n for n in range(60)
+)
+PAYWALLED = (
+    b"<html><head><title>The memory function of sleep</title>"
+    b'<script type="application/ld+json">{"@type": "WebPage", "mainEntity": {"@type": "ScholarlyArticle",'
+    b' "isAccessibleForFree": false, "hasPart": {"@type": "WebPageElement", "isAccessibleForFree": false}}}</script>'
+    b"</head><body><article><p>Abstract. Sleep helps memory.</p><p>This is a preview of subscription content.</p>"
+    b'<section class="references">' + REFERENCES + b"</section></article></body></html>"
+)
+
+
+def test_a_page_that_says_it_is_for_subscribers_is_known():
+    assert web.extract_article(PAYWALLED, "https://journal.example.com/a").paywalled is True
+    # Springer Nature says it in a meta tag of its own.
+    meta = ARTICLE.replace(b"<head>", b'<head><meta name="access" content="No">')
+    assert web.extract_article(meta, "https://journal.example.com/a").paywalled is True
+    assert web.extract_article(ARTICLE, "https://blog.example.com/a").paywalled is False
+    free = PAYWALLED.replace(b"false", b"true")
+    assert web.extract_article(free, "https://journal.example.com/a").paywalled is False
+    # A script that is not JSON is passed over.
+    broken = ARTICLE.replace(b"<head>", b'<head><script type="application/ld+json">{not json</script>')
+    assert web.extract_article(broken, "https://blog.example.com/a").paywalled is False
+
+
+async def test_save_url_does_not_keep_a_preview_as_the_document(client, auth, fake_web):
+    fake_web.dns["journal.example.com"] = ["93.184.216.34"]
+    fake_web.routes["journal.example.com/articles/closed"] = httpx.Response(
+        200, headers={"content-type": "text/html"}, content=PAYWALLED
+    )
+    h = auth()
+    r = await client.post(
+        "/api/documents/save-url", headers=h, json={"url": "https://journal.example.com/articles/closed"}
+    )
+    assert r.status_code == 422, r.text
+    assert "xem trước" in r.json()["detail"] and "PDF" in r.json()["detail"]
+    assert (await client.get("/api/documents", headers=h)).json() == []
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        ARTICLE,  # a teaser: three short paragraphs
+        b"<html><head><title>Shell</title></head><body><div id='root'></div></body></html>",  # filled in by a script
+        b"<html><body><ul>"
+        + b"<li><a href='/a'>Bai viet</a></li>" * 40
+        + b"</ul></body></html>",  # a page of links
+    ],
+)
+async def test_save_url_does_not_keep_a_page_that_is_not_a_whole_article(client, auth, fake_web, body):
+    fake_web.dns["blog.example.com"] = ["93.184.216.34"]
+    fake_web.routes["blog.example.com/posts/short"] = httpx.Response(
+        200, headers={"content-type": "text/html; charset=utf-8"}, content=body
+    )
+    h = auth()
+    r = await client.post(
+        "/api/documents/save-url", headers=h, json={"url": "https://blog.example.com/posts/short"}
+    )
+    assert r.status_code == 422, r.text
+    assert "quá ít nội dung" in r.json()["detail"] and "PDF" in r.json()["detail"]
+    # Nothing is kept, not even a document marked as failed.
+    assert (await client.get("/api/documents", headers=h)).json() == []
+
+
+async def test_save_url_keeps_a_page_right_at_the_length_of_an_article(client, auth, fake_web):
+    def page(words: int) -> bytes:
+        return b"<html><head><title>T</title></head><body><article><p>%s</p></article></body></html>" % (
+            b"tu " * words
+        )
+
+    fake_web.dns["blog.example.com"] = ["93.184.216.34"]
+    for name, words in (("under", web.MIN_ARTICLE_WORDS - 1), ("at", web.MIN_ARTICLE_WORDS)):
+        fake_web.routes[f"blog.example.com/{name}"] = httpx.Response(
+            200, headers={"content-type": "text/html"}, content=page(words)
+        )
+    h = auth()
+    under = await client.post(
+        "/api/documents/save-url", headers=h, json={"url": "https://blog.example.com/under"}
+    )
+    assert under.status_code == 422, under.text
+    at = await client.post("/api/documents/save-url", headers=h, json={"url": "https://blog.example.com/at"})
+    assert at.status_code == 201, at.text
+    assert at.json()["word_count"] == web.MIN_ARTICLE_WORDS
+
+
+@pytest.mark.parametrize(
+    "status,headers",
+    [
+        (420, {}),  # what IEEE Xplore's filter answers a client it takes for a program
+        (418, {}),
+        # A check that people pass by running a script: the page comes with 200 or 202 and says so in a header.
+        (202, {"x-amzn-waf-action": "challenge"}),
+        (200, {"X-Amzn-Waf-Action": "Captcha"}),
+        (200, {"cf-mitigated": "challenge"}),
+    ],
+)
+async def test_a_bot_check_is_a_refusal_not_a_page_to_keep(client, auth, fake_web, status, headers):
+    fake_web.dns["papers.example.org"] = ["93.184.216.34"]
+    # Even with an article's worth of words on it, what a bot check sends is not the document.
+    fake_web.routes["papers.example.org/document/1"] = httpx.Response(
+        status, headers={"content-type": "text/html", **headers}, content=FULL
+    )
+    h = auth()
+    r = await client.post(
+        "/api/documents/save-url", headers=h, json={"url": "https://papers.example.org/document/1"}
+    )
+    assert r.status_code == 422, r.text
+    assert "không cho phép PureMind" in r.json()["detail"] and "PDF" in r.json()["detail"]
+    assert (await client.get("/api/documents", headers=h)).json() == []
+    assert len(fake_web.requests) == 1  # one visit: no second try to get past the check

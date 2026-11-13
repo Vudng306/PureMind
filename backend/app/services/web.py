@@ -16,12 +16,19 @@ from app.services.html_markdown import absolutize_images, clean_soup, html_to_ma
 TIMEOUT_SECONDS = 20
 MAX_REDIRECTS = 5
 MAX_BYTES = 20 * 1024 * 1024
+# A page with less text than this is not an article to keep: a teaser, an abstract, a list of links, or a
+# shell that a script fills in. The Library's "save a link" and Explore's check share the one rule.
+MIN_ARTICLE_WORDS = 250
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/128.0 Safari/537.36 PureMindReader/1.0"
 )
 # The site refuses the request itself (not a network problem): retrying will not help.
-REFUSED_STATUSES = {401, 403, 407, 429, 451}
+# 418 and 420 are not standard, but sites behind a bot filter (IEEE Xplore among them) answer with them.
+REFUSED_STATUSES = {401, 403, 407, 418, 420, 429, 451}
+# A bot filter may answer 200 or 202 with a page that only runs a script to tell people from programs.
+# It says so in a header. PureMind does not try to pass such a check: the site has refused it.
+CHALLENGE_HEADERS = {"x-amzn-waf-action": ("challenge", "captcha"), "cf-mitigated": ("challenge",)}
 
 
 def user_agent(contact: str = "") -> str:
@@ -155,6 +162,11 @@ async def fetch_url(raw_url: str, contact: str = "", accept: str = ACCEPT_PAGE) 
                             continue
                         if response.status_code in REFUSED_STATUSES:
                             raise FetchRefused(f"HTTP {response.status_code}")
+                        if any(
+                            response.headers.get(name, "").strip().lower() in values
+                            for name, values in CHALLENGE_HEADERS.items()
+                        ):
+                            raise FetchRefused("bot check")
                         if response.status_code >= 400:
                             raise FetchFailed(f"HTTP {response.status_code}")
                         declared = int(response.headers.get("content-length") or 0)
@@ -213,6 +225,8 @@ class Article:
     content: str
     word_count: int
     published_at: datetime | None
+    # The page says its text is for subscribers: what is on it is a preview, never the whole document.
+    paywalled: bool = False
 
 
 def _hint(tag: Tag) -> str:
@@ -276,6 +290,34 @@ def _meta(soup: BeautifulSoup, *names: str) -> str | None:
 
 MIN_WORDS = 150
 MIN_SHARE = 0.25  # of the page's own prose, below which the extraction looks like a failure
+
+
+def _paywalled(soup: BeautifulSoup) -> bool:
+    """Whether the page itself says its text is not free to read: schema.org's `isAccessibleForFree: false`,
+    which publishers put there for search engines, or Springer Nature's `<meta name="access" content="No">`.
+
+    Such a page still has words on it, an abstract and often a long list of references, which the scoring
+    would take for the article. Must be read before `clean_soup`, which strips every <script>.
+    """
+    access = soup.find("meta", attrs={"name": "access"})
+    if access and (access.get("content") or "").strip().lower() == "no":
+        return True
+    for tag in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        try:
+            data = json.loads(tag.string or "")
+        except (ValueError, TypeError):
+            continue
+        stack = [data]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, list):
+                stack.extend(node)
+            elif isinstance(node, dict):
+                stack.extend(v for v in node.values() if isinstance(v, dict | list))
+                free = node.get("isAccessibleForFree")
+                if free is False or (isinstance(free, str) and free.strip().lower() in ("false", "no")):
+                    return True
+    return False
 
 
 def _ld_body(soup: BeautifulSoup) -> str:
@@ -403,6 +445,7 @@ def _content(html: bytes, url: str, title: str, *, drop_hidden: bool, drop_named
 def extract_article(html: bytes, url: str) -> Article:
     soup = BeautifulSoup(html, "html.parser")
     ld_body = _ld_body(soup)  # read before clean_soup drops the <script> tags
+    paywalled = _paywalled(soup)
     title = _meta(soup, "og:title", "twitter:title")
     if not title and soup.title and soup.title.string:
         title = soup.title.string.strip()
@@ -435,5 +478,9 @@ def extract_article(html: bytes, url: str) -> Article:
     if word_count(content) < MIN_WORDS and word_count(ld_body) > word_count(content):
         content = ld_body
     return Article(
-        title=title[:500], content=content, word_count=word_count(content), published_at=published_at
+        title=title[:500],
+        content=content,
+        word_count=word_count(content),
+        published_at=published_at,
+        paywalled=paywalled,
     )
