@@ -54,7 +54,9 @@ async def test_collections_of_others_look_missing(client, auth):
     r = await client.patch(f"/api/documents/{doc['id']}", headers=h, json={"collection_id": theirs["id"]})
     assert r.status_code == 404
     assert (await client.delete(f"/api/collections/{theirs['id']}", headers=h)).status_code == 404
-    assert (await client.patch(f"/api/collections/{theirs['id']}", headers=h, json={"name": "x"})).status_code == 404
+    assert (
+        await client.patch(f"/api/collections/{theirs['id']}", headers=h, json={"name": "x"})
+    ).status_code == 404
     assert (await client.get("/api/collections", headers=h)).json() == []
 
 
@@ -65,7 +67,9 @@ async def test_usage_states_what_removing_a_document_affects(client, auth):
     kept = await create(client, h, doc)
     r = await client.put(f"/api/highlights/{kept.json()['id']}/note", headers=h, json={"content": "ghi chú"})
     assert r.status_code == 200
-    nb = (await client.post("/api/notebooks", headers=h, json={"title": "Sổ", "document_id": doc["id"]})).json()
+    nb = (
+        await client.post("/api/notebooks", headers=h, json={"title": "Sổ", "document_id": doc["id"]})
+    ).json()
     await client.post("/api/posts", headers=h, json={"document_id": doc["id"]})
 
     usage = (await client.get(f"/api/documents/{doc['id']}/usage", headers=h)).json()
@@ -132,9 +136,9 @@ async def test_a_blank_notebook_needs_no_ai_and_survives_the_draft_cleanup(clien
     long_ago = datetime.now(UTC) - timedelta(days=90)
     async with SessionLocal() as s:
         await s.execute(
-            update(Notebook).where(Notebook.id == uuid.UUID(nb["id"])).values(
-                status="draft", opened_at=long_ago, updated_at=long_ago
-            )
+            update(Notebook)
+            .where(Notebook.id == uuid.UUID(nb["id"]))
+            .values(status="draft", opened_at=long_ago, updated_at=long_ago)
         )
         await s.commit()
     items = (await client.get("/api/notebooks", headers=h)).json()
@@ -174,9 +178,13 @@ async def test_notebook_links_and_unlinks_documents_without_touching_them(client
     assert len(r.json()["documents"]) == 1
 
     theirs = await new_doc(client, auth())
-    r = await client.post(f"/api/notebooks/{nb['id']}/documents", headers=h, json={"document_id": theirs["id"]})
+    r = await client.post(
+        f"/api/notebooks/{nb['id']}/documents", headers=h, json={"document_id": theirs["id"]}
+    )
     assert r.status_code == 404
-    r = await client.post(f"/api/notebooks/{nb['id']}/documents", headers=auth(), json={"document_id": doc["id"]})
+    r = await client.post(
+        f"/api/notebooks/{nb['id']}/documents", headers=auth(), json={"document_id": doc["id"]}
+    )
     assert r.status_code == 404
 
     r = await client.delete(f"/api/notebooks/{nb['id']}/documents/{doc['id']}", headers=h)

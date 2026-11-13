@@ -95,7 +95,11 @@ async def list_posts(
     total = await session.scalar(select(func.count(Post.id)).where(*where)) or 0
     posts = (
         await session.scalars(
-            select(Post).where(*where).order_by(Post.published_at.desc()).offset((page - 1) * page_size).limit(page_size)
+            select(Post)
+            .where(*where)
+            .order_by(Post.published_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
         )
     ).all()
     tallies: dict[uuid.UUID, Counter] = {p.id: Counter() for p in posts}
@@ -172,12 +176,16 @@ async def list_comments(
     else:
         where.append(PostComment.id.in_(select(CommentReport.comment_id)))
     comments = (
-        await session.scalars(select(PostComment).where(*where).order_by(PostComment.created_at.desc()).limit(limit))
+        await session.scalars(
+            select(PostComment).where(*where).order_by(PostComment.created_at.desc()).limit(limit)
+        )
     ).all()
     tallies: dict[uuid.UUID, Counter] = {c.id: Counter() for c in comments}
     if comments:
         rows = await session.execute(
-            select(CommentReport.comment_id, CommentReport.reason).where(CommentReport.comment_id.in_(list(tallies)))
+            select(CommentReport.comment_id, CommentReport.reason).where(
+                CommentReport.comment_id.in_(list(tallies))
+            )
         )
         for comment_id, reason in rows.all():
             tallies[comment_id][reason] += 1

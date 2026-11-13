@@ -80,7 +80,9 @@ async def test_a_draft_stays_private_until_published_and_after_unpublishing(clie
     post = await draft(client, h)
     assert (await client.get(f"/api/community/{post['id']}", headers=reader)).status_code == 404
     assert (await client.get(f"/api/posts/{post['id']}", headers=reader)).status_code == 404
-    assert (await client.patch(f"/api/posts/{post['id']}", headers=reader, json={"title": "x"})).status_code == 404
+    assert (
+        await client.patch(f"/api/posts/{post['id']}", headers=reader, json={"title": "x"})
+    ).status_code == 404
     assert (await client.delete(f"/api/posts/{post['id']}", headers=reader)).status_code == 404
     r = await client.post(f"/api/posts/{post['id']}/publish", headers=reader, json={"confirm_rights": True})
     assert r.status_code == 404
@@ -95,7 +97,9 @@ async def test_a_draft_stays_private_until_published_and_after_unpublishing(clie
     assert (await client.post(f"/api/posts/{post['id']}/unpublish", headers=h)).status_code == 200
     assert (await client.get(f"/api/community/{post['id']}", headers=reader)).status_code == 404
     assert (await client.get("/api/community", headers=reader)).json()["items"] == []
-    assert (await client.patch(f"/api/posts/{post['id']}", headers=h, json={"title": "Sửa"})).status_code == 200
+    assert (
+        await client.patch(f"/api/posts/{post['id']}", headers=h, json={"title": "Sửa"})
+    ).status_code == 200
 
 
 async def test_the_community_needs_a_signed_in_reader(client, auth):
@@ -159,7 +163,9 @@ async def test_checks_stop_an_unfinished_post(client, auth, fields, code):
     doc = await new_doc(client, h)
     post = (await client.post("/api/posts", headers=h, json={"document_id": doc["id"]})).json()
     r = await client.patch(
-        f"/api/posts/{post['id']}", headers=h, json={"title": "T", "cards": CARDS, "topic": "science", **fields}
+        f"/api/posts/{post['id']}",
+        headers=h,
+        json={"title": "T", "cards": CARDS, "topic": "science", **fields},
     )
     if code is None:
         assert r.status_code == 422
@@ -182,7 +188,10 @@ async def test_publishing_needs_the_rights_confirmation(client, auth):
 async def nd_doc(client, h) -> dict:
     doc = await new_doc(client, h)
     await set_doc(
-        doc["id"], license="CC BY-ND 4.0", url="https://theconversation.com/a-" + uuid.uuid4().hex, title="Bài ND"
+        doc["id"],
+        license="CC BY-ND 4.0",
+        url="https://theconversation.com/a-" + uuid.uuid4().hex,
+        title="Bài ND",
     )
     return doc
 
@@ -264,7 +273,11 @@ async def test_sharing_the_original_is_a_link_never_the_file(client, auth):
     r = await client.patch(
         f"/api/posts/{post['id']}",
         headers=h,
-        json={"title": "Nên đọc", "topic": "science", "cards": [{"heading": "", "body": "Vì bài này rõ ràng."}]},
+        json={
+            "title": "Nên đọc",
+            "topic": "science",
+            "cards": [{"heading": "", "body": "Vì bài này rõ ràng."}],
+        },
     )
     assert r.status_code == 200
     await publish(client, h, post["id"])
@@ -283,14 +296,20 @@ async def test_a_post_starts_from_exactly_one_thing_of_ones_own(client, auth):
     assert (await client.post("/api/posts", headers=h, json={})).status_code == 422
     r = await client.post("/api/posts", headers=h, json={"document_id": doc["id"], "notebook_id": nb["id"]})
     assert r.status_code == 422
-    assert (await client.post("/api/posts", headers=auth(), json={"document_id": doc["id"]})).status_code == 404
-    assert (await client.post("/api/posts", headers=auth(), json={"notebook_id": nb["id"]})).status_code == 404
+    assert (
+        await client.post("/api/posts", headers=auth(), json={"document_id": doc["id"]})
+    ).status_code == 404
+    assert (
+        await client.post("/api/posts", headers=auth(), json={"notebook_id": nb["id"]})
+    ).status_code == 404
 
 
 async def test_a_post_from_a_notebook_keeps_its_sources_and_deleting_it_keeps_the_notebook(client, auth):
     h = auth()
     doc = await new_doc(client, h)
-    nb = (await client.post("/api/notebooks", headers=h, json={"title": "Sổ", "document_id": doc["id"]})).json()
+    nb = (
+        await client.post("/api/notebooks", headers=h, json={"title": "Sổ", "document_id": doc["id"]})
+    ).json()
     post = (await client.post("/api/posts", headers=h, json={"notebook_id": nb["id"]})).json()
     assert post["notebook_id"] == nb["id"]
     assert [s["document_id"] for s in post["sources"]] == [doc["id"]]
@@ -302,7 +321,9 @@ async def test_a_post_from_a_notebook_keeps_its_sources_and_deleting_it_keeps_th
 async def test_a_post_from_an_ai_notebook_needs_a_human_read(client, auth):
     h = auth()
     doc = await new_doc(client, h)
-    nb = (await client.post("/api/notebooks", headers=h, json={"title": "Sổ", "document_id": doc["id"]})).json()
+    nb = (
+        await client.post("/api/notebooks", headers=h, json={"title": "Sổ", "document_id": doc["id"]})
+    ).json()
     async with SessionLocal() as s:
         await s.execute(update(Notebook).where(Notebook.id == uuid.UUID(nb["id"])).values(ai_model="gpt"))
         await s.commit()
@@ -321,7 +342,9 @@ async def test_a_post_from_an_ai_notebook_needs_a_human_read(client, auth):
 async def test_an_ai_notebook_on_a_cc_by_nd_source_cannot_become_a_post(client, auth):
     h = auth()
     doc = await nd_doc(client, h)
-    nb = (await client.post("/api/notebooks", headers=h, json={"title": "Sổ", "document_id": doc["id"]})).json()
+    nb = (
+        await client.post("/api/notebooks", headers=h, json={"title": "Sổ", "document_id": doc["id"]})
+    ).json()
     async with SessionLocal() as s:
         await s.execute(update(Notebook).where(Notebook.id == uuid.UUID(nb["id"])).values(ai_model="gpt"))
         await s.commit()
@@ -438,7 +461,9 @@ async def test_readers_save_and_unsave(client, auth):
     assert (await client.post(f"/api/community/{post['id']}/save", headers=reader)).status_code == 204
     assert (await client.post(f"/api/community/{post['id']}/save", headers=reader)).status_code == 204
     assert (await client.get(f"/api/community/{post['id']}", headers=reader)).json()["saved"] is True
-    assert [p["id"] for p in (await client.get("/api/community/saved", headers=reader)).json()] == [post["id"]]
+    assert [p["id"] for p in (await client.get("/api/community/saved", headers=reader)).json()] == [
+        post["id"]
+    ]
     assert (await client.delete(f"/api/community/{post['id']}/save", headers=reader)).status_code == 204
     assert (await client.get("/api/community/saved", headers=reader)).json() == []
 
@@ -457,7 +482,9 @@ async def test_comments_are_public_flat_and_removable_by_their_author(client, au
     assert [(c["body"], c["mine"]) for c in listed] == [("Bài hay", False)]
     assert (await client.get(f"/api/community/{post['id']}", headers=h)).json()["comment_count"] == 1
     assert (await client.delete(f"/api/community/comments/{comment['id']}", headers=h)).status_code == 404
-    assert (await client.delete(f"/api/community/comments/{comment['id']}", headers=reader)).status_code == 204
+    assert (
+        await client.delete(f"/api/community/comments/{comment['id']}", headers=reader)
+    ).status_code == 204
     assert (await client.get(path, headers=h)).json() == []
 
 
@@ -541,7 +568,9 @@ async def test_reports_reach_the_admin_as_counts_and_a_hide_is_audited_without_t
     async with SessionLocal() as s:
         logs = (
             await s.scalars(
-                select(AdminAuditLog).where(AdminAuditLog.action.in_(("post.hide", "post.show", "post.delete")))
+                select(AdminAuditLog).where(
+                    AdminAuditLog.action.in_(("post.hide", "post.show", "post.delete"))
+                )
             )
         ).all()
     assert {log.action for log in logs} == {"post.hide", "post.show", "post.delete"}
@@ -555,9 +584,13 @@ async def test_comment_moderation_is_audited_without_text(client, auth):
     h, reader = auth(), auth()
     post = await published(client, h)
     comment = (
-        await client.post(f"/api/community/{post['id']}/comments", headers=reader, json={"body": "Nội dung xấu"})
+        await client.post(
+            f"/api/community/{post['id']}/comments", headers=reader, json={"body": "Nội dung xấu"}
+        )
     ).json()
-    r = await client.post(f"/api/community/comments/{comment['id']}/report", headers=h, json={"reason": "offensive"})
+    r = await client.post(
+        f"/api/community/comments/{comment['id']}/report", headers=h, json={"reason": "offensive"}
+    )
     assert r.status_code == 204
     listed = (await client.get("/api/admin/comments", headers=admin)).json()
     assert listed[0]["reports"] == {"offensive": 1}

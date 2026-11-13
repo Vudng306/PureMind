@@ -94,5 +94,7 @@ def check(post: Post, source_texts: dict) -> list[Issue]:
             issues.append(_warning("CHECK-ND-SOURCE", title=source.title))
         if words := longest_overlap(text, source_texts.get(source.document_id, "")):
             make = _error if nd else _warning
-            issues.append(make("CHECK-OVERLAP-ND" if nd else "CHECK-OVERLAP", words=words, title=source.title))
+            issues.append(
+                make("CHECK-OVERLAP-ND" if nd else "CHECK-OVERLAP", words=words, title=source.title)
+            )
     return issues

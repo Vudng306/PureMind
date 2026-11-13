@@ -110,7 +110,9 @@ async def _documents(session: AsyncSession, nb: Notebook) -> list[NotebookDocume
     """The documents it draws on, linked by hand or through a highlight. They stay managed in the library."""
     linked = set(
         (
-            await session.scalars(select(NotebookDocument.document_id).where(NotebookDocument.notebook_id == nb.id))
+            await session.scalars(
+                select(NotebookDocument.document_id).where(NotebookDocument.notebook_id == nb.id)
+            )
         ).all()
     )
     counts = dict(
@@ -301,7 +303,9 @@ async def link_document(
 
 
 @router.delete("/{notebook_id}/documents/{document_id}", response_model=NotebookOut)
-async def unlink_document(notebook_id: uuid.UUID, document_id: uuid.UUID, user: CurrentUser, session: SessionDep):
+async def unlink_document(
+    notebook_id: uuid.UUID, document_id: uuid.UUID, user: CurrentUser, session: SessionDep
+):
     """Remove the link only: the document stays in the library and the notebook keeps its text."""
     nb = await _owned_notebook(session, user, notebook_id)
     link = await session.get(NotebookDocument, (nb.id, document_id))

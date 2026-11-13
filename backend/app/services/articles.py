@@ -174,5 +174,17 @@ def source_names() -> dict[str, str]:
 
     return {
         m.SOURCE: m.NAME
-        for m in (conversation, globalvoices, owid, plos, europepmc, elife, frym, hlb, arxiv, openalex, guides)
+        for m in (
+            conversation,
+            globalvoices,
+            owid,
+            plos,
+            europepmc,
+            elife,
+            frym,
+            hlb,
+            arxiv,
+            openalex,
+            guides,
+        )
     }

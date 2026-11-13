@@ -562,7 +562,9 @@ class PostSource(Base):
     __table_args__ = (Index("ix_post_sources_post", "post_id", "position"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    post_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    post_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False
+    )
     document_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("documents.id", ondelete="SET NULL"), index=True
     )
@@ -579,7 +581,9 @@ class SavedPost(Base):
 
     __tablename__ = "saved_posts"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
     post_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True, index=True
     )
@@ -591,7 +595,9 @@ class PostReport(Base):
 
     __tablename__ = "post_reports"
 
-    post_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True)
+    post_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("posts.id", ondelete="CASCADE"), primary_key=True
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
     )
@@ -606,7 +612,9 @@ class PostComment(Base):
     __table_args__ = (Index("ix_post_comments_post_created", "post_id", "created_at"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    post_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    post_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )

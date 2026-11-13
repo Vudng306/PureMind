@@ -227,7 +227,9 @@ async def list_my_posts(
     if post_status:
         stmt = stmt.where(Post.status == post_status)
     if document_id:
-        stmt = stmt.where(Post.id.in_(select(PostSource.post_id).where(PostSource.document_id == document_id)))
+        stmt = stmt.where(
+            Post.id.in_(select(PostSource.post_id).where(PostSource.document_id == document_id))
+        )
     return [post_out(p) for p in (await session.scalars(stmt)).all()]
 
 
@@ -343,9 +345,7 @@ async def _material(session: AsyncSession, post: Post) -> str:
             .order_by(Highlight.created_at)
             .limit(MAX_MATERIAL_HIGHLIGHTS)
         )
-        marks = [
-            f"- {h.selected_text}" + (f" (note: {h.note})" if h.note else "") for h in highlights.all()
-        ]
+        marks = [f"- {h.selected_text}" + (f" (note: {h.note})" if h.note else "") for h in highlights.all()]
         if marks:
             parts.append("Highlights:\n" + "\n".join(marks))
         summaries = await session.scalars(select(Summary).where(Summary.document_id.in_(ids)))

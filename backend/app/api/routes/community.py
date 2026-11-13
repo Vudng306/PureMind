@@ -109,7 +109,11 @@ async def _views(session: AsyncSession, posts: list[Post], user: User) -> list[P
     if not ids:
         return []
     saved = set(
-        (await session.scalars(select(SavedPost.post_id).where(SavedPost.user_id == user.id, SavedPost.post_id.in_(ids)))).all()
+        (
+            await session.scalars(
+                select(SavedPost.post_id).where(SavedPost.user_id == user.id, SavedPost.post_id.in_(ids))
+            )
+        ).all()
     )
     counts = dict(
         (
@@ -281,4 +285,3 @@ async def report_comment(comment_id: uuid.UUID, payload: ReportIn, user: Current
     else:
         report.reason = payload.reason
     await session.commit()
-

@@ -40,7 +40,10 @@ def _clean(name: str) -> str:
 
 
 async def _count(session: AsyncSession, collection_id: uuid.UUID) -> int:
-    return await session.scalar(select(func.count(Document.id)).where(Document.collection_id == collection_id)) or 0
+    return (
+        await session.scalar(select(func.count(Document.id)).where(Document.collection_id == collection_id))
+        or 0
+    )
 
 
 async def _commit(session: AsyncSession) -> None:
@@ -72,7 +75,9 @@ async def create_collection(payload: CollectionIn, user: CurrentUser, session: S
 
 
 @router.patch("/{collection_id}", response_model=CollectionOut)
-async def rename_collection(collection_id: uuid.UUID, payload: CollectionIn, user: CurrentUser, session: SessionDep):
+async def rename_collection(
+    collection_id: uuid.UUID, payload: CollectionIn, user: CurrentUser, session: SessionDep
+):
     collection = await owned_collection(session, user, collection_id)
     collection.name = _clean(payload.name)
     await _commit(session)
