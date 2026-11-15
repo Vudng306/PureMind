@@ -387,7 +387,15 @@ export function ReaderPanel({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
-        {views.length > 0 && (
+        {group === "ai" ? (
+          <div className="split shrink-0" role="group" aria-label={t("panel.aiViews")}>
+            {views.map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={tab === value} onClick={() => onTab(value)}>
+                <span className="truncate">{label}</span>
+              </button>
+            ))}
+          </div>
+        ) : views.length > 0 && (
           <div className="flex shrink-0 gap-1.5">
             {views.map(([value, label]) => (
               <button key={value} type="button" aria-pressed={tab === value} onClick={() => onTab(value)} className="chip h-[34px] px-3 text-[13px]">

@@ -119,7 +119,7 @@ const AI_SOURCE: Record<Lang, Record<string, string>> = {
     deep: "Tóm tắt sâu",
     mindmap: "Mind Map",
     analysis: "Phân tích nghiên cứu",
-    chat: "Hỏi AI",
+    chat: "Trợ lý đọc",
     translation: "Bản dịch",
   },
   en: {
@@ -127,7 +127,7 @@ const AI_SOURCE: Record<Lang, Record<string, string>> = {
     deep: "Deep summary",
     mindmap: "Mind map",
     analysis: "Research analysis",
-    chat: "Ask AI",
+    chat: "Reading assistant",
     translation: "Translation",
   },
 };

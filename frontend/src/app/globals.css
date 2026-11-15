@@ -280,6 +280,20 @@ body {
   .segmented > [aria-pressed="true"] svg {
     @apply text-accent-text;
   }
+  /* A split control: equal parts in one outlined pill; the chosen part looks like a chosen chip, and a thin line
+     parts two neighbours that are not chosen. */
+  .split {
+    @apply flex w-full rounded-full border border-line bg-surface p-0.5;
+  }
+  .split > button {
+    @apply relative inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-transparent px-2 text-[15px] font-medium text-ink transition-colors duration-150 hover:bg-soft disabled:opacity-60;
+  }
+  .split > button:not([aria-pressed="true"]) + button:not([aria-pressed="true"])::before {
+    @apply absolute inset-y-2 left-0 w-px bg-line content-[""];
+  }
+  .split > button[aria-pressed="true"] {
+    @apply border-accent bg-accent-soft font-semibold text-accent-on-soft hover:bg-accent-soft;
+  }
   /* The feed's card fills what is left of the screen, down to where its text would no longer fit: under it are the
      action bar and, below lg, the app's dock. --feed-chips: the row of topics, when it takes a line of its own. */
   .feed-card {

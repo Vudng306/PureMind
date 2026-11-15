@@ -33,12 +33,11 @@ import { AiBadge, AiCoverage, Cites, SaveToNotes } from "./cite";
 import { Icon } from "./icons";
 import { ConfirmDialog } from "./ui";
 
-const LANGUAGES: [AiLanguage, Key | null][] = [
-  ["auto", "summary.langAuto"],
-  ["vi", null], // a language's own name reads the same in both interfaces
-  ["en", null],
+// A language's own name reads the same in both interfaces.
+const LANGUAGES: ["vi" | "en", string][] = [
+  ["vi", "Tiếng Việt"],
+  ["en", "English"],
 ];
-const LANGUAGE_NAME: Record<AiLanguage, string> = { auto: "", vi: "Tiếng Việt", en: "English" };
 
 const COPY: Record<ArtifactKind, { empty: Key; lede: Key; create: Key }> = {
   quick: { empty: "ai.quickEmpty", lede: "ai.quickLede", create: "ai.quickCreate" },
@@ -77,7 +76,8 @@ export function ArtifactFrame<K extends ArtifactKind>({
   const { data: user } = useAccount();
   const { data: artifact, isPending, isError, refetch } = useArtifact(docId, kind);
   const create = useCreateArtifact(docId, kind);
-  const [language, setLanguage] = useState<AiLanguage>("auto");
+  // Written in the reader's own language unless they pick the other one.
+  const [language, setLanguage] = useState<AiLanguage>(lang === "en" ? "en" : "vi");
   const [ask, setAsk] = useState<"consent" | "regenerate" | null>(null);
 
   const consented = Boolean(user?.reading_preferences.ai_consent);
@@ -108,30 +108,21 @@ export function ArtifactFrame<K extends ArtifactKind>({
   }
 
   const controls = (
-    <div className="flex flex-wrap items-center gap-2">
-      <label className="sr-only" htmlFor={`ai-language-${kind}`}>
-        {t("summary.language")}
-      </label>
-      <select
-        id={`ai-language-${kind}`}
-        value={language}
-        onChange={(e) => setLanguage(e.target.value as AiLanguage)}
-        disabled={working}
-        className="h-10 rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-focus"
-      >
-        {LANGUAGES.map(([value, label]) => (
-          <option key={value} value={value}>
-            {label ? t(label) : LANGUAGE_NAME[value]}
-          </option>
+    <div className="flex flex-col gap-3">
+      <div className="split" role="group" aria-label={t("summary.language")}>
+        {LANGUAGES.map(([value, name]) => (
+          <button key={value} type="button" aria-pressed={language === value} onClick={() => setLanguage(value)} disabled={working}>
+            {name}
+          </button>
         ))}
-      </select>
+      </div>
       <button
         type="button"
-        className={artifact ? "btn-outline h-10" : "btn-primary h-10"}
+        className={`${artifact ? "btn-outline" : "btn-primary"} h-12 w-full justify-center text-[15px]`}
         onClick={start}
         disabled={working || noText || extracting || quota === 0}
       >
-        <Icon name="spark" size={16} />
+        <Icon name="spark" size={18} />
         {t(artifact ? "ai.recreate" : copy.create)}
       </button>
     </div>
@@ -181,9 +172,11 @@ export function ArtifactFrame<K extends ArtifactKind>({
           <p className="text-xs leading-normal text-muted">{t("ai.disclaimer")}</p>
         </>
       ) : (
-        <div className="flex flex-col gap-3.5 rounded-xl border border-line p-4">
-          <p className="font-serif text-[17px] text-ink">{t(copy.empty)}</p>
-          <p className="text-sm leading-relaxed text-muted">{t(copy.lede)}</p>
+        <div className="flex flex-col gap-4 rounded-2xl border border-line p-5">
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xl font-semibold leading-snug text-ink">{t(copy.empty)}</h3>
+            <p className="text-[15px] leading-relaxed text-muted">{t(copy.lede)}</p>
+          </div>
           {noText ? (
             <>
               <p className="text-sm leading-relaxed text-danger">
@@ -205,7 +198,7 @@ export function ArtifactFrame<K extends ArtifactKind>({
       )}
 
       {quota !== undefined && (
-        <span className={`text-xs ${quota === 0 ? "text-danger" : "text-muted"}`}>
+        <span className={`text-sm ${quota === 0 ? "text-danger" : "text-muted"}`}>
           {quota === 0 ? MSG["MSG-25"] : t("summary.quota", { n: quota })}
         </span>
       )}
@@ -430,14 +423,14 @@ export function AiSummaryPanel({ docId, onFind }: { docId: string; onFind: (text
   const open = (c: ChatCitation) => onFind(findSnippet(c.text));
   return (
     <div className="flex flex-col gap-4">
-      <div role="group" aria-label={t("ai.modeAria")} className="flex shrink-0 self-start rounded-full bg-soft p-0.5">
+      <div role="group" aria-label={t("ai.modeAria")} className="flex shrink-0 self-start rounded-full bg-soft p-1">
         {modes.map((value) => (
           <button
             key={value}
             type="button"
             aria-pressed={mode === value}
             onClick={() => setMode(value)}
-            className={`h-8 rounded-full px-3.5 text-[13px] font-medium ${
+            className={`h-10 rounded-full px-4 text-[15px] font-medium ${
               mode === value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"
             }`}
           >
