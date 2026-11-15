@@ -35,8 +35,9 @@ export function SelectionMenu({
   onColor: (color: HighlightColor) => void;
   onNote: () => void;
   onCopy: () => void;
-  onExplain: () => void;
-  onTranslate: () => void;
+  /** Left out when the feature is switched off (lib/features). */
+  onExplain?: () => void;
+  onTranslate?: () => void;
   /** Show the passage on the original PDF; left out where it cannot be placed. */
   onSource?: () => void;
   onDismiss: () => void;
@@ -48,7 +49,10 @@ export function SelectionMenu({
 
   useEffect(() => {
     function onDown(e: MouseEvent | TouchEvent) {
-      if (!ref.current?.contains(e.target as Node)) onDismiss();
+      const target = e.target as Element | null;
+      // A control that changes the layout around the text (Focus) leaves the selection and its menu be.
+      if (target?.closest?.("[data-keep-selection]")) return;
+      if (!ref.current?.contains(target)) onDismiss();
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onDismiss();
@@ -106,14 +110,18 @@ export function SelectionMenu({
           <Icon name="copy" size={16} />
           {t("selection.copyShort")}
         </button>
-        <button type="button" onClick={onExplain} className={item}>
-          <Icon name="spark" size={16} />
-          {t("selection.explain")}
-        </button>
-        <button type="button" onClick={onTranslate} className={item}>
-          <Icon name="translate" size={16} />
-          {t("selection.translate")}
-        </button>
+        {onExplain && (
+          <button type="button" onClick={onExplain} className={item}>
+            <Icon name="spark" size={16} />
+            {t("selection.explain")}
+          </button>
+        )}
+        {onTranslate && (
+          <button type="button" onClick={onTranslate} className={item}>
+            <Icon name="translate" size={16} />
+            {t("selection.translate")}
+          </button>
+        )}
         {onSource && (
           <button type="button" onClick={onSource} className={item}>
             <Icon name="file" size={16} />

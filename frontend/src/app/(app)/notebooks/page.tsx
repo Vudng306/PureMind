@@ -1,237 +1,150 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { Alert, PageHeader, Spinner, useModal } from "@/components/ui";
-import { relativeTime } from "@/lib/doc-view";
-import { useLang, useMsg, useT } from "@/lib/i18n";
+import { Alert, PageHeader, Spinner } from "@/components/ui";
+import { KIND_CLASS, KIND_LABEL, relativeTime } from "@/lib/doc-view";
+import { useLang, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
-import {
-  MAX_NOTEBOOK_TITLE,
-  MAX_NOTEBOOK_TOPIC,
-  STATUS_LABEL,
-  createNotebook,
-  notebooksKey,
-  useNotebooks,
-  type NotebookStatus,
-} from "@/lib/notebooks";
-import { toneOf } from "@/lib/tone";
+import { readingState, useNotebookGroups, type NotebookGroup } from "@/lib/notebook";
+import { useNotebooks } from "@/lib/notebooks";
 
-const FILTERS = [
-  ["", "common.all"],
-  ["draft", STATUS_LABEL.draft],
-  ["saved", STATUS_LABEL.saved],
-] as const;
+const SEARCH_DELAY = 300;
 
-/** A blank notebook, for writing by hand. No AI runs and nothing is spent. */
-function NewNotebookDialog({ open, topics, onClose }: { open: boolean; topics: string[]; onClose: () => void }) {
+function GroupCard({ g, searching }: { g: NotebookGroup; searching: boolean }) {
   const t = useT();
-  const router = useRouter();
-  const qc = useQueryClient();
-  const ref = useModal(open);
-  const [title, setTitle] = useState("");
-  const [topic, setTopic] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setTitle("");
-      setTopic("");
-      setError(null);
-    }
-  }, [open]);
-
-  async function create(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title.trim()) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const nb = await createNotebook({ title: title.trim(), topic: topic.trim() || undefined });
-      void qc.invalidateQueries({ queryKey: notebooksKey });
-      onClose();
-      router.push(`/notebooks/${nb.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : MSG["MSG-99"]);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const field = "h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-focus";
-
+  const lang = useLang();
+  const state = readingState(g);
+  const counts: [string, string][] = [
+    ["highlighter", t("notebook.nHighlights", { n: g.highlight_count })],
+    ["note", t("notebook.nNotes", { n: g.note_count })],
+    ...(g.insight_count > 0 ? ([["spark", t("notebook.nInsights", { n: g.insight_count })]] as [string, string][]) : []),
+  ];
   return (
-    <dialog
-      ref={ref}
-      aria-label={t("notebooks.new")}
-      onCancel={(e) => {
-        e.preventDefault();
-        if (!busy) onClose();
-      }}
-      className="dialog w-[min(calc(100vw-32px),480px)]"
-    >
-      <form className="flex flex-col gap-3.5 p-[26px]" onSubmit={(e) => void create(e)}>
-        <h2 className="font-serif text-2xl font-medium">{t("notebooks.new")}</h2>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted">{t("nb.titleLabel")}</span>
-          <input value={title} maxLength={MAX_NOTEBOOK_TITLE} onChange={(e) => setTitle(e.target.value)} className={field} />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted">{t("nb.topicLabel")}</span>
-          <input
-            value={topic}
-            list="notebook-topics"
-            maxLength={MAX_NOTEBOOK_TOPIC}
-            placeholder={t("nb.topicPlaceholder")}
-            onChange={(e) => setTopic(e.target.value)}
-            className={field}
-          />
-          <datalist id="notebook-topics">
-            {topics.map((x) => (
-              <option key={x} value={x} />
-            ))}
-          </datalist>
-        </label>
-        {error && <Alert>{error}</Alert>}
-        <div className="mt-1.5 flex justify-end gap-2.5">
-          <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>
-            {t("common.cancel")}
-          </button>
-          <button type="submit" className="btn-primary" disabled={!title.trim() || busy}>
-            {t(busy ? "common.working" : "notebooks.create")}
-          </button>
-        </div>
-      </form>
-    </dialog>
+    <li>
+      <Link
+        href={`/notebooks/doc/${g.document_id}`}
+        className="card group flex h-full min-h-[176px] flex-col gap-3 p-5 transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-float"
+      >
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span className={`flex h-6 w-11 items-center justify-center rounded-[5px] text-[11px] font-bold ${KIND_CLASS[g.file_type]}`}>
+            {KIND_LABEL[g.file_type]}
+          </span>
+          <span
+            className={`flex h-6 items-center rounded-full px-2 text-xs font-medium ${
+              state === "read" ? "bg-success-soft text-success" : "bg-soft text-ink"
+            }`}
+          >
+            {state === "read"
+              ? t("notebook.read")
+              : state === "reading"
+                ? t("notebook.reading", { n: Math.round((g.read_fraction ?? 0) * 100) })
+                : t("notebook.unread")}
+          </span>
+          {searching && g.match_count !== null && g.match_count > 0 && (
+            <span className="flex h-6 items-center rounded-full bg-accent-soft px-2 text-xs font-semibold text-accent-on-soft">
+              {t("notebook.nMatches", { n: g.match_count })}
+            </span>
+          )}
+        </span>
+        <span className="line-clamp-3 font-display text-[20px] font-semibold leading-snug text-ink">{g.title}</span>
+        <span className="mt-auto flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[13px] text-body">
+          {counts.map(([icon, label]) => (
+            <span key={icon} className="flex items-center gap-1.5">
+              <Icon name={icon as "note"} size={15} className="text-muted" />
+              {label}
+            </span>
+          ))}
+        </span>
+        <span className="flex items-center gap-2 border-t border-line pt-3 text-[13px] text-muted">
+          <span className="min-w-0 flex-1 truncate">{t("notebook.updated", { when: relativeTime(g.last_activity_at, lang) })}</span>
+          <Icon name="arrow" size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
+        </span>
+      </Link>
+    </li>
   );
 }
 
-/** UI-06, FR-NB-05: the user's notebooks by topic or project, most recently updated first. */
-export default function NotebooksPage() {
+/**
+ * The Notebook: what the reader marked and wrote, one group per document. A document appears here with its
+ * first highlight, note, or thing kept from the AI; nothing the AI writes arrives on its own.
+ */
+export default function NotebookPage() {
   const t = useT();
-  const msg = useMsg();
-  const lang = useLang();
-  const query = useNotebooks();
-  const [status, setStatus] = useState<NotebookStatus | "">("");
-  const [topic, setTopic] = useState("");
-  const [creating, setCreating] = useState(false);
-  const items = query.data ?? [];
-  const mixed = items.some((nb) => nb.status === "draft") && items.some((nb) => nb.status === "saved");
-  const topics = [...new Set(items.flatMap((nb) => (nb.topic ? [nb.topic] : [])))].sort((a, b) => a.localeCompare(b, lang));
-  const shown = items
-    .filter((nb) => !mixed || !status || nb.status === status)
-    .filter((nb) => !topic || nb.topic === topic);
+  const [text, setText] = useState("");
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setQ(text.trim()), SEARCH_DELAY);
+    return () => clearTimeout(timer);
+  }, [text]);
+
+  const query = useNotebookGroups(q);
+  const { data: old } = useNotebooks();
+  const items = query.data?.items ?? [];
+  const searching = q.length >= 2;
+  const empty = query.isSuccess && items.length === 0;
 
   return (
     <div className="mx-auto flex max-w-[1040px] flex-col gap-7">
       <PageHeader
         title={t("notebooks.title")}
-        lead={query.isSuccess && items.length ? t("notebooks.count", { n: items.length }) : t("notebooks.lede")}
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-              <Icon name="plus" size={16} />
-              {t("notebooks.new")}
-            </button>
-            <Link href="/notebooks/new" className="btn-outline">
-              <Icon name="spark" size={16} />
-              {t("notebooks.fromHighlights")}
-            </Link>
-          </div>
-        }
+        lead={query.isSuccess && !searching && items.length ? t("notebook.count", { n: query.data.total }) : t("notebook.lede")}
       />
+
+      {(!empty || searching || text) && !query.isError && (
+        <label className="relative block max-w-[480px]">
+          <span className="sr-only">{t("notebook.searchAria")}</span>
+          <Icon name="search" size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            type="search"
+            value={text}
+            maxLength={200}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={t("notebook.searchPlaceholder")}
+            className="input h-11 pl-10"
+          />
+        </label>
+      )}
 
       {query.isPending ? (
         <Spinner />
       ) : query.isError ? (
         <div className="flex flex-col items-start gap-3">
           <Alert>{query.error instanceof Error ? query.error.message : MSG["MSG-99"]}</Alert>
-          <button type="button" className="btn-outline" onClick={() => query.refetch()}>
+          <button type="button" className="btn-outline" onClick={() => void query.refetch()}>
             {t("common.retry")}
           </button>
         </div>
-      ) : items.length === 0 ? (
+      ) : empty && searching ? (
+        <p className="py-8 text-[15px] text-muted">{t("notebook.noMatch", { q })}</p>
+      ) : empty ? (
         <div className="flex flex-col items-center gap-3.5 rounded-[22px] border-2 border-dashed border-field bg-surface/60 px-6 py-16 text-center">
           <span aria-hidden className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent-text">
             <Icon name="note" size={26} />
           </span>
-          <span className="font-display text-[28px] font-semibold">{msg("MSG-35")}</span>
-          <span className="max-w-md text-[15px] text-muted">{t("notebooks.emptyLong")}</span>
-          <div className="flex flex-wrap justify-center gap-2.5">
-            <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-              {t("notebooks.new")}
-            </button>
-            <Link href="/notebooks/new" className="btn-outline">
-              {t("notebooks.first")}
-            </Link>
-          </div>
+          <span className="font-display text-[28px] font-semibold">{t("notebook.emptyTitle")}</span>
+          <span className="max-w-md text-[15px] leading-relaxed text-muted">{t("notebook.emptyBody")}</span>
+          <Link href="/library" className="btn-primary">
+            <Icon name="book" size={16} />
+            {t("notebook.toLibrary")}
+          </Link>
         </div>
       ) : (
-        <>
-          {(mixed || topics.length > 0) && (
-            <div className="flex flex-wrap items-center gap-2.5">
-              {mixed && (
-                <div className="segmented">
-                  {FILTERS.map(([value, label]) => (
-                    <button key={value} type="button" aria-pressed={status === value} onClick={() => setStatus(value)}>
-                      {t(label)}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {topics.length > 0 && (
-                <div role="group" aria-label={t("nb.topicLabel")} className="flex flex-wrap items-center gap-1.5">
-                  <button type="button" className="chip" aria-pressed={topic === ""} onClick={() => setTopic("")}>
-                    {t("notebooks.allTopics")}
-                  </button>
-                  {topics.map((x) => (
-                    <button key={x} type="button" className="chip" aria-pressed={topic === x} onClick={() => setTopic(x)}>
-                      {x}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {shown.map((nb) => (
-              <li key={nb.id}>
-                <Link
-                  href={`/notebooks/${nb.id}`}
-                  className={`card group relative flex h-full min-h-[200px] flex-col gap-3.5 overflow-hidden p-5 pt-6 transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-float ${toneOf(nb.title)}`}
-                >
-                  <span aria-hidden className="absolute inset-x-0 top-0 h-1.5 bg-tone" />
-                  <span className="flex flex-wrap items-center gap-1.5">
-                    <span
-                      className={`flex h-6 items-center rounded-full px-2 text-xs font-semibold ${
-                        nb.status === "saved" ? "bg-success-soft text-success" : "bg-soft text-ink"
-                      }`}
-                    >
-                      {t(STATUS_LABEL[nb.status])}
-                    </span>
-                    {nb.topic && <span className="flex h-6 items-center rounded-full bg-soft px-2 text-xs text-ink">{nb.topic}</span>}
-                  </span>
-                  <span className="line-clamp-3 font-display text-[21px] font-semibold leading-snug text-ink">{nb.title}</span>
-                  <span className="mt-auto flex items-center gap-2 border-t border-line pt-3.5 text-[13px] text-muted">
-                    <Icon name="highlighter" size={16} className="shrink-0" />
-                    <span className="min-w-0 flex-1 truncate">
-                      {t("notebooks.sourcesUpdated", { n: nb.source_count, when: relativeTime(nb.updated_at, lang) })}
-                    </span>
-                    <Icon name="arrow" size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </>
+        <ul className={`grid gap-5 sm:grid-cols-2 lg:grid-cols-3 ${query.isPlaceholderData ? "opacity-60" : ""}`}>
+          {items.map((g) => (
+            <GroupCard key={g.document_id} g={g} searching={searching} />
+          ))}
+        </ul>
       )}
-      {items.some((nb) => nb.status === "draft") && <p className="text-xs text-muted">{t("notebooks.draftNotice")}</p>}
-      <NewNotebookDialog open={creating} topics={topics} onClose={() => setCreating(false)} />
+
+      {(old?.length ?? 0) > 0 && (
+        <Link href="/notebooks/archive" className="flex items-center gap-2 self-start text-sm text-muted hover:text-ink">
+          <Icon name="history" size={16} />
+          {t("notebook.archiveLink", { n: old?.length ?? 0 })}
+        </Link>
+      )}
     </div>
   );
 }

@@ -25,7 +25,7 @@ describe("links", () => {
   it("opens highlights at the highlight and documents with in-page find", () => {
     expect(hitHref({ ...hit, kind: "note", highlight_id: "h1" }, "x")).toBe("/reader/d1?hl=h1");
     expect(hitHref(hit, "tổng quát")).toBe("/reader/d1?q=t%E1%BB%95ng%20qu%C3%A1t");
-    expect(hitHref({ ...hit, kind: "document_note" }, "x")).toBe("/reader/d1");
+    expect(hitHref({ ...hit, kind: "document_note" }, "x")).toBe("/reader/d1?panel=notes");
     expect(hitHref({ ...hit, kind: "summary" }, "x")).toBe("/reader/d1?panel=summary");
     expect(hitHref({ ...hit, kind: "notebook", id: "n1", document_id: null }, "x")).toBe("/notebooks/n1");
   });

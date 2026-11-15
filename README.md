@@ -299,6 +299,18 @@ cd backend && pytest
 Test backend dùng SQLite tạm, token Supabase giả lập và OpenAI giả lập, nên không cần mạng hay key thật.
 Lệnh trên đo luôn độ bao phủ và **báo lỗi nếu dưới 70%** (NFR-MNT-01).
 
+Chạy cùng bộ test trên PostgreSQL thật (schema dựng bằng chính các migration). Database này **bị xoá
+sạch** trước mỗi lần chạy, nên tên phải kết thúc bằng `_test`; đừng trỏ vào database đang dùng:
+
+```bash
+docker compose exec db createdb -U puremind puremind_test
+cd backend && TEST_DATABASE_URL=postgresql+asyncpg://puremind:puremind@localhost:5432/puremind_test pytest
+```
+
+Đo thời gian các request của trình đọc trên server (NFR-101/103): thêm `READER_TIMING=1` và chạy
+`pytest tests/test_reader_timing.py -s`. Bộ đánh giá AI của trình đọc (gọi OpenAI thật):
+`python -m evals.run_reader_ai`. Tình trạng Reader v2: [docs/reader-v2-release.md](docs/reader-v2-release.md).
+
 ```bash
 cd backend && ruff check app tests && ruff format --check app tests
 ```

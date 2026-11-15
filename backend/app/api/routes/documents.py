@@ -19,13 +19,14 @@ from app.core.config import Settings
 from app.core.messages import MSG
 from app.core.ratelimit import doi_limiter, upload_limiter
 from app.db.session import SessionLocal
-from app.models import Article as CatalogArticle
 from app.models import (
+    AiArtifact,
     ArticleTopic,
     Collection,
     Document,
     ExtractionStatus,
     Highlight,
+    Note,
     NotebookDocument,
     NotebookHighlight,
     Post,
@@ -34,6 +35,7 @@ from app.models import (
     Summary,
     User,
 )
+from app.models import Article as CatalogArticle
 from app.schemas import DocumentListItem, DocumentOut, DocumentUpdate, DocumentUsage, DoiLookup
 from app.services import doi, equation_ocr, figure_notes, page_ocr, rights, storage, table_ocr, web
 from app.services.epub import extract_epub, looks_like_epub
@@ -110,6 +112,9 @@ def ai_consented(user: User | None) -> bool:
     return bool(user and (user.reading_preferences or {}).get("ai_consent"))
 
 
+MAX_ISSUE_PAGES = 50  # page numbers kept with an issue; its count is always the full number
+
+
 def _with_scanned_pages(content: str, source_map: list, read: dict[int, str]) -> tuple[str, list]:
     """Each scan mark replaced by the text read from its page, or dropped when the page could not be read.
     The page's blocks are placed on the whole page: OCR says what a page says, not where."""
@@ -132,6 +137,7 @@ async def run_extraction(
     With `background`, the figures are then described for the AI after the response (describe_figures);
     without it the caller does that itself, or the figures go without descriptions."""
     doc.extraction_status = ExtractionStatus.processing
+    doc.extraction_issues = None  # what the last extraction left out says nothing about this one
     await session.commit()
     ai = ai_consented(await session.get(User, doc.user_id))
 
@@ -154,9 +160,16 @@ async def run_extraction(
         storage.delete_dir(settings, images)
     else:
         content, source_map = result.content, result.source_map
+        issues: list[dict] = []  # RD-111: only what is known, never a guess at completeness
         if result.ocr_pages:
             read = await page_ocr.read_pages(settings, path, result.ocr_pages) if ai else {}
             content, source_map = _with_scanned_pages(content, source_map, read)
+            for code, pages in (
+                ("scanned_pages", [p for p in result.ocr_pages if p not in read]),
+                ("ocr_pages", sorted(p for p, text in read.items() if text)),
+            ):
+                if pages:
+                    issues.append({"code": code, "count": len(pages), "pages": pages[:MAX_ISSUE_PAGES]})
         if not re.sub(r"^---$", "", content, flags=re.M).strip():  # a scan that could not be read
             doc.extraction_status = ExtractionStatus.failed
             doc.extraction_error = "MSG-15"
@@ -177,6 +190,15 @@ async def run_extraction(
             # A block read from its picture is a new block: its place on the PDF is the picture's.
             keys = {block_key(old): block_key(new) for old, new in replaced.items()}
             source_map = [[keys.get(key, key), boxes] for key, boxes in source_map]
+        # A table or an equation still shown as its picture: the reader sees it, the AI and search do not.
+        for code, pictures in (
+            ("tables_as_images", result.table_images),
+            ("equations_as_images", result.equation_images),
+        ):
+            left = [name for name in dict.fromkeys(pictures) if f"pm-image:{name}" in content]
+            if left:
+                issues.append({"code": code, "count": len(left)})
+        doc.extraction_issues = issues
         if not doc.citation:  # a title that came with the DOI is the publisher's own
             doc.title = result.title[:500]
         doc.content_clean = content
@@ -603,6 +625,9 @@ async def document_usage(document_id: uuid.UUID, user: CurrentUser, session: Ses
             Highlight.document_id == doc.id, Highlight.note.is_not(None), Highlight.note != ""
         )
     )
+    # Notes of the document's own (the reader's and the ones kept from the AI) go with it too.
+    free = await session.scalar(select(func.count(Note.id)).where(Note.document_id == doc.id))
+    notes = (notes or 0) + (free or 0)
     through = (
         select(NotebookHighlight.notebook_id)
         .join(Highlight, Highlight.id == NotebookHighlight.highlight_id)
@@ -616,6 +641,8 @@ async def document_usage(document_id: uuid.UUID, user: CurrentUser, session: Ses
         .where(PostSource.document_id == doc.id, Post.user_id == user.id)
     )
     summary = await session.scalar(select(Summary.id).where(Summary.document_id == doc.id))
+    if summary is None:  # the reader's AI sidebar keeps its summaries and mind map with the document too
+        summary = await session.scalar(select(AiArtifact.id).where(AiArtifact.document_id == doc.id).limit(1))
     return DocumentUsage(
         highlights=highlights or 0,
         notes=notes or 0,

@@ -66,6 +66,21 @@ async def test_update_profile_and_preferences(client, auth):
     r = await client.patch("/api/account", headers=h, json={"reading_preferences": {"font_size": 40}})
     assert r.status_code == 422
 
+    # RD-104, RD-105: the face of the text and the page it is read on follow the account; null hands the
+    # page back to the theme of the app.
+    prefs = {"font_family": "sans", "reading_theme": "sepia"}
+    r = await client.patch("/api/account", headers=h, json={"reading_preferences": prefs})
+    assert r.status_code == 200 and r.json()["reading_preferences"] == {
+        "theme": "sepia",
+        "font_size": 20,
+        **prefs,
+    }
+    r = await client.patch("/api/account", headers=h, json={"reading_preferences": {"reading_theme": None}})
+    assert r.json()["reading_preferences"]["reading_theme"] is None
+    for bad in ({"font_family": "comic"}, {"reading_theme": "neon"}):
+        r = await client.patch("/api/account", headers=h, json={"reading_preferences": bad})
+        assert r.status_code == 422, bad
+
 
 def test_settings_parse_comma_separated_cors(monkeypatch):
     from app.core.config import Settings

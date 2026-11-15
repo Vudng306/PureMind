@@ -1,4 +1,4 @@
-"""Translate a passage the reader selected (English into Vietnamese for now).
+"""Translate a passage the reader selected: English into Vietnamese, or Vietnamese into English (AN-107).
 
 The passage alone is sent — no document context — and the translation is streamed back. It is not stored.
 """
@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 
 from app.core.config import Settings
 from app.services.openai_client import Usage, chat_stream
+from app.services.summarizer import detect_language
 
 SOURCE, TARGET = "en", "vi"
 LANGUAGE_NAME = {"vi": "Vietnamese", "en": "English"}
@@ -31,10 +32,17 @@ def build_messages(text: str, source: str = SOURCE, target: str = TARGET) -> lis
     ]
 
 
-async def translate(settings: Settings, text: str, usage: Usage) -> AsyncIterator[str]:
+def direction(text: str) -> tuple[str, str]:
+    """(source, target): a Vietnamese passage goes into English, anything else into Vietnamese."""
+    return ("vi", "en") if detect_language(text) == "vi" else (SOURCE, TARGET)
+
+
+async def translate(
+    settings: Settings, text: str, usage: Usage, source: str = SOURCE, target: str = TARGET
+) -> AsyncIterator[str]:
     async for delta in chat_stream(
         settings,
-        build_messages(text),
+        build_messages(text, source, target),
         purpose="translate",
         usage=usage,
         max_tokens=MAX_TRANSLATION_TOKENS,

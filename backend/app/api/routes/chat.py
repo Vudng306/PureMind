@@ -170,6 +170,18 @@ CHUNK_COLUMNS = (
 )
 
 
+async def _all_passages(document_id: uuid.UUID) -> list[doc_chat.Chunk]:
+    async with SessionLocal() as session:
+        rows = (
+            await session.execute(
+                select(*CHUNK_COLUMNS)
+                .where(DocumentChunk.document_id == document_id)
+                .order_by(DocumentChunk.position)
+            )
+        ).all()
+    return [_as_chunk(r) for r in rows]
+
+
 async def _closest(document_id: uuid.UUID, vector: list[float], limit: int) -> list[doc_chat.Chunk]:
     """The passages nearest the question, handed back in reading order.
 
@@ -383,6 +395,7 @@ async def ask(
     ]
     question, quote = payload.content, (payload.quote or "").strip() or None
     title, language, user_id = doc.title, conv.language, user.id
+    coverage = doc_chat.coverage_note(doc.extraction_issues)
     await session.commit()  # hold no database connection while the AI works
 
     async def work() -> AsyncIterator[tuple[str, dict]]:
@@ -399,18 +412,30 @@ async def ask(
         await _index(settings, document_id, indexing)
         # A question about a figure ("what does this show?") says little by itself: search with its
         # caption and the text around it as well.
-        query = "\n".join(x for x in (question, figure.alt, figure.context) if x) if figure else question
+        if figure:
+            query = "\n".join(x for x in (question, figure.alt, figure.context) if x)
+        else:
+            query = f"{quote}\n{question}" if quote else question
         vector = (await embeddings.embed(settings, [query], purpose="chat_query", usage=indexing))[0]
         chunks = await _closest(document_id, vector, settings.chat_context_chunks)
+        if quote:
+            # AI-110: a selected passage is answered from where it is in this document first.
+            near = doc_chat.around_quote(await _all_passages(document_id), quote)
+            chunks = doc_chat.merge_passages(near, chunks, settings.chat_context_chunks)
         yield "sources", {"sources": [_source(n, c) for n, c in enumerate(chunks, 1)]}
 
-        messages = doc_chat.build_messages(title, question, chunks, history, language, quote, attached)
+        messages = doc_chat.build_messages(
+            title, question, chunks, history, language, quote, attached, coverage
+        )
         parts: list[str] = []
         async for delta in doc_chat.answer(settings, messages, usage):
             parts.append(delta)
             yield "delta", {"text": delta}
 
         answer = "".join(parts).strip()
+        # AT-15: an answer that says the document does not hold it rests on no passage, so it names none.
+        if doc_chat.abstained(answer):
+            answer = doc_chat.without_refs(answer)
         saved = await _save_turn(
             settings,
             conversation_id,

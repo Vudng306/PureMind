@@ -1,55 +1,78 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import {
   CATEGORY_FOR_COLOR,
   MAX_HIGHLIGHT_NOTE,
-  saveDocumentNote,
   useHighlightActions,
+  type AnchorIssue,
   type Highlight,
 } from "@/lib/annotations";
 import type { ChatImage } from "@/lib/chat";
 import { useDocument } from "@/lib/documents";
+import { SYNTHESIS } from "@/lib/features";
 import { useLang, useT, type Key } from "@/lib/i18n";
+import { MIND_MAP } from "@/lib/features";
 import { MSG } from "@/lib/messages";
 import { notebooksUsing } from "@/lib/notebooks";
+import { useNotes } from "@/lib/notes";
 import { COLOR_DOT, HIGHLIGHT_COLORS, colorLabel, usePreferences, type HighlightColor } from "@/lib/preferences";
+import { findSnippet } from "@/lib/reader-ai";
 import { useUi } from "@/lib/ui-store";
 
-import { Icon } from "./icons";
+import { AiSummaryPanel } from "./ai-summary-panel";
 import { ChatPanel } from "./chat-panel";
+import { DocNotes } from "./doc-notes";
+import { Icon } from "./icons";
+import { MindMapPanel } from "./mind-map-panel";
 import { ReaderInfo } from "./reader-info";
-import { SummaryPanel } from "./summary-panel";
 import { ConfirmDialog } from "./ui";
 
-export type PanelTab = "info" | "highlights" | "notes" | "ai" | "chat";
+export type PanelTab = "info" | "highlights" | "notes" | "ai" | "mindmap" | "chat";
 
-/** The panel's three tabs. Notes and AI each hold two of the views above, chosen inside the tab. */
-type Group = "info" | "notes" | "ai";
-const GROUP: Record<PanelTab, Group> = { info: "info", highlights: "notes", notes: "notes", ai: "ai", chat: "ai" };
+/** The panel's three tabs. Notes and AI each hold several of the views above, chosen inside the tab. */
+export type PanelGroup = "info" | "notes" | "ai";
+type Group = PanelGroup;
+const GROUP: Record<PanelTab, Group> = {
+  info: "info",
+  highlights: "notes",
+  notes: "notes",
+  ai: "ai",
+  mindmap: "ai",
+  chat: "ai",
+};
+/** The tab of the panel a view is under. */
+export const panelGroup = (tab: PanelTab): PanelGroup => GROUP[tab];
+
 const GROUPS: [Group, Key][] = [
   ["info", "reader.tabInfo"],
   ["notes", "reader.tabNotes"],
   ["ai", "reader.tabAi"],
 ];
 
-function HighlightCard({
+export function HighlightCard({
   h,
   active,
   editing,
-  lost,
+  issue = null,
+  stale = false,
   onJump,
+  onFind,
   onEdit,
   onDone,
 }: {
   h: Highlight;
   active: boolean;
   editing: boolean;
-  lost: boolean;
+  /** Why it is not placed in the text shown now (AN-104); null when it is, or when nothing is shown. */
+  issue?: AnchorIssue | null;
+  /** Made on another extraction of the document than the one there is now. */
+  stale?: boolean;
   onJump: () => void;
+  /** Look for its words in the document, for one that is not placed. */
+  onFind?: () => void;
   onEdit: () => void;
   onDone: () => void;
 }) {
@@ -57,7 +80,7 @@ function HighlightCard({
   const lang = useLang();
   const labels = usePreferences((s) => s.colorLabels);
   const showToast = useUi((s) => s.showToast);
-  const { updateHighlight, removeHighlight } = useHighlightActions();
+  const { updateHighlight, removeHighlight, retryHighlight } = useHighlightActions();
   const ref = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState(h.note);
   const opened = useRef(h.note);
@@ -87,8 +110,8 @@ function HighlightCard({
       return onDone();
     }
     if (draft !== opened.current) {
-      updateHighlight(h.id, { note: draft }, { now: true });
-      showToast(t("panel.savedNote"));
+      // AN-105: "saved" once the server has it; until then the card says it is being saved.
+      updateHighlight(h.id, { note: draft }, { now: true, onSaved: () => showToast(t("panel.savedNote")) });
     }
     onDone();
   }
@@ -103,8 +126,7 @@ function HighlightCard({
     }
     setUsedIn(used);
     if (h.note.trim() || used) return setConfirm("highlight");
-    removeHighlight(h.id);
-    showToast(t("highlights.deleted"));
+    removeHighlight(h.id, { onDone: () => showToast(t("highlights.deleted")) });
   }
 
   return (
@@ -113,11 +135,11 @@ function HighlightCard({
       className={`flex flex-col gap-2.5 rounded-xl border p-3.5 transition-colors ${active ? "border-accent" : "border-line"}`}
     >
       <div className="flex items-center gap-2 text-xs text-muted">
-        <span className="flex h-6 items-center gap-1.5 rounded-full bg-soft pl-1.5 pr-2 text-xs font-semibold text-ink">
+        <span className="flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-soft pl-1.5 pr-2 text-xs font-semibold text-ink">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_DOT[h.color] }} />
           {colorLabel(labels, h.color, lang)}
         </span>
-        {h.page ? t("panel.pageN", { page: h.page }) : null}
+        {h.page ? <span className="whitespace-nowrap">{t("panel.pageN", { page: h.page })}</span> : null}
         <span className="flex-1" />
         {HIGHLIGHT_COLORS.map((c) => (
           <button
@@ -151,16 +173,38 @@ function HighlightCard({
       <button type="button" onClick={onJump} className="text-left font-serif text-base leading-normal text-ink hover:underline">
         “{h.text}”
       </button>
-      {lost &&
-        (h.rects ? (
-          <p className="rounded-lg bg-soft px-3 py-2 text-xs leading-normal text-muted">
-            {t("panel.lostOriginal")}
+      {h.save === "saving" && (
+        <p role="status" className="text-xs text-muted">
+          {t("panel.saving")}
+        </p>
+      )}
+      {h.save === "failed" && (
+        <div role="alert" className="flex items-start gap-2 rounded-lg bg-danger-soft px-3 py-2 text-xs leading-normal text-danger">
+          <span className="flex-1">
+            {h.saveError ? `${h.saveError} ` : ""}
+            {t("panel.saveFailed")}
+          </span>
+          {!h.saveError && (
+            <button type="button" onClick={() => retryHighlight(h.id)} className="shrink-0 font-semibold underline">
+              {t("common.retry")}
+            </button>
+          )}
+        </div>
+      )}
+      {issue && (
+        <div className="flex flex-col items-start gap-1.5 rounded-lg bg-soft px-3 py-2 text-xs leading-normal text-muted">
+          {issue === "review" && !h.rects && <p className="font-semibold text-ink">{t("panel.review")}</p>}
+          <p>
+            {h.rects ? t("panel.lostOriginal") : t(issue === "review" ? "panel.reviewText" : "panel.lostText")}
+            {stale ? ` ${t("panel.otherVersion")}` : ""}
           </p>
-        ) : (
-          <p className="rounded-lg bg-danger-soft px-3 py-2 text-xs leading-normal text-danger">
-            {t("panel.lostText")}
-          </p>
-        ))}
+          {onFind && !h.rects && (
+            <button type="button" onClick={onFind} className="font-semibold text-accent-text hover:underline">
+              {t("panel.findInText")}
+            </button>
+          )}
+        </div>
+      )}
       {editing ? (
         <div className="flex flex-col gap-2">
           <textarea
@@ -214,13 +258,12 @@ function HighlightCard({
         }}
         onConfirm={() => {
           if (confirm === "note") {
-            updateHighlight(h.id, { note: "" }, { now: true });
+            updateHighlight(h.id, { note: "" }, { now: true, onSaved: () => showToast(t("panel.noteDeleted")) });
             setDraft("");
-            showToast(t("panel.noteDeleted"));
             onDone();
           } else {
-            removeHighlight(h.id);
-            showToast(t(h.note.trim() ? "panel.bothDeleted" : "highlights.deleted"));
+            const said = h.note.trim() ? "panel.bothDeleted" : "highlights.deleted";
+            removeHighlight(h.id, { onDone: () => showToast(t(said)) });
           }
           setConfirm(null);
         }}
@@ -238,7 +281,7 @@ function HighlightCard({
   );
 }
 
-/** Right panel: about the document, its highlights and note, and the AI summary and chat. */
+/** Right panel: about the document, its highlights and notes, and the AI summaries, mind map and chat. */
 export function ReaderPanel({
   docId,
   highlights,
@@ -255,7 +298,7 @@ export function ReaderPanel({
   onClearImage,
   onKeyword,
   canHighlight,
-  lostIds,
+  issues,
   progress,
 }: {
   docId: string;
@@ -276,56 +319,23 @@ export function ReaderPanel({
   /** A summary keyword or a cited passage was chosen: find it in the document (FR-RDR-04). */
   onKeyword: (keyword: string) => void;
   canHighlight: boolean;
-  /** Highlights that could not be placed in the current text (FR-HL-02). */
-  lostIds: string[];
+  /** Highlights not placed in the current text, and why (AN-104). */
+  issues: Record<string, AnchorIssue>;
   /** How far the reader is right now, for the Info tab. */
   progress: string;
 }) {
   const t = useT();
   const lang = useLang();
   const labels = usePreferences((s) => s.colorLabels);
-  const qc = useQueryClient();
   const { data: doc } = useDocument(docId);
+  const { data: notes } = useNotes(docId);
   const [filter, setFilter] = useState<HighlightColor | "all">("all");
-  const [draft, setDraft] = useState(doc?.note ?? "");
-  const [status, setStatus] = useState<"saved" | "dirty" | "saving" | "error">("saved");
-  const sent = useRef(doc?.note ?? "");
-
-  async function saveNote(text: string) {
-    if (text === sent.current) return setStatus("saved");
-    setStatus("saving");
-    try {
-      await saveDocumentNote(qc, docId, text);
-      sent.current = text;
-      setStatus((s) => (s === "saving" ? "saved" : s));
-    } catch {
-      setStatus("error");
-    }
-  }
-
-  // Unsaved text is still sent when the panel closes.
-  const latest = useRef(draft);
-  latest.current = draft;
-  useEffect(
-    () => () => {
-      if (latest.current !== sent.current) saveDocumentNote(qc, docId, latest.current).catch(() => undefined);
-    },
-    [qc, docId],
-  );
-
-  // Document note autosaves shortly after typing stops.
-  useEffect(() => {
-    if (status !== "dirty") return;
-    const t = setTimeout(() => void saveNote(draft), 800);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, status]);
 
   const sorted = [...highlights].sort((a, b) => (a.page ?? 0) - (b.page ?? 0) || a.createdAt.localeCompare(b.createdAt));
   // Filtering by color is filtering by category: the two are the same choice (CATEGORY_FOR_COLOR).
   const shown = sorted.filter((h) => filter === "all" || h.color === filter);
-  const lost = new Set(lostIds);
-  const lostText = highlights.filter((h) => lost.has(h.id) && !h.rects).length;
+  const lostText = highlights.filter((h) => issues[h.id] && !h.rects).length;
+  const version = doc?.content_version ?? null;
   const group = GROUP[tab];
   // Coming back to Notes or AI shows the view that was open there last.
   const lastIn = useRef<Record<Group, PanelTab>>({ info: "info", notes: "highlights", ai: "ai" });
@@ -334,11 +344,12 @@ export function ReaderPanel({
     group === "notes"
       ? [
           ["highlights", t("panel.tabHighlights", { n: highlights.length })],
-          ["notes", t("reader.subDocNote")],
+          ["notes", t("notes.tab", { n: notes?.length ?? 0 })],
         ]
       : group === "ai"
         ? [
             ["ai", t("reader.subSummary")],
+            ...(MIND_MAP ? ([["mindmap", t("ai.tabMap")]] as [PanelTab, string][]) : []),
             ["chat", t("panel.tabChat")],
           ]
         : [];
@@ -348,7 +359,9 @@ export function ReaderPanel({
       aria-label={t("panel.aria")}
       className="fixed inset-y-0 right-0 z-20 flex w-full min-h-0 flex-col border-l border-line bg-surface shadow-pop sm:w-[380px] lg:static lg:z-auto lg:shadow-none"
     >
-      <div className="flex h-14 shrink-0 items-center gap-5 border-b border-line pl-4 pr-2" role="tablist">
+      <div className="flex h-14 shrink-0 items-center border-b border-line pl-4 pr-2">
+        {/* Only the tabs are in the tab list; the close button beside them is not a tab (WCAG 4.1.2). */}
+        <div className="flex h-14 items-center gap-5" role="tablist">
         {GROUPS.map(([value, label]) => (
           <button
             key={value}
@@ -366,6 +379,7 @@ export function ReaderPanel({
             )}
           </button>
         ))}
+        </div>
         <span className="flex-1" />
         <button type="button" aria-label={t("panel.closePanel")} title={t("panel.closePanel")} onClick={onClose} className="icon-btn h-10 w-10 text-muted">
           <Icon name="panelRight" />
@@ -387,7 +401,7 @@ export function ReaderPanel({
 
         {tab === "highlights" && (
           <>
-            {highlights.length > 0 && (
+            {SYNTHESIS && highlights.length > 0 && (
               <Link
                 href={`/notebooks/new?document=${docId}`}
                 className="flex items-center gap-2 rounded-lg border border-line px-3 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-soft"
@@ -444,8 +458,10 @@ export function ReaderPanel({
                   h={h}
                   active={h.id === activeId}
                   editing={h.id === editingId}
-                  lost={lost.has(h.id)}
+                  issue={issues[h.id] ?? null}
+                  stale={Boolean(version && h.contentVersion && h.contentVersion !== version)}
                   onJump={() => onJump(h)}
+                  onFind={() => onKeyword(findSnippet(h.text))}
                   onEdit={() => onEditing(h.id)}
                   onDone={() => onEditing(null)}
                 />
@@ -454,38 +470,11 @@ export function ReaderPanel({
           </>
         )}
 
-        {tab === "notes" && (
-          <div className="flex flex-1 flex-col gap-2">
-            <label className="flex flex-1 flex-col gap-2 text-sm font-medium text-ink">
-              {t("panel.docNote")}
-              <textarea
-                value={draft}
-                maxLength={20000}
-                onChange={(e) => {
-                  setDraft(e.target.value);
-                  setStatus("dirty");
-                }}
-                onBlur={() => void saveNote(draft)}
-                placeholder={t("panel.docNotePlaceholder")}
-                className="min-h-[320px] flex-1 resize-none rounded-[10px] border border-line bg-bg px-3.5 py-3 font-serif text-base font-normal leading-relaxed text-ink outline-none focus:border-focus"
-              />
-            </label>
-            <span className={`text-xs ${status === "error" ? "text-danger" : "text-muted"}`} aria-live="polite">
-              {t("nb.chars", { n: draft.length })} ·{" "}
-              {status === "saved" ? (
-                t("common.saved")
-              ) : status === "error" ? (
-                <button type="button" className="underline" onClick={() => void saveNote(draft)}>
-                  {t("panel.notSaved")}
-                </button>
-              ) : (
-                t("common.saving")
-              )}
-            </span>
-          </div>
-        )}
+        {tab === "notes" && <DocNotes docId={docId} onOpen={(c) => onKeyword(findSnippet(c.text))} />}
 
-        {tab === "ai" && <SummaryPanel docId={docId} onKeyword={onKeyword} />}
+        {tab === "ai" && <AiSummaryPanel docId={docId} onFind={onKeyword} />}
+
+        {tab === "mindmap" && MIND_MAP && <MindMapPanel docId={docId} onFind={onKeyword} />}
 
         {tab === "chat" && (
           <ChatPanel

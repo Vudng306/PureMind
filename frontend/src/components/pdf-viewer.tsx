@@ -46,6 +46,8 @@ export interface PdfViewerHandle {
   scrollToHighlight: (h: Highlight) => boolean;
   /** Scroll to a passage of the clean text on the PDF and outline it for a moment; false before the PDF loads. */
   showSource: (boxes: SourceBox[]) => boolean;
+  /** Scroll to the top of a page; false before the PDF loads. */
+  scrollToPage: (page: number) => boolean;
 }
 
 const SOURCE_SHOWN_MS = 2600;
@@ -536,7 +538,7 @@ export function PdfViewer({
   useEffect(() => {
     if (!pdf || !query.trim()) {
       setPageMatchCounts(null);
-      onResult(0);
+      onResult(0, query);
       return;
     }
     let cancelled = false;
@@ -554,7 +556,10 @@ export function PdfViewer({
           counts.push(findMatches(text, query).length);
         }
         setPageMatchCounts(counts);
-        onResult(counts.reduce((a, b) => a + b, 0));
+        onResult(
+          counts.reduce((a, b) => a + b, 0),
+          query,
+        );
       } catch {
         /* document closed while searching */
       }
@@ -705,6 +710,7 @@ export function PdfViewer({
         sourceTimer.current = setTimeout(() => setSource(null), SOURCE_SHOWN_MS);
         return true;
       },
+      scrollToPage: (page) => scrollToPoint(page, 0),
     }),
     [positionOf, scrollToPoint],
   );
@@ -848,8 +854,12 @@ export function PdfViewer({
       )}
       {pdf && thumbsSlot && createPortal(<Thumbnails pdf={pdf} sizes={sizes} current={current} onPick={goTo} />, thumbsSlot)}
 
+      {/* Focusable, so the pages scroll with the arrow keys and Page Up/Down as well (WCAG 2.1.1). */}
       <div
         ref={scrollerRef}
+        role="region"
+        aria-label={t("reader.original")}
+        tabIndex={0}
         onScroll={onScroll}
         onMouseUp={onPointerUp}
         onTouchEnd={onPointerUp}

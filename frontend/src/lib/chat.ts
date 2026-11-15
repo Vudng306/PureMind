@@ -168,6 +168,18 @@ export function afterAnswer(
 }
 
 /** The passages an answer refers to, in the order they are first cited. */
+// How an answer opens when the document does not hold what was asked (doc_chat.NO_ANSWER on the server).
+const NO_ANSWER = [
+  "Không tìm thấy thông tin đủ để kết luận trong tài liệu này",
+  "This document does not contain enough information to answer that",
+];
+
+/** The answer says the document does not hold it (AI-104): it is a refusal, not an answer without sources. */
+export function isRefusal(content: string): boolean {
+  const opening = content.replace(/^[\s>*_"“]+/, "").toLocaleLowerCase();
+  return NO_ANSWER.some((phrase) => opening.startsWith(phrase.toLocaleLowerCase()));
+}
+
 export function citedSources(content: string, citations: ChatCitation[]): ChatCitation[] {
   const byPosition = new Map(citations.map((c) => [c.position, c]));
   const seen: ChatCitation[] = [];

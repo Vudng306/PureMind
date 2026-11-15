@@ -1,0 +1,206 @@
+{
+  "_about": "Reader v2 AI evaluation set (TSD 10.3). Each document is cut and sent as the app does; the checks are run by evals/run_reader_ai.py. `expect` answers must contain one of `any` and cite a passage that holds it; `abstain` answers must open with the refusal and cite nothing. A question with a `quote` is the reader explaining a selection. `analysis_expect` lists words a field of the research analysis must hold, `analysis_empty` the fields the document does not report.",
+  "documents": [
+    {
+      "id": "paper",
+      "file": "docs/paper.md",
+      "type": "research",
+      "page_count": 3,
+      "issues": null,
+      "summaries": [
+        "quick",
+        "deep",
+        "mindmap",
+        "analysis"
+      ],
+      "deep_must_mention": [
+        "62",
+        "48"
+      ],
+      "questions": [
+        {
+          "q": "How many adults took part in the study?",
+          "expect": {
+            "any": [
+              "84",
+              "eighty-four"
+            ]
+          }
+        },
+        {
+          "q": "What share of the target words did the spaced retrieval group recall after four weeks?",
+          "expect": {
+            "any": [
+              "62"
+            ]
+          }
+        },
+        {
+          "q": "What are the study's limitations?",
+          "expect": {
+            "any": [
+              "single college",
+              "one teacher",
+              "four weeks",
+              "written recall"
+            ]
+          }
+        },
+        {
+          "q": "Who funded this study?",
+          "abstain": true
+        },
+        {
+          "q": "Did the learners improve their speaking skills?",
+          "abstain": true
+        },
+        {
+          "q": "Explain this passage.",
+          "quote": "A response counted as correct when the spelling allowed only one reading of the word.",
+          "expect": {
+            "any": [
+              "spelling",
+              "one reading"
+            ]
+          }
+        }
+      ],
+      "analysis_expect": {
+        "data": [
+          "84",
+          "eighty-four",
+          "81"
+        ],
+        "findings": [
+          "62"
+        ],
+        "limitations": [
+          "single college",
+          "one teacher",
+          "four weeks"
+        ]
+      }
+    },
+    {
+      "id": "essay",
+      "file": "docs/essay.md",
+      "type": "essay",
+      "page_count": null,
+      "issues": null,
+      "summaries": [
+        "quick",
+        "deep",
+        "analysis"
+      ],
+      "deep_must_not": [
+        "mẫu",
+        "người tham gia",
+        "khảo sát cho thấy",
+        "phương pháp nghiên cứu",
+        "sample",
+        "participants"
+      ],
+      "questions": [
+        {
+          "q": "Bài viết đề xuất những thói quen nào?",
+          "expect": {
+            "any": [
+              "ghi chú",
+              "đọc lại",
+              "tắt thông báo"
+            ]
+          }
+        },
+        {
+          "q": "Vì sao theo tác giả đọc nhanh không giúp ta nhớ?",
+          "expect": {
+            "any": [
+              "câu hỏi",
+              "lướt",
+              "dừng lại"
+            ]
+          }
+        },
+        {
+          "q": "Bài viết đã khảo sát bao nhiêu người?",
+          "abstain": true
+        },
+        {
+          "q": "Tác giả của bài viết sinh năm nào?",
+          "abstain": true
+        },
+        {
+          "q": "Giải thích đoạn này.",
+          "quote": "Gặp một câu dài, ta bỏ qua thay vì đọc lại, và dần dần ta chỉ còn đọc những gì dễ đọc.",
+          "expect": {
+            "any": [
+              "đọc lại",
+              "câu dài",
+              "dễ đọc"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "partial",
+      "file": "docs/partial_report.md",
+      "type": "report",
+      "page_count": 3,
+      "issues": [
+        {
+          "code": "scanned_pages",
+          "count": 1,
+          "pages": [
+            2
+          ]
+        }
+      ],
+      "summaries": [
+        "quick",
+        "deep",
+        "analysis"
+      ],
+      "disclose": [
+        "could not be read",
+        "not available",
+        "not included",
+        "scanned",
+        "page 2",
+        "missing",
+        "not in the"
+      ],
+      "questions": [
+        {
+          "q": "How many visits did the library have in 2025?",
+          "expect": {
+            "any": [
+              "212,000",
+              "212000"
+            ]
+          }
+        },
+        {
+          "q": "What was the library's total budget in 2025?",
+          "abstain": true,
+          "disclose": true
+        },
+        {
+          "q": "How many staff did the library employ?",
+          "abstain": true,
+          "disclose": true
+        }
+      ],
+      "analysis_expect": {
+        "findings": [
+          "212,000",
+          "212000"
+        ]
+      },
+      "analysis_empty": [
+        "method",
+        "limitations"
+      ]
+    }
+  ]
+}

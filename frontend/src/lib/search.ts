@@ -59,6 +59,7 @@ export function hitHref(hit: SearchHit, q: string): string {
   if (hit.kind === "notebook") return `/notebooks/${hit.id}`;
   if (hit.highlight_id) return `/reader/${hit.document_id}?hl=${hit.highlight_id}`;
   if (hit.kind === "summary") return `/reader/${hit.document_id}?panel=summary`;
+  if (hit.kind === "document_note") return `/reader/${hit.document_id}?panel=notes`;
   if (hit.kind === "document") return `/reader/${hit.document_id}?q=${encodeURIComponent(q)}`;
   return `/reader/${hit.document_id}`;
 }

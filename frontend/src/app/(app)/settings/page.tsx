@@ -17,14 +17,25 @@ import {
   type ColumnWidth,
   type HighlightColor,
   type LineHeight,
+  type FontFamily,
   type OpenMode,
 } from "@/lib/preferences";
-import type { AppTheme, Lang } from "@/lib/types";
+import type { AppTheme, Lang, Theme } from "@/lib/types";
 
-// Only day and night here; the sepia page is chosen inside the reader, for that sitting only.
+// Day and night for the app; the page documents are read on can also be the sepia one (RD-105).
 const THEMES: [AppTheme, Key][] = [
   ["light", "settings.themeLight"],
   ["dark", "settings.themeDark"],
+];
+const PAGES: [Theme | "auto", Key][] = [
+  ["auto", "settings.readingThemeAuto"],
+  ["light", "reader.themeLightLabel"],
+  ["sepia", "reader.themeSepiaLabel"],
+  ["dark", "reader.themeDarkLabel"],
+];
+const FONTS: [FontFamily, Key][] = [
+  ["serif", "reader.fontSerif"],
+  ["sans", "reader.fontSans"],
 ];
 const LINE_HEIGHTS: [LineHeight, Key][] = [
   [1.5, "settings.lhTight"],
@@ -144,6 +155,14 @@ function Settings() {
             <Row label={t("settings.theme")}>
               {THEMES.map(([v, l]) => option(v, prefs.theme, t(l), (theme: AppTheme) => prefs.set({ theme })))}
             </Row>
+            <Row label={t("settings.readingTheme")}>
+              {PAGES.map(([v, l]) =>
+                option(v, prefs.readingTheme ?? "auto", t(l), (page) => prefs.set({ readingTheme: page === "auto" ? null : page })),
+              )}
+            </Row>
+            <Row label={t("reader.fontFamily")}>
+              {FONTS.map(([v, l]) => option(v, prefs.fontFamily, t(l), (fontFamily) => prefs.set({ fontFamily })))}
+            </Row>
             <Row label={t("settings.lineHeight")}>
               {LINE_HEIGHTS.map(([v, l]) => option(v, prefs.lineHeight, t(l), (lineHeight) => prefs.set({ lineHeight })))}
             </Row>
@@ -197,13 +216,16 @@ function Settings() {
           </div>
 
           <div
-            data-theme={prefs.theme}
+            data-theme={prefs.readingTheme ?? prefs.theme}
             aria-label={t("settings.preview")}
             className="flex flex-col gap-3.5 overflow-hidden rounded-[14px] border border-line bg-bg px-8 py-9 text-body sm:px-10"
           >
             <span className="eyebrow">{t("settings.previewEyebrow", { width: prefs.width })}</span>
             <span className="font-serif text-[34px] font-medium text-ink">{t("settings.previewTitle")}</span>
-            <p className="font-serif" style={{ fontSize: prefs.fontSize, lineHeight: prefs.lineHeight, maxWidth: prefs.width }}>
+            <p
+              className={prefs.fontFamily === "sans" ? "font-sans" : "font-serif"}
+              style={{ fontSize: prefs.fontSize, lineHeight: prefs.lineHeight, maxWidth: prefs.width }}
+            >
               {t("settings.previewBefore")}
               <span className="hl-bg-yellow box-decoration-clone">{t("settings.previewHighlight")}</span>
               {t("settings.previewAfter")}

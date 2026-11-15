@@ -10,6 +10,7 @@ import {
   askQuestion,
   citationLabel,
   citedSources,
+  isRefusal,
   useConversation,
   useConversations,
   useCreateConversation,
@@ -23,39 +24,14 @@ import { useLang, useT } from "@/lib/i18n";
 import { parseMarkdown } from "@/lib/markdown";
 import { MSG, messageFor } from "@/lib/messages";
 import { useAccount } from "@/lib/queries";
+import { findSnippet } from "@/lib/reader-ai";
 
 import { AiConsentDialog } from "./ai-consent-dialog";
+import { AiCoverage, Cite, SaveToNotes } from "./cite";
 import { FigureImage } from "./clean-reader";
 import { Icon } from "./icons";
 import { MarkdownView } from "./notebook-markdown";
 import { ConfirmDialog } from "./ui";
-
-/** Enough of a passage to find it again in the document (FR-RDR-04 find). */
-const FIND_WORDS = 8;
-
-function snippet(text: string): string {
-  return text.trim().split(/\s+/).slice(0, FIND_WORDS).join(" ");
-}
-
-/** A [n] citation: opens the passage in the document. */
-function Cite({ n, sources, onOpen }: { n: number; sources: Map<number, ChatCitation>; onOpen: (c: ChatCitation) => void }) {
-  const t = useT();
-  const lang = useLang();
-  const cls = "mx-px rounded px-1 py-px align-[0.1em] font-sans text-[0.72em] font-semibold";
-  const source = sources.get(n);
-  if (!source) return <span className={`${cls} bg-soft text-muted`}>{n}</span>;
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(source)}
-      className={`${cls} bg-accent/15 text-accent-text hover:bg-accent/25`}
-      title={`${citationLabel(source, lang)}: “${source.text.slice(0, 120)}”`}
-      aria-label={t("chat.sourceN", { n, where: citationLabel(source, lang) })}
-    >
-      {n}
-    </button>
-  );
-}
 
 function Answer({
   content,
@@ -122,8 +98,23 @@ function Turn({
   message: ChatMessage;
   onOpen: (c: ChatCitation) => void;
 }) {
+  const t = useT();
   if (message.role === "user") return <Question docId={docId} content={message.content} image={message.image} />;
-  return <Answer content={message.content} citations={message.citations} onOpen={onOpen} />;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Answer content={message.content} citations={message.citations} onOpen={onOpen} />
+      {/* A refusal says the document does not hold the answer (AT-15); any other answer that names no
+          passage is shown as such: it cannot be checked against the document. */}
+      {isRefusal(message.content) ? (
+        <p className="text-xs leading-normal text-muted">{t("chat.refused")}</p>
+      ) : (
+        citedSources(message.content, message.citations).length === 0 && (
+          <p className="text-xs leading-normal text-muted">{t("chat.noSources")}</p>
+        )
+      )}
+      <SaveToNotes docId={docId} piece={{ source: "chat", source_id: message.id, part: "all" }} className="-ml-2 self-start" />
+    </div>
+  );
 }
 
 /**
@@ -224,6 +215,15 @@ export function ChatPanel({
   useEffect(() => {
     sendRef.current = send;
   });
+  // "Explain" in the selection menu opens here with the passage: the question is filled in, and asked
+  // only when the reader sends it.
+  const lastQuote = useRef<string | null>(null);
+  useEffect(() => {
+    if (!quote || quote === lastQuote.current) return;
+    lastQuote.current = quote;
+    setDraft((d) => (d.trim() ? d : t("chat.explainSelectionQuestion")));
+  }, [quote, t]);
+
   const imageKey = image?.key;
   const askedKey = useRef<number | undefined>(undefined);
   useEffect(() => {
@@ -248,7 +248,7 @@ export function ChatPanel({
     return (
       <p className="rounded-lg bg-soft px-3 py-2.5 text-sm leading-normal text-muted">
         {noText
-          ? messageFor(doc?.extraction_error ?? "MSG-CHAT-NO-TEXT")
+          ? `${messageFor(doc?.extraction_error ?? "MSG-CHAT-NO-TEXT")} ${t("reader.noContentHint")}`
           : t("chat.extracting")}
       </p>
     );
@@ -290,6 +290,7 @@ export function ChatPanel({
       )}
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+        <AiCoverage issues={doc?.extraction_issues} />
         {messages.length === 0 && !busy && (
           <div className="flex flex-col gap-2 rounded-xl border border-line p-4">
             <p className="font-serif text-[17px] text-ink">{t("chat.emptyTitle")}</p>
@@ -300,14 +301,14 @@ export function ChatPanel({
         )}
 
         {messages.map((m) => (
-          <Turn key={m.id} docId={docId} message={m} onOpen={(c) => onFind(snippet(c.text))} />
+          <Turn key={m.id} docId={docId} message={m} onOpen={(c) => onFind(findSnippet(c.text))} />
         ))}
 
         {pending && (
           <>
             <Question docId={docId} content={pending} image={pendingImage} />
             {streamed ? (
-              <Answer content={streamed} citations={sources} onOpen={(c) => onFind(snippet(c.text))} />
+              <Answer content={streamed} citations={sources} onOpen={(c) => onFind(findSnippet(c.text))} />
             ) : (
               <div role="status" className="flex items-center gap-2.5 text-sm text-muted">
                 <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-line border-t-accent" aria-hidden />

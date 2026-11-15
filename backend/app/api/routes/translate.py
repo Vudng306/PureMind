@@ -1,4 +1,4 @@
-"""Translate a passage selected in the reader, English into Vietnamese.
+"""Translate a passage selected in the reader, English into Vietnamese or Vietnamese into English.
 
 A translation is not stored and costs no AI credits; a per-user rate limit stops a script from running up
 the OpenAI bill. Like every AI feature, the passage is only sent to OpenAI once the user has agreed to it.
@@ -41,16 +41,17 @@ async def translate(payload: TranslateIn, request: Request, user: CurrentUser, s
         log.warning("translate rate limit hit user=%s", key)
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, MSG["MSG-TR-RATE"])
     text = payload.text
+    source, target = translator.direction(text)
 
     async def work() -> AsyncIterator[tuple[str, dict]]:
         parts: list[str] = []
-        async for delta in translator.translate(settings, text, Usage()):
+        async for delta in translator.translate(settings, text, Usage(), source, target):
             parts.append(delta)
             yield "delta", {"text": delta}
         done = TranslateOut(
             translation="".join(parts).strip(),
-            source=translator.SOURCE,
-            target=translator.TARGET,
+            source=source,
+            target=target,
         )
         yield "done", done.model_dump()
 

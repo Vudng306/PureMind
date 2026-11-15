@@ -4,15 +4,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { usePreferences } from "@/lib/preferences";
+import { useUi } from "@/lib/ui-store";
 
 import { AuthProvider } from "./auth-provider";
 import { Toast } from "./ui";
 
 function ThemeApplier() {
   const theme = usePreferences((s) => s.theme);
+  // The reader's own page (light, sepia, dark) is over the app's theme while a document is open.
+  const pageTheme = useUi((s) => s.pageTheme);
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
+    document.documentElement.dataset.theme = pageTheme ?? theme;
+  }, [theme, pageTheme]);
   return null;
 }
 

@@ -35,7 +35,7 @@ import {
   type LibraryFilters,
 } from "@/lib/library";
 import { MSG } from "@/lib/messages";
-import { COMMUNITY } from "@/lib/features";
+import { COMMUNITY, SYNTHESIS } from "@/lib/features";
 import { useCreatePost, useDeletePost, useMyPosts, useUnpublishPost, type Post, type PostKind } from "@/lib/posts";
 import type { DocumentListItem } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
@@ -125,10 +125,12 @@ function CardMenu({ doc, actions, row = false }: { doc: DocumentListItem; action
             <Icon name="book" size={16} />
             {t("library.readAction")}
           </Link>
-          <button type="button" role="menuitem" className={item} onClick={choose(actions.onAddToNotebook)}>
-            <Icon name="note" size={16} />
-            {t("library.addToNotebook")}
-          </button>
+          {SYNTHESIS && (
+            <button type="button" role="menuitem" className={item} onClick={choose(actions.onAddToNotebook)}>
+              <Icon name="note" size={16} />
+              {t("library.addToNotebook")}
+            </button>
+          )}
           {COMMUNITY && (
             <>
               <button type="button" role="menuitem" className={item} onClick={choose(actions.onCreatePost)}>

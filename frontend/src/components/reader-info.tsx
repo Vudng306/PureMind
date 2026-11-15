@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { KIND_LABEL, origin, relativeTime } from "@/lib/doc-view";
 import { useLang, useT, type Key } from "@/lib/i18n";
-import { useSummary } from "@/lib/summary";
+import { useArtifact } from "@/lib/reader-ai";
 import type { DocumentDetail } from "@/lib/types";
 
 import { CitationDialog } from "./citation-dialog";
@@ -24,7 +24,7 @@ export function ReaderInfo({
 }) {
   const t = useT();
   const lang = useLang();
-  const { data: summary } = useSummary(doc.id);
+  const { data: summary } = useArtifact(doc.id, "quick");
   const [editing, setEditing] = useState(false);
 
   const authors = (doc.citation?.authors ?? []).map((a) => (a.given ? `${a.given} ${a.family}` : a.family)).filter(Boolean);
@@ -71,7 +71,7 @@ export function ReaderInfo({
         <h3 className="eyebrow">{t("reader.infoSummary").toLocaleUpperCase(lang)}</h3>
         {summary ? (
           <>
-            <p className="text-[15px] leading-relaxed text-ink">{summary.conclusion || summary.key_points[0]}</p>
+            <p className="text-[15px] leading-relaxed text-ink">{summary.payload.tldr}</p>
             <button type="button" onClick={onSummary} className="flex items-center gap-1 self-start text-[13px] font-medium text-accent-text hover:underline">
               {t("reader.fullSummary")}
               <Icon name="arrow" size={14} />

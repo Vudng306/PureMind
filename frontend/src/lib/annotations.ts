@@ -1,17 +1,18 @@
 "use client";
 
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 
+import { locate, type AnchorIssue, type Placement, type Spot, type TextBlock } from "./anchor";
 import { ApiError, api } from "./api";
-import { documentsKey } from "./documents";
-import { findLoose, supportsHighlights } from "./find";
+import { supportsHighlights } from "./find";
+import { createOutbox, mergeUnsaved, type Outbox, type Patch } from "./outbox";
 import type { PdfRect } from "./pdf-rects";
 import { MSG } from "./messages";
 import { HIGHLIGHT_COLORS, currentLang, type HighlightColor } from "./preferences";
-import type { DocumentDetail, Lang } from "./types";
+import type { Lang } from "./types";
 import { useUi } from "./ui-store";
 
 /** Highlights are stored on the server; edits show at once and are sent in the background. */
@@ -32,6 +33,15 @@ export interface Highlight {
   note: string;
   page: number | null;
   createdAt: string;
+  /** The words right before and after the passage in its block, to find it again (AN-102). */
+  prefix?: string | null;
+  suffix?: string | null;
+  /** Which text of the document it was made on, as the server names it. */
+  contentVersion?: string | null;
+  /** AN-105: on its way to the server, or not saved after the tries. Absent once the server has it. */
+  save?: "saving" | "failed";
+  /** Why the server refused it, when it said. */
+  saveError?: string;
 }
 
 /** FR-HL-04: what kind of passage it is, independent of its color. */
@@ -89,6 +99,9 @@ export interface HighlightDto {
   note: string;
   page_number: number | null;
   created_at: string;
+  prefix?: string | null;
+  suffix?: string | null;
+  content_version?: string | null;
 }
 
 export interface HighlightPage {
@@ -97,6 +110,8 @@ export interface HighlightPage {
 }
 
 export const highlightsKey = ["highlights"] as const;
+/** Everything the notebook pages read; refreshed whenever a highlight or a note changes. */
+export const notebookKey = ["notebook"] as const;
 export const MAX_HIGHLIGHT_NOTE = 10000;
 export const MAX_SELECTION = 5000;
 
@@ -113,8 +128,12 @@ export const fromDto = (h: HighlightDto): Highlight => ({
   note: h.note,
   page: h.page_number,
   createdAt: h.created_at,
+  prefix: h.prefix ?? null,
+  suffix: h.suffix ?? null,
+  contentVersion: h.content_version ?? null,
 });
 
+/** What is sent to make a highlight. Which text it was made on is the server's to say, so it is not sent. */
 export const toDto = (h: Omit<Highlight, "createdAt">) => ({
   id: h.id,
   document_id: h.docId,
@@ -127,6 +146,8 @@ export const toDto = (h: Omit<Highlight, "createdAt">) => ({
   category: h.category,
   note: h.note,
   page_number: h.page,
+  prefix: h.prefix || null,
+  suffix: h.suffix || null,
 });
 
 export function newId(): string {
@@ -153,61 +174,65 @@ export function useHighlights(docId?: string) {
   const { session } = useAuth();
   const query = useQuery({
     queryKey: highlightsKey,
-    queryFn: fetchAllHighlights,
+    // What is still on its way is laid over the server's list, so a reload of the list never drops it.
+    queryFn: async () => mergeUnsaved(await fetchAllHighlights(), box?.unsaved() ?? []),
     enabled: Boolean(session),
   });
+  // Unsaved work belongs to the person who did it.
+  const userId = session?.user.id ?? null;
+  useEffect(() => {
+    if (owner !== null && owner !== userId) box?.clear();
+    owner = userId;
+  }, [userId]);
   const all = query.data;
   const data = useMemo(() => (all && docId ? all.filter((h) => h.docId === docId) : (all ?? [])), [all, docId]);
   return { ...query, data };
 }
 
-// ---- writes: optimistic cache update, request queued per highlight
+// ---- writes: shown at once, saved in the background, marked until the server has answered (AN-105)
 
-type Patch = Partial<Pick<Highlight, "color" | "category" | "note">>;
+export type { Patch };
 
-/** Requests for one highlight run in order (create → edits → delete). */
-const chains = new Map<string, Promise<unknown>>();
-const pending = new Map<string, { patch: Patch; timer: ReturnType<typeof setTimeout>; qc: QueryClient }>();
+let box: Outbox | null = null;
+let client: QueryClient | null = null;
+let owner: string | null = null;
 
-function enqueue(id: string, run: () => Promise<unknown>, qc: QueryClient) {
-  const next = (chains.get(id) ?? Promise.resolve())
-    .catch(() => undefined)
-    .then(run)
-    .catch((e: unknown) => {
-      // Validation errors carry their own message (MSG-22, MSG-24); anything else is a save failure.
-      useUi.getState().showToast(e instanceof ApiError && e.status === 422 ? e.message : MSG["MSG-23"]);
-      void qc.invalidateQueries({ queryKey: highlightsKey });
-    });
-  chains.set(id, next);
-  void next.finally(() => {
-    if (chains.get(id) === next) chains.delete(id);
-  });
-}
+const show = (h: Highlight) =>
+  client?.setQueryData<Highlight[]>(highlightsKey, (old = []) =>
+    old.some((x) => x.id === h.id) ? old.map((x) => (x.id === h.id ? h : x)) : [...old, h],
+  );
 
-function flush(id: string) {
-  const p = pending.get(id);
-  if (!p) return;
-  clearTimeout(p.timer);
-  pending.delete(id);
-  const { note, ...fields } = p.patch;
-  if (Object.keys(fields).length) {
-    enqueue(id, () => api(`/highlights/${id}`, { method: "PATCH", body: JSON.stringify(fields) }), p.qc);
-  }
-  if (note !== undefined) {
-    // FR-NOTE-01: one note per highlight; saving it empty deletes it.
-    enqueue(
-      id,
-      () =>
+function outbox(qc: QueryClient): Outbox {
+  client = qc;
+  return (box ??= createOutbox({
+    wire: {
+      create: async (h) => fromDto(await api<HighlightDto>("/highlights", { method: "POST", body: JSON.stringify(toDto(h)) })),
+      patch: (id, fields) => api(`/highlights/${id}`, { method: "PATCH", body: JSON.stringify(fields) }),
+      // FR-NOTE-01: one note per highlight; saving it empty deletes it.
+      note: (id, note) =>
         note.trim()
           ? api(`/highlights/${id}/note`, { method: "PUT", body: JSON.stringify({ content: note }) })
           : api(`/highlights/${id}/note`, { method: "DELETE" }),
-      p.qc,
-    );
-  }
+      remove: (id) => api(`/highlights/${id}`, { method: "DELETE" }),
+    },
+    put: show,
+    saved(h) {
+      show(h);
+      void client?.invalidateQueries({ queryKey: notebookKey });
+      // A list asked for before the save was answered would not have it: ask again.
+      if (client?.isFetching({ queryKey: highlightsKey, exact: true })) {
+        void client.invalidateQueries({ queryKey: highlightsKey, exact: true });
+      }
+    },
+    failed(_h, e) {
+      // Validation errors carry their own message (MSG-22, MSG-24); anything else is a save failure.
+      useUi.getState().showToast(e instanceof ApiError && e.status === 422 ? e.message : MSG["MSG-23"]);
+    },
+  }));
 }
 
 export function flushHighlightEdits() {
-  for (const id of [...pending.keys()]) flush(id);
+  box?.flush();
 }
 
 if (typeof document !== "undefined") {
@@ -216,50 +241,53 @@ if (typeof document !== "undefined") {
   });
 }
 
-const edit = (qc: QueryClient, fn: (list: Highlight[]) => Highlight[]) =>
-  qc.setQueryData<Highlight[]>(highlightsKey, (old) => fn(old ?? []));
+const cached = (qc: QueryClient, id: string) => qc.getQueryData<Highlight[]>(highlightsKey)?.find((h) => h.id === id);
 
 export function useHighlightActions() {
   const qc = useQueryClient();
   return useMemo(
     () => ({
+      /** `onSaved` is called once the server has the highlight, never before. */
       addHighlight(
-        input: Omit<Highlight, "id" | "createdAt" | "note" | "category"> & {
+        input: Omit<Highlight, "id" | "createdAt" | "note" | "category" | "save" | "saveError" | "contentVersion"> & {
           note?: string;
           category?: HighlightCategory | null;
         },
+        { onSaved }: { onSaved?: () => void } = {},
       ): Highlight {
         const h: Highlight = { note: "", category: null, ...input, id: newId(), createdAt: new Date().toISOString() };
-        edit(qc, (list) => [...list, h]);
-        enqueue(h.id, () => api("/highlights", { method: "POST", body: JSON.stringify(toDto(h)) }), qc);
+        outbox(qc).add(h, onSaved);
         return h;
       },
       /** Color and category changes are sent at once; note typing is batched unless `now` is set. */
-      updateHighlight(id: string, patch: Patch, { now = false } = {}) {
-        edit(qc, (list) => list.map((h) => (h.id === id ? { ...h, ...patch } : h)));
-        const prev = pending.get(id);
-        if (prev) clearTimeout(prev.timer);
-        const merged = { ...prev?.patch, ...patch };
-        const delay = "note" in patch && !now ? 700 : 0;
-        pending.set(id, { patch: merged, qc, timer: setTimeout(() => flush(id), delay) });
-        if (now) flush(id);
+      updateHighlight(id: string, patch: Patch, options: { now?: boolean; onSaved?: () => void } = {}) {
+        const current = cached(qc, id);
+        if (current) outbox(qc).edit(current, patch, options);
       },
-      removeHighlight(id: string) {
-        const p = pending.get(id);
-        if (p) clearTimeout(p.timer);
-        pending.delete(id);
-        edit(qc, (list) => list.filter((h) => h.id !== id));
-        enqueue(id, () => api(`/highlights/${id}`, { method: "DELETE" }), qc);
+      /** Send again a highlight, or an edit of one, that was not saved. */
+      retryHighlight(id: string) {
+        outbox(qc).retry(id);
+      },
+      /** `onDone` is called once the server has deleted it. */
+      removeHighlight(id: string, { onDone }: { onDone?: () => void } = {}) {
+        qc.setQueryData<Highlight[]>(highlightsKey, (old) => old?.filter((h) => h.id !== id));
+        outbox(qc)
+          .remove(id)
+          .then(
+            () => {
+              onDone?.();
+              void qc.invalidateQueries({ queryKey: notebookKey });
+            },
+            () => {
+              // Still on the server: say so and show it again.
+              useUi.getState().showToast(MSG["MSG-23"]);
+              void qc.invalidateQueries({ queryKey: highlightsKey });
+            },
+          );
       },
     }),
     [qc],
   );
-}
-
-/** Save the whole-document note and keep the cached document in step. */
-export async function saveDocumentNote(qc: QueryClient, docId: string, note: string) {
-  const doc = await api<DocumentDetail>(`/documents/${docId}`, { method: "PATCH", body: JSON.stringify({ note }) });
-  qc.setQueryData<DocumentDetail>([...documentsKey, "detail", docId], (old) => (old ? { ...old, note: doc.note } : old));
 }
 
 // ---- DOM helpers (clean-text reader)
@@ -312,49 +340,36 @@ export function rangeFor(root: HTMLElement, h: Anchor & { text: string }): Range
   return range && range.toString() === h.text ? range : null;
 }
 
-/** Match of `text` in `haystack` closest to `near` (exact first, then ignoring whitespace/case/diacritics). */
-function nearestMatch(haystack: string, text: string, near: number): [number, number] | null {
-  let best: [number, number] | null = null;
-  for (let i = haystack.indexOf(text); i >= 0; i = haystack.indexOf(text, i + 1)) {
-    if (!best || Math.abs(i - near) < Math.abs(best[0] - near)) best = [i, i + text.length];
-  }
-  if (best) return best;
-  for (const m of findLoose(haystack, text)) {
-    if (!best || Math.abs(m[0] - near) < Math.abs(best[0] - near)) best = m;
-  }
-  return best;
-}
-
-/**
- * FR-HL-02: where a highlight sits in the clean text now. Stored offsets first; otherwise the passage is
- * looked up in its own block, then in the blocks of its page, then anywhere. Highlights made on the PDF
- * page have no offsets and are always looked up. Null means it cannot be placed.
- */
-export function resolveAnchor(
-  root: HTMLElement,
-  h: Pick<Highlight, "blockId" | "start" | "end" | "text" | "page">,
-): Anchor | null {
-  if (h.blockId !== null && h.start !== null && h.end !== null) {
-    const stored = { blockId: h.blockId, start: h.start, end: h.end };
-    if (rangeFor(root, { ...stored, text: h.text })) return stored;
-  }
-  const own = h.blockId ? blockEl(root, h.blockId) : null;
-  // Blocks in reading order with their page (page breaks carry data-page-break).
-  const onPage: HTMLElement[] = [];
-  const rest: HTMLElement[] = [];
+/** The blocks of the clean text in reading order, each with the page it is on (page breaks carry data-page-break). */
+export function readBlocks(root: HTMLElement): TextBlock[] {
+  const out: TextBlock[] = [];
   let page = 1;
   for (const el of root.querySelectorAll<HTMLElement>("[data-block-id], [data-page-break]")) {
     if (el.dataset.pageBreak) page = Number(el.dataset.pageBreak);
-    else if (el !== own) (h.page === page ? onPage : rest).push(el);
+    else if (el.dataset.blockId) out.push({ id: el.dataset.blockId, text: el.textContent ?? "", page });
   }
-  for (const block of [own, ...onPage, ...rest]) {
-    if (!block?.dataset.blockId) continue;
-    const m = nearestMatch(block.textContent ?? "", h.text, block === own ? (h.start ?? 0) : 0);
-    if (!m) continue;
-    const anchor = { blockId: block.dataset.blockId, start: m[0], end: m[1] };
-    if (rangeAt(root, anchor)) return anchor;
+  return out;
+}
+
+export type { AnchorIssue, Placement, Spot };
+
+/**
+ * FR-HL-02, AN-104: where a highlight sits in the clean text now, or why it is not placed (see `locate`).
+ * `blocks` is read only when the stored position no longer holds; pass one reader for many highlights.
+ */
+export function placeHighlight(
+  root: HTMLElement,
+  h: Pick<Highlight, "blockId" | "start" | "end" | "text" | "page" | "prefix" | "suffix">,
+  blocks: () => TextBlock[] = () => readBlocks(root),
+): Placement {
+  if (h.blockId !== null && h.start !== null && h.end !== null) {
+    const stored = { blockId: h.blockId, start: h.start, end: h.end };
+    if (rangeFor(root, { ...stored, text: h.text })) return { state: "exact", spot: stored };
   }
-  return null;
+  const placed = locate(blocks(), h);
+  // A place the page cannot make a range for is no place.
+  if (placed.spot && !rangeAt(root, placed.spot)) return { state: "lost", spot: null };
+  return placed;
 }
 
 /** Paint highlights by color; the active one also gets an underline, `flash` a short strong tint. */

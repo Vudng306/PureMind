@@ -5,11 +5,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
+import { useSaveTranslation } from "@/lib/notes";
 import { useAccount } from "@/lib/queries";
-import { cachedTranslation, translateText } from "@/lib/translate";
+import { cachedTranslation, looksVietnamese, translateText } from "@/lib/translate";
 import { useUi } from "@/lib/ui-store";
 
 import { AiConsentDialog } from "./ai-consent-dialog";
+import { AiBadge } from "./cite";
 import { Icon } from "./icons";
 import { selectionMenuBounds } from "./selection-menu";
 
@@ -19,12 +21,15 @@ const CARD_MAX_H = 360;
 // replaces it before the wait is over, so only the last one is sent.
 const SETTLE_MS = 350;
 
-/** The translation of a selected passage, in a card next to where it was selected. */
+/** The translation of a selected passage, in a card next to where it was selected. It is marked as the AI's,
+ * the passage stays as it is in the document, and it is kept as a note only when the reader asks (AN-107). */
 export function TranslatePopover({
+  docId,
   text,
   rect,
   onClose,
 }: {
+  docId: string;
   text: string;
   /** Where the passage was on screen when it was selected. */
   rect: DOMRect;
@@ -38,6 +43,10 @@ export function TranslatePopover({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
+  // Which way it goes, as the server decides it; known for sure once the translation is done.
+  const [target, setTarget] = useState<"vi" | "en">(() => (looksVietnamese(text) ? "en" : "vi"));
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const save = useSaveTranslation(docId);
   // Booleans, not `user`: a refetched account must not start another translation.
   const loaded = Boolean(user);
   const consented = Boolean(user?.reading_preferences.ai_consent);
@@ -50,6 +59,7 @@ export function TranslatePopover({
       try {
         const result = await translateText(text, (d) => setTranslation((s) => s + d), signal);
         setTranslation(result.translation);
+        if (result.target === "vi" || result.target === "en") setTarget(result.target);
       } catch (e) {
         if (signal?.aborted) return;
         setError(e instanceof ApiError ? e.message : MSG["MSG-99"]);
@@ -94,6 +104,20 @@ export function TranslatePopover({
     };
   }, [asking, onClose]);
 
+  function keep() {
+    if (savedId || save.isPending || !translation) return;
+    save.mutate(
+      { quote: text, translation, target },
+      {
+        onSuccess: (note) => {
+          setSavedId(note.id);
+          showToast(t("translate.savedToast"));
+        },
+        onError: (e) => showToast(e instanceof ApiError ? e.message : t("ai.saveFailed")),
+      },
+    );
+  }
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(translation);
@@ -131,7 +155,10 @@ export function TranslatePopover({
         >
           <div className="flex items-center gap-2">
             <Icon name="translate" size={16} className="text-accent-text" />
-            <span className="flex-1 text-[13px] font-semibold text-ink">{t("translate.title")}</span>
+            <span className="flex-1 text-[13px] font-semibold text-ink">
+              {t(target === "en" ? "translate.titleViEn" : "translate.title")}
+            </span>
+            <AiBadge />
             <button type="button" aria-label={t("common.close")} onClick={onClose} className="icon-btn h-8 w-8 text-muted">
               <Icon name="x" size={15} />
             </button>
@@ -153,15 +180,26 @@ export function TranslatePopover({
                 {t("common.retry")}
               </button>
             ) : (
-              <button
-                type="button"
-                className="btn-ghost h-8 px-3 text-[13px]"
-                onClick={() => void copy()}
-                disabled={busy || !translation}
-              >
-                <Icon name="copy" size={14} />
-                {t("selection.copyShort")}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn-ghost h-8 px-3 text-[13px]"
+                  onClick={() => void copy()}
+                  disabled={busy || !translation}
+                >
+                  <Icon name="copy" size={14} />
+                  {t("selection.copyShort")}
+                </button>
+                <button
+                  type="button"
+                  className={`btn-ghost h-8 px-3 text-[13px] ${savedId ? "text-success" : ""}`}
+                  onClick={keep}
+                  disabled={busy || !translation || save.isPending || savedId !== null}
+                >
+                  <Icon name={savedId ? "check" : "bookmark"} size={14} />
+                  {t(savedId ? "translate.saved" : "translate.save")}
+                </button>
+              </>
             )}
           </div>
         </div>

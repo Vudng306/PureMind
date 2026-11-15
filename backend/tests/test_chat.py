@@ -158,6 +158,57 @@ async def test_question_is_answered_from_the_document(client, auth, chat_ai):
     assert (await client.get("/api/account", headers=h)).json()["chat_quota_remaining"] == 49
 
 
+async def test_a_refusal_cites_nothing(client, auth, chat_ai):
+    """AT-15: an answer that says the document does not hold it keeps no citation, even one the model added."""
+    h = auth()
+    _, answer = chat_ai(
+        "Không tìm thấy thông tin đủ để kết luận trong tài liệu này. Có thể xem phần ví dụ [2]."
+    )
+    doc, conv = await start(client, h)
+    r = await ask(client, h, doc, conv, "Tác giả sinh năm nào?")
+    assert r.status_code == 200, r.text
+    saved = r.json()["answer"]
+    assert saved["citations"] == [] and "[2]" not in saved["content"]
+    assert saved["content"].startswith(doc_chat.NO_ANSWER["vi"])
+    assert "cites no passage numbers" in answer.calls[-1][0]["content"]
+
+
+async def test_the_answer_is_told_what_the_text_leaves_out(client, auth, chat_ai):
+    h = auth()
+    _, answer = chat_ai("Có [1].")
+    doc, conv = await start(client, h)
+    from app.models import Document
+
+    async with SessionLocal() as session:
+        await session.execute(
+            update(Document)
+            .where(Document.id == uuid.UUID(doc))
+            .values(extraction_issues=[{"code": "tables_as_images", "count": 2}])
+        )
+        await session.commit()
+    assert (await ask(client, h, doc, conv, "Bảng 1 nói gì?")).status_code == 200
+    assert "2 table(s) are only pictures" in answer.passages
+
+
+def test_coverage_note_and_refusals():
+    assert doc_chat.coverage_note(None) is None
+    assert doc_chat.coverage_note([{"code": "ocr_pages", "count": 0}]) is None
+    note = doc_chat.coverage_note(
+        [
+            {"code": "scanned_pages", "count": 2, "pages": [3, 4]},
+            {"code": "ocr_pages", "count": 1, "pages": [5]},
+        ]
+    )
+    assert (
+        "2 scanned page(s) (pages 3, 4)" in note
+        and "1 page(s) (page 5) were read by text recognition" in note
+    )
+    assert doc_chat.abstained("**This document does not contain enough information to answer that.**")
+    assert doc_chat.abstained("> Không tìm thấy thông tin đủ để kết luận trong tài liệu này")
+    assert not doc_chat.abstained("Theo tài liệu [1], câu trả lời là có.")
+    assert doc_chat.without_refs("Không có [2]. Xem mục A [1][3].") == "Không có. Xem mục A."
+
+
 async def test_passages_match_the_question_and_are_indexed_once(client, auth, chat_ai):
     h = auth()
     embed, answer = chat_ai("Trang 3 nói về học máy [1].")

@@ -20,12 +20,15 @@ import {
   clearAnnotations,
   offsetIn,
   paintAnnotations,
+  placeHighlight,
   rangeAt,
   rangeFor,
-  resolveAnchor,
+  readBlocks,
   type Anchor,
+  type AnchorIssue,
   type Highlight,
 } from "@/lib/annotations";
+import { contextOf, type TextBlock } from "@/lib/anchor";
 import { clearHighlights, findRanges, paintHighlights, scrollRangeIntoView } from "@/lib/find";
 import { useLang, useT } from "@/lib/i18n";
 import { ChartData } from "@/components/chart-data";
@@ -38,7 +41,8 @@ import { Icon } from "./icons";
 export interface SearchState {
   query: string;
   index: number;
-  onResult: (total: number) => void;
+  /** How many matches `query` has; given the query, so an answer is not taken for a later one. */
+  onResult: (total: number, query: string) => void;
 }
 
 /** A passage the reader just selected, in block offsets. */
@@ -47,14 +51,43 @@ export interface TextSelection {
   start: number;
   end: number;
   text: string;
+  /** The words right before and after it in its block, kept with a highlight to find it again (AN-102). */
+  prefix: string;
+  suffix: string;
   rect: DOMRect;
+}
+
+/** Where the text is scrolled to: the block under the reading line and how far into it the line is. */
+export interface ReadingPlace {
+  blockId: string;
+  /** 0 at the top of the block, 1 at its bottom; more than 1 in the gap below it. */
+  offset: number;
+}
+
+/** What a scroll reports (RD-107): progress, the page, the place by block, and the scroll itself. */
+export interface ScrollState {
+  fraction: number;
+  page: number | null;
+  place: ReadingPlace | null;
+  top: number;
+  view: number;
 }
 
 export interface CleanReaderHandle {
   scrollToBlock: (blockId: string) => void;
   scrollToHighlight: (h: Highlight) => boolean;
+  /** A jump to a block or a highlight is still on its way there. */
+  jumping: () => boolean;
   scrollToFraction: (fraction: number) => void;
+  /** Put a place back under the reading line, at once; false when its block is not in this text. */
+  scrollToPlace: (place: ReadingPlace) => boolean;
+  place: () => ReadingPlace | null;
+  /** The passage selected right now, measured where it is on screen now. */
+  currentSelection: () => TextSelection | null;
 }
+
+// The reading line: this far below the top edge, where scrollToBlock puts a block.
+const LINE = 24;
 
 const cellText = (nodes: Inline[]): string =>
   nodes.map((n) => ("v" in n ? n.v : "c" in n ? cellText(n.c) : "\n")).join("");
@@ -375,6 +408,7 @@ export function CleanReader({
   fontSize,
   lineHeight,
   width,
+  fontFamily = "serif",
   search,
   highlights,
   activeHighlightId,
@@ -396,15 +430,17 @@ export function CleanReader({
   fontSize: number;
   lineHeight: number;
   width: number;
+  /** RD-104: the face of the running text. */
+  fontFamily?: "serif" | "sans";
   search: SearchState;
   highlights: Highlight[];
   activeHighlightId: string | null;
   flashHighlightId?: string | null;
   onSelect: (selection: TextSelection | null) => void;
   onHighlightClick: (id: string) => void;
-  /** Highlights whose passage could not be found in the current text (FR-HL-02). */
-  onUnanchored?: (ids: string[]) => void;
-  onScrollProgress: (fraction: number, page: number | null) => void;
+  /** Highlights not placed in the current text, and why: several places fit, or none does (AN-104). */
+  onUnanchored?: (issues: Record<string, AnchorIssue>) => void;
+  onScrollProgress: (state: ScrollState) => void;
   /** Ask the AI to explain a figure (the button on each image). */
   onExplainImage?: (src: string, alt: string) => void;
   /** Show a block on the original PDF (the button on figures and tables). */
@@ -429,11 +465,11 @@ export function CleanReader({
     const article = articleRef.current;
     if (!article || !query.trim()) {
       clearHighlights();
-      onResult(0);
+      onResult(0, query);
       return;
     }
     const ranges = findRanges(article, query);
-    onResult(ranges.length);
+    onResult(ranges.length, query);
     const current = ranges.length ? ranges[((index % ranges.length) + ranges.length) % ranges.length] : null;
     paintHighlights(ranges, current);
     if (current && scrollerRef.current) scrollRangeIntoView(scrollerRef.current, current);
@@ -441,7 +477,7 @@ export function CleanReader({
 
   useEffect(() => clearHighlights, []);
 
-  // ---- highlights (placed where their passage is now; see resolveAnchor)
+  // ---- highlights (placed where their passage is now, and only where that is sure; see locate)
   const anchors = useRef(new Map<string, Anchor>());
   useEffect(() => {
     const article = articleRef.current;
@@ -449,25 +485,69 @@ export function CleanReader({
     let active: Range | null = null;
     let flash: Range | null = null;
     const painted: { color: Highlight["color"]; range: Range }[] = [];
-    const lost: string[] = [];
+    const issues: Record<string, AnchorIssue> = {};
+    let texts: TextBlock[] | null = null;
+    const blocksNow = () => (texts ??= readBlocks(article));
     anchors.current = new Map();
     for (const h of highlights) {
-      const anchor = resolveAnchor(article, h);
-      const range = anchor && rangeAt(article, anchor);
-      if (!anchor || !range) {
-        lost.push(h.id);
+      const placed = placeHighlight(article, h, blocksNow);
+      const range = placed.spot && rangeAt(article, placed.spot);
+      if (!placed.spot || !range) {
+        // A highlight that is not sure of its place is painted nowhere (TSD §5.2).
+        issues[h.id] = placed.state === "review" ? "review" : "lost";
         continue;
       }
-      anchors.current.set(h.id, anchor);
+      anchors.current.set(h.id, placed.spot);
       painted.push({ color: h.color, range });
       if (h.id === activeHighlightId) active = range;
       if (h.id === flashHighlightId) flash = range;
     }
     paintAnnotations(painted, active, flash);
-    onUnanchored?.(lost);
+    onUnanchored?.(issues);
   }, [highlights, activeHighlightId, flashHighlightId, blocks, onUnanchored]);
 
   useEffect(() => clearAnnotations, []);
+
+  // ---- the place by block (RD-107): kept across a change of font, width or window, which a fraction is not
+  const blockEls = useRef<HTMLElement[] | null>(null);
+  useEffect(() => {
+    blockEls.current = null;
+  }, [blocks]);
+  const readPlace = useCallback((): ReadingPlace | null => {
+    const scroller = scrollerRef.current;
+    const article = articleRef.current;
+    if (!scroller || !article) return null;
+    const els = (blockEls.current ??= [...article.querySelectorAll<HTMLElement>(":scope > [data-block-id]")]);
+    if (!els.length) return null;
+    const line = scroller.getBoundingClientRect().top + LINE;
+    // The last block that starts at or above the line (blocks are in order down the page).
+    let lo = 0;
+    let hi = els.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (els[mid].getBoundingClientRect().top <= line) lo = mid;
+      else hi = mid - 1;
+    }
+    const rect = els[lo].getBoundingClientRect();
+    const offset = rect.height > 0 ? Math.max(0, (line - rect.top) / rect.height) : 0;
+    return { blockId: els[lo].dataset.blockId ?? "", offset };
+  }, []);
+
+  // A jump that glides to its passage: where it is heading, until it gets there or the reader takes the scroll.
+  const heading = useRef<{ top: number; since: number } | null>(null);
+  const glideTo = useCallback((scroller: HTMLElement, top: number) => {
+    const max = scroller.scrollHeight - scroller.clientHeight;
+    heading.current = { top: Math.min(Math.max(0, top), max), since: performance.now() };
+    scroller.scrollTo({ top, behavior: "smooth" });
+  }, []);
+  const takeOver = useCallback(() => {
+    heading.current = null;
+  }, []);
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    scroller?.addEventListener("scrollend", takeOver);
+    return () => scroller?.removeEventListener("scrollend", takeOver);
+  }, [takeOver]);
 
   useImperativeHandle(
     handleRef,
@@ -477,25 +557,46 @@ export function CleanReader({
         const scroller = scrollerRef.current;
         if (!el || !scroller) return;
         const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 24;
-        scroller.scrollTo({ top, behavior: "smooth" });
+        glideTo(scroller, top);
       },
       scrollToHighlight(h) {
         const article = articleRef.current;
         const scroller = scrollerRef.current;
-        const anchor = article && resolveAnchor(article, h);
-        const range = article && anchor && rangeAt(article, anchor);
+        const spot = article && placeHighlight(article, h).spot;
+        const range = article && spot && rangeAt(article, spot);
         if (!range || !scroller) return false;
         const rect = range.getBoundingClientRect();
         const box = scroller.getBoundingClientRect();
-        scroller.scrollTo({ top: scroller.scrollTop + rect.top - box.top - box.height / 3, behavior: "smooth" });
+        glideTo(scroller, scroller.scrollTop + rect.top - box.top - box.height / 3);
         return true;
+      },
+      jumping() {
+        const scroller = scrollerRef.current;
+        const jump = heading.current;
+        if (!scroller || !jump) return false;
+        // "scrollend" says when the glide is over; without it (older Safari) a glide is given a few seconds.
+        const patience = "onscrollend" in window ? 20000 : 4000;
+        if (Math.abs(scroller.scrollTop - jump.top) <= 2 || performance.now() - jump.since > patience) heading.current = null;
+        return heading.current !== null;
       },
       scrollToFraction(fraction) {
         const scroller = scrollerRef.current;
         if (scroller) scroller.scrollTop = fraction * (scroller.scrollHeight - scroller.clientHeight);
       },
+      scrollToPlace({ blockId, offset }) {
+        const el = articleRef.current?.querySelector<HTMLElement>(`:scope > [data-block-id="${CSS.escape(blockId)}"]`);
+        const scroller = scrollerRef.current;
+        if (!el || !scroller) return false;
+        const rect = el.getBoundingClientRect();
+        const top = rect.top - scroller.getBoundingClientRect().top + scroller.scrollTop - LINE + offset * rect.height;
+        // A place that is already under the line is left alone, so nothing moves by a rounding.
+        if (Math.abs(top - scroller.scrollTop) >= 1) scroller.scrollTop = top;
+        return true;
+      },
+      place: () => readPlaceRef.current(),
+      currentSelection: () => readSelectionRef.current(),
     }),
-    [],
+    [glideTo],
   );
 
   // ---- selection → highlight menu; click on a highlight → open it in the panel
@@ -520,9 +621,15 @@ export function CleanReader({
       start,
       end,
       text,
+      ...contextOf(blockText, start, end),
       rect: (exact ?? range).getBoundingClientRect(),
     } satisfies TextSelection;
   }, []);
+
+  const readPlaceRef = useRef(readPlace);
+  readPlaceRef.current = readPlace;
+  const readSelectionRef = useRef(readSelection);
+  readSelectionRef.current = readSelection;
 
   const onPointerUp = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
@@ -572,21 +679,29 @@ export function CleanReader({
           page = Number(b.dataset.pageBreak);
         }
       }
-      onScrollProgress(fraction, page);
+      onScrollProgress({ fraction, page, place: readPlace(), top: scroller.scrollTop, view: scroller.clientHeight });
       onSelect(null);
     });
-  }, [onScrollProgress, onSelect]);
+  }, [onScrollProgress, onSelect, readPlace]);
 
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   return (
-    <div ref={scrollerRef} onScroll={onScroll} className="h-full overflow-y-auto">
+    <div
+      ref={scrollerRef}
+      onScroll={onScroll}
+      onWheel={takeOver}
+      onTouchStart={takeOver}
+      onPointerDown={takeOver}
+      onKeyDown={takeOver}
+      className="h-full overflow-y-auto"
+    >
       <article
         ref={articleRef}
         onMouseUp={onPointerUp}
         onTouchEnd={onPointerUp}
         onKeyUp={onKeyUp}
-        className="mx-auto px-6 pt-10 font-serif text-body sm:pt-14"
+        className={`mx-auto px-6 pt-10 text-body sm:pt-14 ${fontFamily === "sans" ? "font-sans" : "font-serif"}`}
         style={{ fontSize, lineHeight, maxWidth: width + 48, paddingBottom: bottomPadding }}
         lang={lang}
       >

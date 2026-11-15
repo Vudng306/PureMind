@@ -7,6 +7,7 @@ import { useHighlights } from "@/lib/annotations";
 import { KIND_CLASS, KIND_LABEL, isProcessing, origin, progressLabel, progressOf } from "@/lib/doc-view";
 import { useDocuments } from "@/lib/documents";
 import { normalize } from "@/lib/find";
+import { SYNTHESIS } from "@/lib/features";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import { COLOR_DOT, colorLabel, usePreferences } from "@/lib/preferences";
 import type { AppTheme } from "@/lib/types";
@@ -123,12 +124,16 @@ export function CommandPalette() {
       { key: "add", icon: "plus", label: t("palette.addDocument"), run: () => setAddOpen(true) },
       { key: "highlights", icon: "highlighter", label: t("palette.allHighlights"), run: () => router.push("/highlights") },
       { key: "notebooks", icon: "note", label: t("palette.notebooks"), run: () => router.push("/notebooks") },
-      {
-        key: "notebook-new",
-        icon: "spark",
-        label: t("palette.notebookFromHighlights"),
-        run: () => router.push("/notebooks/new"),
-      },
+      ...(SYNTHESIS
+        ? [
+            {
+              key: "notebook-new",
+              icon: "spark" as const,
+              label: t("palette.notebookFromHighlights"),
+              run: () => router.push("/notebooks/new"),
+            },
+          ]
+        : []),
       { key: "settings", icon: "gear", label: t("palette.readingSettings"), run: () => router.push("/settings") },
       ...(["light", "dark"] as AppTheme[]).map((theme) => ({
         key: `theme-${theme}`,

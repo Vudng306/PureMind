@@ -435,7 +435,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
       deleted.current = true;
       await remove.mutateAsync(notebook.id);
       showToast(t("nb.deleted"));
-      router.replace("/notebooks");
+      router.replace("/notebooks/archive");
     } catch {
       deleted.current = false;
       setConfirmDelete(false);
@@ -455,7 +455,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
     <>
       <div className="mx-auto flex max-w-[1180px] flex-col gap-5 print:hidden">
         <div className="flex flex-wrap items-center gap-2.5">
-          <Link href="/notebooks" className="flex items-center gap-1 text-sm text-muted hover:text-ink">
+          <Link href="/notebooks/archive" className="flex items-center gap-1 text-sm text-muted hover:text-ink">
             <Icon name="back" size={16} />
             {t("notebooks.title")}
           </Link>
@@ -704,7 +704,7 @@ export default function NotebookPage() {
           {notFound ? t("nb.notFound") : query.error instanceof Error ? query.error.message : MSG["MSG-99"]}
         </Alert>
         {notFound ? (
-          <Link href="/notebooks" className="btn-outline">
+          <Link href="/notebooks/archive" className="btn-outline">
             {t("nb.backToList")}
           </Link>
         ) : (

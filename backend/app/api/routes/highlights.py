@@ -1,14 +1,14 @@
 import uuid
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.documents import _owned_document
-from app.models import Document, Highlight, User
+from app.models import Document, Highlight, Note, User
 from app.schemas import (
     AnnotationsImport,
     AnnotationsImportResult,
@@ -27,6 +27,7 @@ router = APIRouter(tags=["highlights"])
 
 MAX_HIGHLIGHTS_PER_DOCUMENT = 2000
 NOT_FOUND = "Không tìm thấy highlight."
+EXISTS = "Highlight đã tồn tại."
 
 
 def _position_error(doc: Document, h: HighlightBase) -> str | None:
@@ -79,10 +80,24 @@ async def list_highlights(
     return HighlightPage(items=items, total=total)
 
 
+def _saved_already(existing: Highlight, user: User, doc: Document) -> Highlight:
+    """AN-105: the id is the client's key for one highlight, so sending it again gives the one saved.
+    Someone else's id, or one used on another document, is a conflict and says nothing about that row."""
+    if existing.user_id != user.id or existing.document_id != doc.id:
+        raise HTTPException(status.HTTP_409_CONFLICT, EXISTS)
+    return existing
+
+
 @router.post("/highlights", response_model=HighlightOut, status_code=status.HTTP_201_CREATED)
-async def create_highlight(payload: HighlightCreate, user: CurrentUser, session: SessionDep):
-    """FR-HL-01."""
+async def create_highlight(
+    payload: HighlightCreate, response: Response, user: CurrentUser, session: SessionDep
+):
+    """FR-HL-01. Sent again with the same id (a retry after a lost reply), it gives the highlight already
+    saved (200) instead of a second one."""
     doc = await _owned_document(session, user, payload.document_id)
+    if payload.id is not None and (existing := await session.get(Highlight, payload.id)) is not None:
+        response.status_code = status.HTTP_200_OK
+        return _saved_already(existing, user, doc)
     count = await session.scalar(select(func.count()).where(Highlight.document_id == doc.id))
     if (count or 0) >= MAX_HIGHLIGHTS_PER_DOCUMENT:
         raise HTTPException(422, "Tài liệu này đã có quá nhiều highlight.")
@@ -90,13 +105,24 @@ async def create_highlight(payload: HighlightCreate, user: CurrentUser, session:
         raise HTTPException(422, error)
 
     data = payload.model_dump(exclude={"id", "document_id"})
-    hl = Highlight(id=payload.id or uuid.uuid4(), user_id=user.id, document_id=doc.id, **data)
+    new_id = payload.id or uuid.uuid4()
+    hl = Highlight(
+        id=new_id,
+        user_id=user.id,
+        document_id=doc.id,
+        content_version=doc.content_version,  # the server's own reading of which text this is
+        **data,
+    )
     session.add(hl)
     try:
         await session.commit()
-    except IntegrityError:  # id already used
+    except IntegrityError:  # the same id arrived twice at once
         await session.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "Highlight đã tồn tại.") from None
+        existing = await session.get(Highlight, new_id)
+        if existing is None:
+            raise HTTPException(status.HTTP_409_CONFLICT, EXISTS) from None
+        response.status_code = status.HTTP_200_OK
+        return _saved_already(existing, user, doc)
     await session.refresh(hl)
     return hl
 
@@ -182,11 +208,23 @@ async def import_annotations(payload: AnnotationsImport, user: CurrentUser, sess
             existing.add(h.id)
         added += 1
 
+    # A document's locally kept note becomes its first note, unless it already has one of the reader's own.
+    noted = (
+        set(
+            (
+                await session.scalars(
+                    select(Note.document_id).where(Note.user_id == user.id, Note.document_id.in_(docs))
+                )
+            ).all()
+        )
+        if docs
+        else set()
+    )
     notes = 0
     for doc_id, text in payload.notes.items():
         doc = docs.get(doc_id)
-        if doc and text.strip() and not doc.note:
-            doc.note = text
+        if doc and text.strip() and doc_id not in noted:
+            session.add(Note(user_id=user.id, document_id=doc_id, body=text))
             notes += 1
 
     progress = 0

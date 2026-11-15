@@ -96,11 +96,12 @@ async def _read(settings: Settings, path: Path, page_number: int) -> str | None:
         )
     except openai_client.AIError:
         return None
-    return _markdown(answer.text)
+    return _markdown(answer.text) or ""  # read and found blank, which is not the same as not read
 
 
 async def read_pages(settings: Settings, path: Path, pages: list[int]) -> dict[int, str]:
-    """{page number: Markdown} for the scanned pages the model could read (none without an API key)."""
+    """{page number: Markdown} for the scanned pages the model could read (none without an API key). A page
+    it read and found blank is there with "": nothing was left out of it."""
     pages = pages[:MAX_PAGES]
     if not pages or not settings.openai_api_key:
         return {}
@@ -114,4 +115,4 @@ async def read_pages(settings: Settings, path: Path, pages: list[int]) -> dict[i
     unread = [n for n, t in zip(pages, texts, strict=True) if t is None]
     if unread:
         log.info("page_ocr left out pages %s of %s", unread, path.name)
-    return {n: t for n, t in zip(pages, texts, strict=True) if t}
+    return {n: t for n, t in zip(pages, texts, strict=True) if t is not None}

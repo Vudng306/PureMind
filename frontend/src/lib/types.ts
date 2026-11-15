@@ -16,6 +16,12 @@ export interface ReadingPreferences {
   color_labels?: { yellow: string; green: string; blue: string; pink: string; purple?: string };
   ai_consent?: boolean;
   language?: Lang;
+  /** The face the clean text is set in (RD-104). */
+  font_family?: "serif" | "sans";
+  /** The page the reader reads on (RD-105); null follows the theme of the app. */
+  reading_theme?: Theme | null;
+  /** Show the estimate of the reading time left (RD-112). */
+  time_left?: boolean;
 }
 
 export interface User {
@@ -88,7 +94,25 @@ export interface DocumentListItem {
   updated_at: string;
 }
 
+/** The place in the clean text: the block at the top of the page and how far into it (0..1). */
+export interface ReadPosition {
+  block_id: string;
+  offset: number;
+}
+
+/** Something the extraction knows is not in the clean text as text (RD-111). */
+export interface ExtractionIssue {
+  code: "scanned_pages" | "ocr_pages" | "tables_as_images" | "equations_as_images";
+  count: number;
+  pages?: number[] | null;
+}
+
 export interface DocumentDetail extends DocumentListItem {
   content_clean: string;
+  /** Names the clean text as it is now; a highlight made on another one carries another name (AN-102). */
+  content_version?: string | null;
   note: string;
+  read_position: ReadPosition | null;
+  /** Empty when the extraction found nothing left out; null when it was never recorded. */
+  extraction_issues: ExtractionIssue[] | null;
 }

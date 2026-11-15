@@ -15,7 +15,7 @@ class FakeTranslate:
         self.result = result
         self.calls: list[str] = []
 
-    def __call__(self, settings, text, usage):
+    def __call__(self, settings, text, usage, source="en", target="vi"):
         self.calls.append(text)
 
         async def stream():

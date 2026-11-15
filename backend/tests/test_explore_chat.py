@@ -71,9 +71,12 @@ async def test_recommends_the_nearest_articles(client, auth, feed, explore_ai): 
     assert len(body["articles"]) == 2  # explore_chat_articles
     assert body["cited"] == [1]  # a number it was not given is dropped
     assert body["chat_quota_remaining"] == get_settings().chat_daily_quota - 1
-    # Only the articles found go into the prompt, numbered.
+    # Only the articles found go into the prompt, numbered. The forest and the heart articles are equally far
+    # from the question, so which of them comes second is the database's choice (pgvector or Python).
     prompt = answer.passages
-    assert "[1] Why sleep helps memory" in prompt and "How the heart works" not in prompt
+    left_out = {"Forests and the climate", "How the heart works"} - {a["title"] for a in body["articles"]}
+    assert "[1] Why sleep helps memory" in prompt and len(left_out) == 1
+    assert all(title not in prompt for title in left_out)
     assert "Vietnamese" in answer.calls[-1][0]["content"]
 
     # Every article was indexed once; the next message only embeds the query.

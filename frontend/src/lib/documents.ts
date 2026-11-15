@@ -92,7 +92,9 @@ export function useDeleteDocument() {
 
 export function updateDocument(
   id: string,
-  patch: Partial<Pick<DocumentDetail, "title" | "last_read_page" | "read_fraction" | "is_read" | "note">> & { citation?: Citation },
+  patch: Partial<Pick<DocumentDetail, "title" | "last_read_page" | "read_fraction" | "read_position" | "is_read" | "note">> & {
+    citation?: Citation;
+  },
 ) {
   return api<DocumentDetail>(`/documents/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
 }

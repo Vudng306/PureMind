@@ -1,6 +1,7 @@
 """ORM models (SRS section 5): users, documents, highlights, summaries, notebooks, document chat, feed, posts."""
 
 import enum
+import hashlib
 import uuid
 from datetime import UTC, date, datetime
 
@@ -170,6 +171,13 @@ class Document(TimestampMixin, Base):
     # Free-form note for the whole document and clean-text scroll position (0..1).
     note: Mapped[str] = mapped_column(Text, default="", nullable=False)
     read_fraction: Mapped[float | None] = mapped_column(Float)
+    # Where the reader stopped in the clean text: {"block_id": the block at the top of the page, "offset":
+    # how far into it, 0..1}. It holds when the type size or the column changes, which read_fraction
+    # (kept for the progress bars and as the fallback) does not.
+    read_position: Mapped[dict | None] = mapped_column(JsonType)
+    # What the extraction knows it left out or could not turn into text (schemas.ExtractionIssue): empty
+    # when it found nothing of the kind, None for a document extracted before this was recorded.
+    extraction_issues: Mapped[list | None] = mapped_column(JsonType)
     # FR-CHAT-01: sha256 of the text the chat index was built from; a re-extraction makes it stale.
     chunks_hash: Mapped[str | None] = mapped_column(String(64))
     chunks_model: Mapped[str | None] = mapped_column(String(100))
@@ -192,6 +200,14 @@ class Document(TimestampMixin, Base):
     license: Mapped[str | None] = mapped_column(String(32))
 
     user: Mapped[User] = relationship(back_populates="documents")
+
+    @property
+    def content_version(self) -> str | None:
+        """Which clean text this is (AN-102): it changes when the document is extracted again, so a highlight
+        made on an earlier text can be told from one made on this one."""
+        if not self.content_clean:
+            return None
+        return hashlib.sha256(self.content_clean.encode()).hexdigest()[:16]
 
 
 HIGHLIGHT_COLORS = ("yellow", "green", "blue", "pink", "purple")
@@ -243,6 +259,12 @@ class Highlight(TimestampMixin, Base):
     # FR-NOTE-01: at most one note per highlight; "" = no note.
     note: Mapped[str] = mapped_column(Text, default="", nullable=False)
     page_number: Mapped[int | None] = mapped_column(Integer)
+    # AN-102: the words just before and after the passage in its block, and the text of the document it was
+    # made on (Document.content_version at that time). After a new extraction they tell a passage that only
+    # moved from one that is now found in several places. None on highlights made before this was kept.
+    prefix: Mapped[str | None] = mapped_column(String(64))
+    suffix: Mapped[str | None] = mapped_column(String(64))
+    content_version: Mapped[str | None] = mapped_column(String(16))
 
 
 class Summary(Base):
@@ -265,6 +287,78 @@ class Summary(Base):
     ai_model: Mapped[str] = mapped_column(String(100), nullable=False)
     prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
     completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+NOTE_ORIGINS = ("user", "ai_saved")
+MAX_NOTE_BODY = 20_000
+MAX_NOTES_PER_DOCUMENT = 500
+
+
+class Note(TimestampMixin, Base):
+    """A note on a document that is not tied to one highlight (a highlight's own note stays on the highlight).
+
+    `origin` says who wrote it first: the reader, or the AI — and then only because the reader pressed
+    "save to notes" on a summary, a mind-map node or an answer. Nothing the AI writes is stored here on its
+    own. An AI note keeps where it came from in `provenance`, with the passages it cited, so it still shows
+    its source after the summary it was taken from has been regenerated or the conversation deleted.
+    """
+
+    __tablename__ = "notes"
+    __table_args__ = (
+        Index("ix_notes_document_created", "document_id", "created_at"),
+        # Saving the same AI passage twice (a double click, a retry) gives the note already there.
+        UniqueConstraint("user_id", "source_key", name="uq_notes_user_source"),
+        CheckConstraint("origin IN ('user', 'ai_saved')", name="ck_notes_origin"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    origin: Mapped[str] = mapped_column(String(8), default="user", nullable=False)
+    # ai_saved only: {source, source_id, part, model, language, generated_at, citations: [{position, ...}]}
+    provenance: Mapped[dict | None] = mapped_column(JsonType)
+    # ai_saved only: "<source>:<source id>:<part>"; null for the reader's own notes.
+    source_key: Mapped[str | None] = mapped_column(String(160))
+
+
+AI_ARTIFACT_KINDS = ("quick", "deep", "mindmap", "analysis")
+
+
+class AiArtifact(Base):
+    """What the reader's AI sidebar made for a document: a quick summary, a deep summary, a mind map or a
+    research analysis.
+
+    At most one of each kind per document; making it again replaces the row under a new id. `content_hash`
+    is the text it was made from, so the reader can be told when the document has changed since.
+    """
+
+    __tablename__ = "ai_artifacts"
+    __table_args__ = (
+        UniqueConstraint("document_id", "kind", name="uq_ai_artifacts_document_kind"),
+        CheckConstraint("kind IN ('quick', 'deep', 'mindmap', 'analysis')", name="ck_ai_artifacts_kind"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(8), nullable=False)
+    language: Mapped[str] = mapped_column(String(5), nullable=False)
+    # The validated answer, with `citations`: [{position, page_number, heading, text}] it points at.
+    payload: Mapped[dict] = mapped_column(JsonType, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    ai_model: Mapped[str] = mapped_column(String(100), nullable=False)
+    prompt_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    # The answer as plain text, for FR-SRCH-01.
+    search_text: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completion_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 

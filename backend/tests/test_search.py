@@ -10,8 +10,10 @@ async def setup_library(client, headers):
         files={"file": ("ml.pdf", text_pdf(2, title="Machine learning"), "application/pdf")},
     )
     doc = r.json()
-    await client.patch(
-        f"/api/documents/{doc['id']}", headers=headers, json={"note": "review gradient descent before exam"}
+    await client.post(
+        f"/api/documents/{doc['id']}/notes",
+        headers=headers,
+        json={"body": "review gradient descent before exam"},
     )
     for text, note, category in (
         ("overfitting happens when the model memorises noise", "ask about regularisation", "question"),

@@ -23,8 +23,10 @@ from app.api.routes import (
     feed,
     highlights,
     notebooks,
+    notes,
     papers,
     posts,
+    reader_ai,
     search,
     summaries,
     translate,
@@ -179,6 +181,8 @@ app.include_router(highlights.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 app.include_router(summaries.router, prefix="/api")
 app.include_router(notebooks.router, prefix="/api")
+app.include_router(notes.router, prefix="/api")
+app.include_router(reader_ai.router, prefix="/api")
 app.include_router(posts.router, prefix="/api")
 app.include_router(community.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")

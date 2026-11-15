@@ -12,7 +12,7 @@ from sqlalchemy import ColumnElement, Select, func, literal, literal_column, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, SessionDep
-from app.models import Document, Highlight, Notebook, Summary
+from app.models import AiArtifact, Document, Highlight, Note, Notebook, Summary
 from app.schemas import HighlightCategory, file_type_of
 
 router = APIRouter(tags=["search"])
@@ -252,28 +252,30 @@ async def search(
         )
         items = [hl_hit("note", r) for r in rows]
         if not category:
-            dcond = [Document.user_id == user.id, Document.note != "", s.match(Document.note)]
+            dcond = [Note.user_id == user.id, s.match(Note.body)]
             dstmt = (
                 select(
-                    Document.id,
+                    Note.id,
+                    Note.document_id,
+                    Note.updated_at,
                     Document.title,
                     Document.source_type,
                     Document.original_filename,
-                    Document.updated_at,
-                    s.headline(Document.note).label("snippet"),
+                    s.headline(Note.body).label("snippet"),
                 )
+                .join(Document, Document.id == Note.document_id)
                 .where(*dcond)
-                .order_by(s.rank(Document.note).desc(), Document.updated_at.desc())
+                .order_by(s.rank(Note.body).desc(), Note.updated_at.desc())
             )
             drows, dtotal = await _page(
-                session, dstmt, select(func.count()).select_from(Document).where(*dcond), page
+                session, dstmt, select(func.count()).select_from(Note).where(*dcond), page
             )
             total += dtotal
             items += [
                 SearchHit(
                     kind="document_note",
                     id=r.id,
-                    document_id=r.id,
+                    document_id=r.document_id,
                     document_title=r.title,
                     file_type=file_type_of(r.source_type, r.original_filename),
                     snippet=s.snippet(r.snippet or ""),
@@ -301,8 +303,28 @@ async def search(
         )
         count = select(func.count()).select_from(Summary).join(Document, Document.id == Summary.document_id)
         rows, total = await _page(session, stmt, count.where(*cond), page)
+        # What the reader's AI sidebar made (quick and deep summaries, mind map) is found the same way.
+        acond = [Document.user_id == user.id, s.match(AiArtifact.search_text)]
+        astmt = (
+            select(
+                AiArtifact.id,
+                AiArtifact.document_id,
+                AiArtifact.created_at,
+                Document.title,
+                Document.source_type,
+                Document.original_filename,
+                s.headline(AiArtifact.search_text).label("snippet"),
+            )
+            .join(Document, Document.id == AiArtifact.document_id)
+            .where(*acond)
+            .order_by(s.rank(AiArtifact.search_text).desc(), AiArtifact.created_at.desc())
+        )
+        acount = (
+            select(func.count()).select_from(AiArtifact).join(Document, Document.id == AiArtifact.document_id)
+        )
+        arows, atotal = await _page(session, astmt, acount.where(*acond), page)
         result.summaries = SearchGroup(
-            total=total,
+            total=total + atotal,
             items=[
                 SearchHit(
                     kind="summary",
@@ -313,7 +335,7 @@ async def search(
                     snippet=s.snippet(r.snippet or ""),
                     created_at=r.created_at,
                 )
-                for r in rows
+                for r in [*rows, *arows]
             ],
         )
 

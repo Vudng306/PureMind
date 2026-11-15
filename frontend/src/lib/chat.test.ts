@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { citationLabel, citedSources, type ChatCitation } from "./chat";
+import { citationLabel, citedSources, isRefusal, type ChatCitation } from "./chat";
 
 const passage = (position: number, over: Partial<ChatCitation> = {}): ChatCitation => ({
   position,
@@ -29,5 +29,18 @@ describe("citationLabel", () => {
     expect(citationLabel(passage(3, { page_number: 12 }))).toBe("Trang 12");
     expect(citationLabel(passage(3, { heading: "Mở đầu" }))).toBe("Mở đầu");
     expect(citationLabel(passage(3))).toBe("Đoạn 3");
+  });
+});
+
+describe("isRefusal", () => {
+  it("knows the refusal in both languages, however it is emphasised", () => {
+    expect(isRefusal("Không tìm thấy thông tin đủ để kết luận trong tài liệu này. Bạn có thể xem mục 2.")).toBe(true);
+    expect(isRefusal("**This document does not contain enough information to answer that.**")).toBe(true);
+    expect(isRefusal("> không tìm thấy thông tin đủ để kết luận trong tài liệu này")).toBe(true);
+  });
+
+  it("is not fooled by an answer that only mentions missing information later", () => {
+    expect(isRefusal("Tài liệu nói rằng [1] không tìm thấy thông tin đủ để kết luận trong tài liệu này.")).toBe(false);
+    expect(isRefusal("")).toBe(false);
   });
 });

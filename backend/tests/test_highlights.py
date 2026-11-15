@@ -44,7 +44,6 @@ async def test_highlight_crud(client, auth):
     created = r.json()
     assert created["id"] == client_id and created["note"] == "" and created["category"] is None
     assert created["document_id"] == doc
-    assert (await create(client, h, doc, id=client_id)).status_code == 409
 
     r = await client.patch(
         f"/api/highlights/{client_id}", headers=h, json={"color": "purple", "category": "question"}
@@ -61,6 +60,49 @@ async def test_highlight_crud(client, auth):
 
     assert (await client.delete(f"/api/highlights/{client_id}", headers=h)).status_code == 204
     assert (await items(client, h))["total"] == 1
+
+
+async def test_create_again_with_the_same_id_gives_the_saved_highlight(client, auth):
+    """AN-105: a retry after a lost reply must not make a second highlight, nor undo what came after."""
+    alice, bob = auth(), auth()
+    doc = await new_doc(client, alice)
+    client_id = str(uuid.uuid4())
+
+    first = await create(client, alice, doc, id=client_id)
+    assert first.status_code == 201, first.text
+    await client.patch(f"/api/highlights/{client_id}", headers=alice, json={"color": "blue"})
+
+    again = await create(client, alice, doc, id=client_id, color="pink")
+    assert again.status_code == 200, again.text
+    assert again.json()["id"] == client_id and again.json()["color"] == "blue"  # the saved one, as it is now
+    assert (await items(client, alice))["total"] == 1
+
+    # The id of someone else's highlight, or of one on another document, is refused without showing it.
+    theirs = await new_doc(client, bob)
+    r = await create(client, bob, theirs, id=client_id)
+    assert r.status_code == 409 and "selected_text" not in r.json()
+    other = await new_doc(client, alice)
+    assert (await create(client, alice, other, id=client_id)).status_code == 409
+    assert (await items(client, bob))["total"] == 0
+
+
+async def test_highlight_keeps_its_context_and_the_text_it_was_made_on(client, auth):
+    """AN-102: the words around the passage come from the client, the version of the text from the server."""
+    h = auth()
+    doc = await new_doc(client, h)
+    version = (await client.get(f"/api/documents/{doc}", headers=h)).json()["content_version"]
+    assert version and len(version) == 16
+
+    r = await create(client, h, doc, prefix="Trước đó, ", suffix=" trong đa số trường hợp")
+    assert r.status_code == 201, r.text
+    saved = r.json()
+    assert saved["prefix"] == "Trước đó, " and saved["suffix"] == " trong đa số trường hợp"
+    assert saved["content_version"] == version
+    assert (await items(client, h))["items"][0]["content_version"] == version
+
+    assert (await create(client, h, doc, prefix="x" * 65)).status_code == 422
+    plain = (await create(client, h, doc, block_id="b8")).json()
+    assert plain["prefix"] is None and plain["suffix"] is None and plain["content_version"] == version
 
 
 async def test_highlight_note(client, auth):

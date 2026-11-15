@@ -4,7 +4,8 @@ import { ApiError, apiFetch } from "./api";
 import { MSG } from "./messages";
 import { readEvents } from "./notebooks";
 
-/** Translate a selected passage, English into Vietnamese. Free for the user; rate-limited on the server. */
+/** Translate a selected passage, English into Vietnamese or Vietnamese into English. Free for the user;
+ * rate-limited on the server. */
 
 export interface Translation {
   translation: string;
@@ -25,6 +26,15 @@ export function looksEnglish(text: string): boolean {
   if (letters.length < MIN_LETTERS) return false;
   const plain = letters.filter((c) => /[a-z]/i.test(c)).length;
   return plain / letters.length >= 0.9;
+}
+
+const VI_LETTERS = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/giu;
+
+/** Whether a passage is Vietnamese, as the server decides it: enough of its letters carry Vietnamese marks. */
+export function looksVietnamese(text: string): boolean {
+  const letters = text.match(/\p{L}/gu) ?? [];
+  if (letters.length === 0) return false;
+  return (text.match(VI_LETTERS) ?? []).length / letters.length > 0.03;
 }
 
 // Selecting the same passage again (closing the card, reselecting) shows the translation already written

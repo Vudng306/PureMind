@@ -117,6 +117,21 @@ async def test_update_and_delete_document(client, auth):
     assert r.status_code == 200 and r.json()["last_read_page"] == 2 and r.json()["title"] == "Mới"
     r = await client.patch(f"/api/documents/{doc['id']}", headers=h, json={"last_read_page": 9})
     assert r.status_code == 422
+    # RD-107: the place in the clean text is kept by block, next to the fraction the library shows.
+    assert doc["read_position"] is None and doc["extraction_issues"] == []
+    place = {"block_id": "b67909df3", "offset": 0.25}
+    r = await client.patch(
+        f"/api/documents/{doc['id']}", headers=h, json={"read_fraction": 0.4, "read_position": place}
+    )
+    assert r.status_code == 200 and r.json()["read_position"] == place and r.json()["read_fraction"] == 0.4
+    again = (await client.get(f"/api/documents/{doc['id']}", headers=h)).json()
+    assert again["read_position"] == place
+    for bad in ({"block_id": "", "offset": 0}, {"block_id": "b1", "offset": 1.5}, {"block_id": "b1", "x": 1}):
+        r = await client.patch(f"/api/documents/{doc['id']}", headers=h, json={"read_position": bad})
+        assert r.status_code == 422, bad
+    # Another reader cannot move it (NFR-106).
+    r = await client.patch(f"/api/documents/{doc['id']}", headers=auth(), json={"read_position": place})
+    assert r.status_code == 404
     # F-16: rename (whitespace collapsed, blank refused) and mark read / unread.
     r = await client.patch(f"/api/documents/{doc['id']}", headers=h, json={"title": "Giáo  trình\n học máy"})
     assert r.status_code == 200 and r.json()["title"] == "Giáo trình học máy"
@@ -559,6 +574,8 @@ async def test_scanned_pages_are_read_by_ocr(client, auth, monkeypatch):
     source = dict((await client.get(f"/api/documents/{doc['id']}/source-map", headers=h)).json())
     assert source[block_key("# 2. Method")] == [[2, 0, 0, 1, 1]]
     assert source[block_key("Typed first page of the report.")][0][0] == 1
+    # RD-111: the page read from its picture is named; the blank one left nothing out.
+    assert doc["extraction_issues"] == [{"code": "ocr_pages", "count": 1, "pages": [2]}]
 
     # A scan the model cannot read is still "no text" (MSG-15).
     monkeypatch.setattr(openai_client, "chat", AsyncMock(side_effect=openai_client.AIError("HTTP 500")))
@@ -585,13 +602,16 @@ async def test_upload_sends_nothing_to_openai_without_consent(client, auth, monk
     h = auth()
 
     # Tables, equations and figures stay pictures, and no figure is described.
-    for data in (image_table_pdf(), equation_pdf()):
+    for data, issue in ((image_table_pdf(), "tables_as_images"), (equation_pdf(), "equations_as_images")):
         doc = (await upload(client, h, data)).json()
         assert doc["extraction_status"] == "done" and "pm-image:" in doc["content_clean"]
+        # RD-111: what stayed a picture is counted, so the reader can be told.
+        assert [(i["code"], i["count"] > 0) for i in doc["extraction_issues"]] == [(issue, True)]
     # A scan's typed pages are kept and its scanned pages left out; a scan with no typed page has no text.
     mixed = (await upload(client, h, mixed_scan_pdf(), "mixed.pdf")).json()
     assert mixed["extraction_status"] == "done"  # read in the request: nothing for the model to do
     assert "Typed first page" in mixed["content_clean"] and "pm-ocr" not in mixed["content_clean"]
+    assert mixed["extraction_issues"] == [{"code": "scanned_pages", "count": 2, "pages": [2, 3]}]
     scan = (await upload(client, h, scanned_pdf(), "scan.pdf")).json()
     assert scan["extraction_status"] == "failed" and scan["extraction_error"] == "MSG-15"
     assert calls.await_count == 0

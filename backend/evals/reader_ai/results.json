@@ -1,0 +1,1322 @@
+[
+  {
+    "id": "paper",
+    "language": "en",
+    "passages": 8,
+    "summaries": {
+      "quick": {
+        "payload": {
+          "tldr": "This study found that adult learners of Spanish who spaced short retrieval quizzes over several days retained more vocabulary after four weeks than those who massed review in one session or re-read word lists. Spaced retrieval led to a recall of 62% of words, outperforming massed review and re-reading groups. The findings suggest spaced retrieval is an effective, low-cost method to improve vocabulary retention in evening classes.",
+          "tldr_sources": [
+            1,
+            2,
+            3
+          ],
+          "takeaways": [
+            {
+              "text": "Adult learners studying Spanish in evening courses benefit more from spaced retrieval quizzes than from massed review or re-reading.",
+              "sources": [
+                1,
+                2,
+                3
+              ]
+            },
+            {
+              "text": "Spaced retrieval participants recalled 62% of words after four weeks versus 48% for massed review and 41% for re-reading.",
+              "sources": [
+                1,
+                2
+              ]
+            },
+            {
+              "text": "The study used real class word lists and involved 81 adult participants aged 23 to 61 with less than one year of Spanish study.",
+              "sources": [
+                4,
+                5,
+                6
+              ]
+            },
+            {
+              "text": "The retention test was a written recall of Spanish words from English prompts administered four weeks after practice.",
+              "sources": [
+                6,
+                2
+              ]
+            },
+            {
+              "text": "Limitations include testing only written recall, one teacher/class setting, and no longer-term retention measures.",
+              "sources": [
+                7
+              ]
+            }
+          ],
+          "citations": [
+            {
+              "position": 1,
+              "page_number": 1,
+              "heading": "Abstract",
+              "text": "# Spaced retrieval practice and vocabulary retention in adult language learners\n\n## Abstract\n\nThis study asked whether spacing short retrieval quizzes over several days helps adult learners keep new vocabulary better than reviewing the same words in one block. Eighty-four adult learners of Spanish at a community college took part. Learners in the spaced retrieval group recalled 62% of the target words after four weeks, compared with 48% in the massed review group and 41% in the re-reading group. The difference between the spaced and the massed groups was moderate in size (Cohen's d = 0.71)."
+            },
+            {
+              "position": 2,
+              "page_number": 3,
+              "heading": "3. Results",
+              "text": "## 3. Results\n\nAfter four weeks, the spaced retrieval group recalled 62% of the target words on average, the massed review group 48% and the re-reading group 41%. The spaced retrieval group did better than the massed review group (Cohen's d = 0.71) and better than the re-reading group (Cohen's d = 0.94). The massed review and re-reading groups did not differ reliably. Learners in the spaced group also reported, in a short questionnaire, that the quizzes felt harder than re-reading."
+            },
+            {
+              "position": 3,
+              "page_number": 3,
+              "heading": "5. Conclusion",
+              "text": "## 5. Conclusion\n\nSpacing short retrieval quizzes across sessions improved four-week vocabulary retention for adult beginners compared with massed review or re-reading of the same words."
+            },
+            {
+              "position": 4,
+              "page_number": 1,
+              "heading": "1. Background",
+              "text": "## 1. Background\n\nMany adult learners prepare for vocabulary tests by reviewing word lists the evening before. Laboratory work has shown that spreading practice over time and testing oneself instead of re-reading both improve long-term memory, but few studies have combined the two in an ordinary evening class with working adults. This study tested the combination in a real course, using the class's own word lists rather than invented words."
+            },
+            {
+              "position": 5,
+              "page_number": 2,
+              "heading": "2.1 Participants",
+              "text": "## 2. Method\n\n### 2.1 Participants\n\nThe participants were 84 adults (52 women and 32 men) aged 23 to 61, enrolled in a beginner Spanish evening course. All had studied Spanish for less than one year. Three learners who missed more than two sessions were excluded before the analysis, leaving 81 learners whose results were analysed."
+            },
+            {
+              "position": 6,
+              "page_number": 2,
+              "heading": "2.3 Materials and measures",
+              "text": "### 2.3 Materials and measures\n\nThe target vocabulary was 60 Spanish nouns and verbs taken from the course textbook. Retention was measured with a written recall test four weeks after the last practice session: learners saw the English word and wrote the Spanish word. A response counted as correct when the spelling allowed only one reading of the word."
+            },
+            {
+              "position": 7,
+              "page_number": 3,
+              "heading": "4. Discussion and limitations",
+              "text": "## 4. Discussion and limitations\n\nThe results suggest that a few short quizzes spread over a week and a half can be added to an evening language class at little cost and with a clear benefit for retention. The study has several limitations. It was run at a single college with one teacher, so the results may not hold for other teachers or settings. The retention test came four weeks after practice; longer delays were not tested. The word lists contained only nouns and verbs, and the test measured written recall only, not speaking."
+            }
+          ]
+        },
+        "seconds": 3.5,
+        "points": 6,
+        "with_source": 6,
+        "supported": 6,
+        "mean_support": 0.73,
+        "unsupported_numbers": []
+      },
+      "deep": {
+        "payload": {
+          "document_type": "research",
+          "context": [
+            {
+              "text": "The study addresses whether spacing short retrieval quizzes over multiple days improves adult learners' retention of new vocabulary better than reviewing the same words in one block, as many adult learners typically cram vocabulary by reviewing word lists just before tests. This question matters because prior laboratory work shows benefits of spaced practice and self-testing on memory, but few studies have combined these methods in realistic adult evening classes using actual course vocabulary.",
+              "sources": [
+                1,
+                2
+              ]
+            }
+          ],
+          "core": [
+            {
+              "text": "Eighty-four adult beginner learners of Spanish at a community college were randomly assigned to one of three conditions: spaced retrieval, massed review, or re-reading. The spaced retrieval group took short quizzes on new words across three sessions spread over nine days. The massed review group spent the same total time reviewing words in a single session. The re-reading group re-read the word list with translations for the same duration in one session. Target vocabulary consisted of 60 Spanish nouns and verbs from the course textbook. Retention was measured by a written recall test four weeks after the last practice session, where learners wrote the Spanish word given the English translation. Responses were counted correct if spelling allowed only one reading.",
+              "sources": [
+                3,
+                4,
+                5
+              ]
+            }
+          ],
+          "findings": [
+            {
+              "text": "After four weeks, the spaced retrieval group recalled 62% of the target words, outperforming the massed review group (48%) and the re-reading group (41%). The performance difference between spaced retrieval and massed review was moderate in size (Cohen's d = 0.71), and even stronger compared with re-reading (Cohen's d = 0.94). The massed review and re-reading groups did not differ reliably. Learners reported that the quizzes in the spaced condition felt harder than re-reading.",
+              "sources": [
+                1,
+                6
+              ]
+            }
+          ],
+          "limitations": [
+            {
+              "text": "The study's results are limited by being conducted at a single college with one teacher, so findings may not generalize to other teachers or settings. The retention test was only conducted four weeks after practice; longer retention intervals were not assessed. The vocabulary tested consisted solely of nouns and verbs, and only written recall was measured, not speaking ability.",
+              "sources": [
+                7
+              ]
+            }
+          ],
+          "questions": [
+            "Would the benefits of spaced retrieval practice persist at longer retention intervals beyond four weeks?",
+            "How would spaced retrieval practice affect retention of other parts of speech beyond nouns and verbs, such as adjectives or phrases?",
+            "Does spaced retrieval practice improve spoken recall and active usage of vocabulary, not only written recall?",
+            "How would similar spaced retrieval methods perform in other teaching contexts, including different teachers, institutions, or age groups?",
+            "What are learners' subjective experiences with spaced retrieval over longer courses, and how does perceived difficulty relate to learning outcomes?"
+          ],
+          "citations": [
+            {
+              "position": 1,
+              "page_number": 1,
+              "heading": "Abstract",
+              "text": "# Spaced retrieval practice and vocabulary retention in adult language learners\n\n## Abstract\n\nThis study asked whether spacing short retrieval quizzes over several days helps adult learners keep new vocabulary better than reviewing the same words in one block. Eighty-four adult learners of Spanish at a community college took part. Learners in the spaced retrieval group recalled 62% of the target words after four weeks, compared with 48% in the massed review group and 41% in the re-reading group. The difference between the spaced and the massed groups was moderate in size (Cohen's d = 0.71)."
+            },
+            {
+              "position": 2,
+              "page_number": 1,
+              "heading": "1. Background",
+              "text": "## 1. Background\n\nMany adult learners prepare for vocabulary tests by reviewing word lists the evening before. Laboratory work has shown that spreading practice over time and testing oneself instead of re-reading both improve long-term memory, but few studies have combined the two in an ordinary evening class with working adults. This study tested the combination in a real course, using the class's own word lists rather than invented words."
+            },
+            {
+              "position": 3,
+              "page_number": 2,
+              "heading": "2.1 Participants",
+              "text": "## 2. Method\n\n### 2.1 Participants\n\nThe participants were 84 adults (52 women and 32 men) aged 23 to 61, enrolled in a beginner Spanish evening course. All had studied Spanish for less than one year. Three learners who missed more than two sessions were excluded before the analysis, leaving 81 learners whose results were analysed."
+            },
+            {
+              "position": 4,
+              "page_number": 2,
+              "heading": "2.2 Design",
+              "text": "### 2.2 Design\n\nLearners were randomly assigned to one of three conditions. In the spaced retrieval condition, learners answered a five-minute quiz on the new words at the start of three sessions spread over nine days. In the massed review condition, learners spent the same fifteen minutes reviewing the words in a single session. In the re-reading condition, learners re-read the word list with translations for fifteen minutes in one session."
+            },
+            {
+              "position": 5,
+              "page_number": 2,
+              "heading": "2.3 Materials and measures",
+              "text": "### 2.3 Materials and measures\n\nThe target vocabulary was 60 Spanish nouns and verbs taken from the course textbook. Retention was measured with a written recall test four weeks after the last practice session: learners saw the English word and wrote the Spanish word. A response counted as correct when the spelling allowed only one reading of the word."
+            },
+            {
+              "position": 6,
+              "page_number": 3,
+              "heading": "3. Results",
+              "text": "## 3. Results\n\nAfter four weeks, the spaced retrieval group recalled 62% of the target words on average, the massed review group 48% and the re-reading group 41%. The spaced retrieval group did better than the massed review group (Cohen's d = 0.71) and better than the re-reading group (Cohen's d = 0.94). The massed review and re-reading groups did not differ reliably. Learners in the spaced group also reported, in a short questionnaire, that the quizzes felt harder than re-reading."
+            },
+            {
+              "position": 7,
+              "page_number": 3,
+              "heading": "4. Discussion and limitations",
+              "text": "## 4. Discussion and limitations\n\nThe results suggest that a few short quizzes spread over a week and a half can be added to an evening language class at little cost and with a clear benefit for retention. The study has several limitations. It was run at a single college with one teacher, so the results may not hold for other teachers or settings. The retention test came four weeks after practice; longer delays were not tested. The word lists contained only nouns and verbs, and the test measured written recall only, not speaking."
+            }
+          ]
+        },
+        "seconds": 5.2,
+        "points": 4,
+        "with_source": 4,
+        "supported": 4,
+        "mean_support": 0.75,
+        "unsupported_numbers": [],
+        "document_type": "research",
+        "type_ok": true
+      },
+      "mindmap": {
+        "payload": {
+          "nodes": [
+            {
+              "id": "n1",
+              "parent": null,
+              "label": "Spaced Retrieval Practice and Vocabulary Retention",
+              "detail": "Study on vocabulary retention methods in adult Spanish learners.",
+              "sources": [],
+              "depth": 0
+            },
+            {
+              "id": "n2",
+              "parent": "n1",
+              "label": "Background and Study Rationale",
+              "detail": "The motivation and previous findings related to spaced retrieval.",
+              "sources": [
+                1
+              ],
+              "depth": 1
+            },
+            {
+              "id": "n5",
+              "parent": "n1",
+              "label": "Method and Participants",
+              "detail": "Description of study design and learner demographics.",
+              "sources": [
+                2,
+                3,
+                4
+              ],
+              "depth": 1
+            },
+            {
+              "id": "n9",
+              "parent": "n1",
+              "label": "Results and Findings",
+              "detail": "Comparison of vocabulary retention across different conditions.",
+              "sources": [
+                5
+              ],
+              "depth": 1
+            },
+            {
+              "id": "n13",
+              "parent": "n1",
+              "label": "Discussion and Limitations",
+              "detail": "Evaluation of findings and study constraints.",
+              "sources": [
+                6
+              ],
+              "depth": 1
+            },
+            {
+              "id": "n16",
+              "parent": "n1",
+              "label": "Conclusion",
+              "detail": "Spaced retrieval improves vocabulary retention versus massed review or re-reading.",
+              "sources": [
+                7
+              ],
+              "depth": 1
+            },
+            {
+              "id": "n3",
+              "parent": "n2",
+              "label": "Common Practice and Laboratory Findings",
+              "detail": "Adults often review word lists before tests; spacing practice and self-testing improve memory.",
+              "sources": [
+                1
+              ],
+              "depth": 2
+            },
+            {
+              "id": "n4",
+              "parent": "n2",
+              "label": "Gap in Research",
+              "detail": "Few studies combine spaced retrieval and testing in real adult evening classes.",
+              "sources": [
+                1
+              ],
+              "depth": 2
+            },
+            {
+              "id": "n6",
+              "parent": "n5",
+              "label": "Participants",
+              "detail": "Eighty-one adult beginners in Spanish analyzed after exclusions.",
+              "sources": [
+                2
+              ],
+              "depth": 2
+            },
+            {
+              "id": "n7",
+              "parent": "n5",
+              "label": "Experimental Design",
+              "detail": "Learners assigned to spaced retrieval, massed review, or re-reading conditions.",
+              "sources": [
+                3
+              ],
+              "depth": 2
+            },
+            {
+              "id": "n8",
+              "parent": "n5",
+              "label": "Materials and Measures",
+              "detail": "60 Spanish nouns and verbs tested with written recall after four weeks.",
+              "sources": [
+                4
+              ],
+              "depth": 2
+            },
+            {
+              "id": "n10",
+              "parent": "n9",
+              "label": "Recall Performance",
+              "detail": "Spaced group recalled 62%, massed 48%, re-reading 41% after 4 weeks.",
+              "sources": [
+                5
+              ],
+              "depth": 2
+            },
+            {
+              "id": "n11",
+              "parent": "n9",
+              "label": "Effect Sizes and Comparisons",
+              "detail": "Spaced better than massed (d=0.71) and re-reading (d=0.94); massed and re-reading similar.",
+              "sources": [
+                5
+              ],
+              "depth": 2
+            },
+            {
+              "id": "n12",
+              "parent": "n9",
+              "label": "Learner Perceptions",
+              "detail": "Spaced quizzes reported as harder than re-reading by participants.",
+              "sources": [
+                5
+              ],
+              "depth": 2
+            },
+            {
+              "id": "n14",
+              "parent": "n13",
+              "label": "Practical Implications",
+              "detail": "Spacing quizzes beneficial and feasible in evening language classes.",
+              "sources": [
+                6
+              ],
+              "depth": 2
+            },
+            {
+              "id": "n15",
+              "parent": "n13",
+              "label": "Study Limitations",
+              "detail": "Single college and teacher, no long-term data beyond 4 weeks, limited word types and recall mode.",
+              "sources": [
+                6
+              ],
+              "depth": 2
+            }
+          ],
+          "citations": [
+            {
+              "position": 1,
+              "page_number": 1,
+              "heading": "1. Background",
+              "text": "## 1. Background\n\nMany adult learners prepare for vocabulary tests by reviewing word lists the evening before. Laboratory work has shown that spreading practice over time and testing oneself instead of re-reading both improve long-term memory, but few studies have combined the two in an ordinary evening class with working adults. This study tested the combination in a real course, using the class's own word lists rather than invented words."
+            },
+            {
+              "position": 2,
+              "page_number": 2,
+              "heading": "2.1 Participants",
+              "text": "## 2. Method\n\n### 2.1 Participants\n\nThe participants were 84 adults (52 women and 32 men) aged 23 to 61, enrolled in a beginner Spanish evening course. All had studied Spanish for less than one year. Three learners who missed more than two sessions were excluded before the analysis, leaving 81 learners whose results were analysed."
+            },
+            {
+              "position": 3,
+              "page_number": 2,
+              "heading": "2.2 Design",
+              "text": "### 2.2 Design\n\nLearners were randomly assigned to one of three conditions. In the spaced retrieval condition, learners answered a five-minute quiz on the new words at the start of three sessions spread over nine days. In the massed review condition, learners spent the same fifteen minutes reviewing the words in a single session. In the re-reading condition, learners re-read the word list with translations for fifteen minutes in one session."
+            },
+            {
+              "position": 4,
+              "page_number": 2,
+              "heading": "2.3 Materials and measures",
+              "text": "### 2.3 Materials and measures\n\nThe target vocabulary was 60 Spanish nouns and verbs taken from the course textbook. Retention was measured with a written recall test four weeks after the last practice session: learners saw the English word and wrote the Spanish word. A response counted as correct when the spelling allowed only one reading of the word."
+            },
+            {
+              "position": 5,
+              "page_number": 3,
+              "heading": "3. Results",
+              "text": "## 3. Results\n\nAfter four weeks, the spaced retrieval group recalled 62% of the target words on average, the massed review group 48% and the re-reading group 41%. The spaced retrieval group did better than the massed review group (Cohen's d = 0.71) and better than the re-reading group (Cohen's d = 0.94). The massed review and re-reading groups did not differ reliably. Learners in the spaced group also reported, in a short questionnaire, that the quizzes felt harder than re-reading."
+            },
+            {
+              "position": 6,
+              "page_number": 3,
+              "heading": "4. Discussion and limitations",
+              "text": "## 4. Discussion and limitations\n\nThe results suggest that a few short quizzes spread over a week and a half can be added to an evening language class at little cost and with a clear benefit for retention. The study has several limitations. It was run at a single college with one teacher, so the results may not hold for other teachers or settings. The retention test came four weeks after practice; longer delays were not tested. The word lists contained only nouns and verbs, and the test measured written recall only, not speaking."
+            },
+            {
+              "position": 7,
+              "page_number": 3,
+              "heading": "5. Conclusion",
+              "text": "## 5. Conclusion\n\nSpacing short retrieval quizzes across sessions improved four-week vocabulary retention for adult beginners compared with massed review or re-reading of the same words."
+            }
+          ]
+        },
+        "seconds": 5.5,
+        "points": 15,
+        "with_source": 15,
+        "supported": 12,
+        "mean_support": 0.57,
+        "unsupported_numbers": []
+      },
+      "analysis": {
+        "payload": {
+          "document_type": "research",
+          "question": [
+            {
+              "text": "Does spacing short retrieval quizzes over several days help adult learners retain new vocabulary better than reviewing the same words in one block?",
+              "sources": [
+                1,
+                2
+              ]
+            }
+          ],
+          "method": [
+            {
+              "text": "The study randomly assigned 84 adult beginner Spanish learners to one of three conditions: spaced retrieval practice over three sessions across nine days with quizzes; massed review in one single session; or re-reading the word list in one session.",
+              "sources": [
+                3,
+                4
+              ]
+            },
+            {
+              "text": "The target vocabulary consisted of 60 Spanish nouns and verbs taken from the course textbook.",
+              "sources": [
+                5
+              ]
+            },
+            {
+              "text": "Retention was measured with a written recall test four weeks after the last practice session, where learners wrote the Spanish word given the English prompt, scored correct if spelling was clear.",
+              "sources": [
+                5
+              ]
+            }
+          ],
+          "data": [
+            {
+              "text": "81 adult learners (52 women, 32 men) aged 23 to 61, enrolled in a beginner Spanish evening course and having studied Spanish for less than one year, were analyzed after exclusions.",
+              "sources": [
+                3
+              ]
+            }
+          ],
+          "findings": [
+            {
+              "text": "After four weeks, spaced retrieval group recalled 62% of target words, massed review group recalled 48%, and re-reading group recalled 41%.",
+              "sources": [
+                1,
+                6
+              ]
+            },
+            {
+              "text": "The difference between spaced and massed groups was moderate (Cohen's d = 0.71), and spaced retrieval was also better than re-reading (Cohen's d = 0.94).",
+              "sources": [
+                1,
+                6
+              ]
+            },
+            {
+              "text": "Massed review and re-reading groups did not differ reliably in retention.",
+              "sources": [
+                6
+              ]
+            },
+            {
+              "text": "Learners reported quizzes felt harder than re-reading.",
+              "sources": [
+                6
+              ]
+            }
+          ],
+          "limitations": [
+            {
+              "text": "Study was run at a single college with one teacher, so results may not generalize to other teachers or settings.",
+              "sources": [
+                7
+              ]
+            },
+            {
+              "text": "Retention test was only at four weeks after practice; longer delays were not tested.",
+              "sources": [
+                7
+              ]
+            },
+            {
+              "text": "Vocabulary tested included only nouns and verbs, and measurement was written recall only, not speaking.",
+              "sources": [
+                7
+              ]
+            }
+          ],
+          "applicability": [
+            {
+              "text": "Spaced retrieval quizzes can be added to an evening language class at little cost to improve vocabulary retention over four weeks for adult beginner learners.",
+              "sources": [
+                7
+              ]
+            }
+          ],
+          "citations": [
+            {
+              "position": 1,
+              "page_number": 1,
+              "heading": "Abstract",
+              "text": "# Spaced retrieval practice and vocabulary retention in adult language learners\n\n## Abstract\n\nThis study asked whether spacing short retrieval quizzes over several days helps adult learners keep new vocabulary better than reviewing the same words in one block. Eighty-four adult learners of Spanish at a community college took part. Learners in the spaced retrieval group recalled 62% of the target words after four weeks, compared with 48% in the massed review group and 41% in the re-reading group. The difference between the spaced and the massed groups was moderate in size (Cohen's d = 0.71)."
+            },
+            {
+              "position": 2,
+              "page_number": 1,
+              "heading": "1. Background",
+              "text": "## 1. Background\n\nMany adult learners prepare for vocabulary tests by reviewing word lists the evening before. Laboratory work has shown that spreading practice over time and testing oneself instead of re-reading both improve long-term memory, but few studies have combined the two in an ordinary evening class with working adults. This study tested the combination in a real course, using the class's own word lists rather than invented words."
+            },
+            {
+              "position": 3,
+              "page_number": 2,
+              "heading": "2.1 Participants",
+              "text": "## 2. Method\n\n### 2.1 Participants\n\nThe participants were 84 adults (52 women and 32 men) aged 23 to 61, enrolled in a beginner Spanish evening course. All had studied Spanish for less than one year. Three learners who missed more than two sessions were excluded before the analysis, leaving 81 learners whose results were analysed."
+            },
+            {
+              "position": 4,
+              "page_number": 2,
+              "heading": "2.2 Design",
+              "text": "### 2.2 Design\n\nLearners were randomly assigned to one of three conditions. In the spaced retrieval condition, learners answered a five-minute quiz on the new words at the start of three sessions spread over nine days. In the massed review condition, learners spent the same fifteen minutes reviewing the words in a single session. In the re-reading condition, learners re-read the word list with translations for fifteen minutes in one session."
+            },
+            {
+              "position": 5,
+              "page_number": 2,
+              "heading": "2.3 Materials and measures",
+              "text": "### 2.3 Materials and measures\n\nThe target vocabulary was 60 Spanish nouns and verbs taken from the course textbook. Retention was measured with a written recall test four weeks after the last practice session: learners saw the English word and wrote the Spanish word. A response counted as correct when the spelling allowed only one reading of the word."
+            },
+            {
+              "position": 6,
+              "page_number": 3,
+              "heading": "3. Results",
+              "text": "## 3. Results\n\nAfter four weeks, the spaced retrieval group recalled 62% of the target words on average, the massed review group 48% and the re-reading group 41%. The spaced retrieval group did better than the massed review group (Cohen's d = 0.71) and better than the re-reading group (Cohen's d = 0.94). The massed review and re-reading groups did not differ reliably. Learners in the spaced group also reported, in a short questionnaire, that the quizzes felt harder than re-reading."
+            },
+            {
+              "position": 7,
+              "page_number": 3,
+              "heading": "4. Discussion and limitations",
+              "text": "## 4. Discussion and limitations\n\nThe results suggest that a few short quizzes spread over a week and a half can be added to an evening language class at little cost and with a clear benefit for retention. The study has several limitations. It was run at a single college with one teacher, so the results may not hold for other teachers or settings. The retention test came four weeks after practice; longer delays were not tested. The word lists contained only nouns and verbs, and the test measured written recall only, not speaking."
+            }
+          ]
+        },
+        "seconds": 4.4,
+        "points": 13,
+        "with_source": 13,
+        "supported": 13,
+        "mean_support": 0.88,
+        "unsupported_numbers": [],
+        "document_type": "research",
+        "field_checks": {
+          "data has 84/eighty-four/81": true,
+          "findings has 62": true,
+          "limitations has single college/one teacher/four weeks": true
+        },
+        "type_ok": true
+      }
+    },
+    "answers": [
+      {
+        "question": "How many adults took part in the study?",
+        "quote": null,
+        "answer": "Eighty-four adult learners of Spanish took part in the study[1][3].",
+        "raw_citations": [
+          1,
+          3
+        ],
+        "abstained": false,
+        "citations": [
+          {
+            "n": 1,
+            "text": "# Spaced retrieval practice and vocabulary retention in adult language learners\n\n## Abstract\n\nThis study asked whether spacing short retrieval quizzes over several days helps adult learners keep new vocabulary better than reviewing the same words in one block. Eighty-four adult learners of Spanish at a community college took part. Learners in the spaced retrieval group recalled 62% of the target words after four weeks, compared with 48% in the massed review group and 41% in the re-reading group. The difference between the spaced and the massed groups was moderate in size (Cohen's d = 0.71)."
+          },
+          {
+            "n": 3,
+            "text": "## 2. Method\n\n### 2.1 Participants\n\nThe participants were 84 adults (52 women and 32 men) aged 23 to 61, enrolled in a beginner Spanish evening course. All had studied Spanish for less than one year. Three learners who missed more than two sessions were excluded before the analysis, leaving 81 learners whose results were analysed."
+          }
+        ],
+        "verdict": {
+          "kind": "answer",
+          "ok": true,
+          "has_fact": true,
+          "cites_fact": true
+        }
+      },
+      {
+        "question": "What share of the target words did the spaced retrieval group recall after four weeks?",
+        "quote": null,
+        "answer": "The spaced retrieval group recalled 62% of the target words after four weeks[1][6].",
+        "raw_citations": [
+          1,
+          6
+        ],
+        "abstained": false,
+        "citations": [
+          {
+            "n": 1,
+            "text": "# Spaced retrieval practice and vocabulary retention in adult language learners\n\n## Abstract\n\nThis study asked whether spacing short retrieval quizzes over several days helps adult learners keep new vocabulary better than reviewing the same words in one block. Eighty-four adult learners of Spanish at a community college took part. Learners in the spaced retrieval group recalled 62% of the target words after four weeks, compared with 48% in the massed review group and 41% in the re-reading group. The difference between the spaced and the massed groups was moderate in size (Cohen's d = 0.71)."
+          },
+          {
+            "n": 6,
+            "text": "## 3. Results\n\nAfter four weeks, the spaced retrieval group recalled 62% of the target words on average, the massed review group 48% and the re-reading group 41%. The spaced retrieval group did better than the massed review group (Cohen's d = 0.71) and better than the re-reading group (Cohen's d = 0.94). The massed review and re-reading groups did not differ reliably. Learners in the spaced group also reported, in a short questionnaire, that the quizzes felt harder than re-reading."
+          }
+        ],
+        "verdict": {
+          "kind": "answer",
+          "ok": true,
+          "has_fact": true,
+          "cites_fact": true
+        }
+      },
+      {
+        "question": "What are the study's limitations?",
+        "quote": null,
+        "answer": "The study's limitations include:\n\n- It was conducted at a single college with only one teacher, so the results may not generalize to other teachers or educational settings.\n- The retention test was administered four weeks after the practice sessions; the effects of longer delays were not examined.\n- The word lists used for practice and testing included only nouns and verbs, not other types of vocabulary.\n- The assessment measured written recall only, so the impact on speaking or other language skills was not evaluated [7].",
+        "raw_citations": [
+          7
+        ],
+        "abstained": false,
+        "citations": [
+          {
+            "n": 7,
+            "text": "## 4. Discussion and limitations\n\nThe results suggest that a few short quizzes spread over a week and a half can be added to an evening language class at little cost and with a clear benefit for retention. The study has several limitations. It was run at a single college with one teacher, so the results may not hold for other teachers or settings. The retention test came four weeks after practice; longer delays were not tested. The word lists contained only nouns and verbs, and the test measured written recall only, not speaking."
+          }
+        ],
+        "verdict": {
+          "kind": "answer",
+          "ok": true,
+          "has_fact": true,
+          "cites_fact": true
+        }
+      },
+      {
+        "question": "Who funded this study?",
+        "quote": null,
+        "answer": "This document does not contain enough information to answer that. You could look for an acknowledgments or funding section, or check for any mention of grants, sponsors, or funding agencies elsewhere in the document.",
+        "raw_citations": [],
+        "abstained": true,
+        "citations": [],
+        "verdict": {
+          "kind": "abstain",
+          "ok": true,
+          "cited_before_guard": false
+        }
+      },
+      {
+        "question": "Did the learners improve their speaking skills?",
+        "quote": null,
+        "answer": "This document does not contain enough information to answer that. The passages describe that vocabulary retention was measured using a written recall test, not speaking, and mention that only written recall was assessed, not oral skills. To answer your question, you could look for data or results on speaking assessments or oral recall tests.",
+        "raw_citations": [],
+        "abstained": true,
+        "citations": [],
+        "verdict": {
+          "kind": "abstain",
+          "ok": true,
+          "cited_before_guard": false
+        }
+      },
+      {
+        "question": "Explain this passage.",
+        "quote": "A response counted as correct when the spelling allowed only one reading of the word.",
+        "answer": "The passage \"A response counted as correct when the spelling allowed only one reading of the word\" explains how answers were scored on the written recall test. In context, this means that learners were given the English word and had to write the Spanish equivalent; their response was marked as correct if its spelling was clear enough that it could only be interpreted as the target word, allowing for minor errors as long as the intended word was unambiguous[5].\n\nThis scoring method was part of the retention test used to measure how many target vocabulary words each learner remembered four weeks after the last practice session[5]. The focus was on written recall, and the test did not require perfect spelling, just unambiguous identification of the correct Spanish word[5].",
+        "raw_citations": [
+          5
+        ],
+        "abstained": false,
+        "citations": [
+          {
+            "n": 5,
+            "text": "### 2.3 Materials and measures\n\nThe target vocabulary was 60 Spanish nouns and verbs taken from the course textbook. Retention was measured with a written recall test four weeks after the last practice session: learners saw the English word and wrote the Spanish word. A response counted as correct when the spelling allowed only one reading of the word."
+          }
+        ],
+        "verdict": {
+          "kind": "answer",
+          "ok": true,
+          "has_fact": true,
+          "cites_fact": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "essay",
+    "language": "vi",
+    "passages": 5,
+    "summaries": {
+      "quick": {
+        "payload": {
+          "tldr": "Bài viết phân tích rằng việc đọc nhanh và đọc lướt qua nhiều tin tức trong ngày không giúp ta nhớ lâu do ta không thực sự hiểu hay đặt câu hỏi về nội dung. Tác giả đề xuất ba thói quen đọc chậm gồm dành thời gian đọc bài dài, ghi chú tay và đọc lại để tăng khả năng nhớ và hiểu sâu sắc hơn về thông tin.",
+          "tldr_sources": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "takeaways": [
+            {
+              "text": "Đọc nhanh dẫn đến việc chỉ tiếp nhận bề mặt thông tin mà không đi sâu hiểu nội dung, làm giảm khả năng nhớ lâu dài.",
+              "sources": [
+                1,
+                2
+              ]
+            },
+            {
+              "text": "Việc đọc lướt khiến ta mất kiên nhẫn với đoạn văn dài và chỉ chú ý đến phần dễ đọc.",
+              "sources": [
+                2
+              ]
+            },
+            {
+              "text": "Ba thói quen đọc chậm gồm dành thời gian cố định đọc bài dài, ghi chú bằng tay, và đọc lại ghi chú sau một tuần sẽ giúp giữ lại và hiểu sâu thông tin hơn.",
+              "sources": [
+                3
+              ]
+            },
+            {
+              "text": "Đọc lướt vẫn cần thiết để kịp theo tin tức nhưng không thể thay thế cho việc đọc chậm nếu muốn hiểu sâu vấn đề.",
+              "sources": [
+                5
+              ]
+            },
+            {
+              "text": "Đọc chậm là sự lựa chọn chú ý thông minh, giúp ta đọc ít hơn nhưng nhớ nhiều hơn.",
+              "sources": [
+                4
+              ]
+            }
+          ],
+          "citations": [
+            {
+              "position": 1,
+              "page_number": null,
+              "heading": "Đọc chậm trong thời của những dòng tin ngắn",
+              "text": "# Đọc chậm trong thời của những dòng tin ngắn\n\nMỗi sáng, nhiều người trong chúng ta mở điện thoại và lướt qua hàng chục mẩu tin chỉ trong vài phút. Ta có cảm giác đã biết thêm rất nhiều, nhưng đến chiều thì gần như không nhớ nổi một ý nào. Bài viết này cho rằng vấn đề không nằm ở lượng thông tin, mà ở cách ta đọc: ta đọc để lướt qua, không đọc để hiểu."
+            },
+            {
+              "position": 2,
+              "page_number": null,
+              "heading": "Vì sao đọc nhanh không giúp ta nhớ",
+              "text": "## Vì sao đọc nhanh không giúp ta nhớ\n\nKhi lướt, mắt ta nhảy từ tiêu đề này sang tiêu đề khác, và đầu óc chỉ kịp ghi nhận rằng có một chuyện đã xảy ra. Ta không dừng lại để hỏi chuyện đó có nghĩa gì, nó liên quan thế nào tới điều ta đã biết. Theo tác giả, chính những câu hỏi ấy mới làm một ý ở lại trong trí nhớ. Một bài viết dài đọc chậm trong ba mươi phút có thể để lại nhiều hơn cả trăm mẩu tin đọc vội.\n\nTác giả cũng cho rằng thói quen lướt làm ta mất kiên nhẫn với những đoạn văn khó. Gặp một câu dài, ta bỏ qua thay vì đọc lại, và dần dần ta chỉ còn đọc những gì dễ đọc."
+            },
+            {
+              "position": 3,
+              "page_number": null,
+              "heading": "Ba thói quen đề xuất",
+              "text": "## Ba thói quen đề xuất\n\nBài viết đề xuất ba thói quen đơn giản. Thứ nhất, mỗi ngày dành ra một khoảng thời gian cố định để đọc một bài dài, tắt thông báo trong lúc đọc. Thứ hai, ghi chú bằng tay một hai câu sau mỗi phần, viết lại ý chính bằng lời của chính mình. Thứ ba, một tuần sau đọc lại những ghi chú đó và tự hỏi mình còn đồng ý với điều đã viết hay không.\n\nTác giả thừa nhận rằng ba thói quen này tốn thời gian, và không phải ai cũng có sẵn ba mươi phút yên tĩnh mỗi ngày. Nhưng theo tác giả, bắt đầu với mười phút vẫn tốt hơn là không bắt đầu."
+            },
+            {
+              "position": 4,
+              "page_number": null,
+              "heading": "Kết luận",
+              "text": "## Kết luận\n\nĐọc chậm không phải là quay lưng với thời đại, mà là chọn lại cách dùng sự chú ý của mình. Theo tác giả, một vài thói quen nhỏ, lặp lại đều đặn, đủ để ta đọc ít hơn nhưng nhớ nhiều hơn."
+            },
+            {
+              "position": 5,
+              "page_number": null,
+              "heading": "Phản biện và giới hạn",
+              "text": "## Phản biện và giới hạn\n\nCó người sẽ nói rằng đọc lướt là cần thiết để theo kịp tin tức. Tác giả không phản đối điều đó: lướt vẫn có ích để biết có chuyện gì đang diễn ra. Điều tác giả muốn nói là lướt không thể thay thế cho đọc chậm khi ta muốn thật sự hiểu một vấn đề. Đây là một bài bình luận dựa trên trải nghiệm cá nhân của tác giả, không phải kết quả của một nghiên cứu hay khảo sát nào."
+            }
+          ]
+        },
+        "seconds": 3.2,
+        "points": 6,
+        "with_source": 6,
+        "supported": 6,
+        "mean_support": 0.66,
+        "unsupported_numbers": []
+      },
+      "deep": {
+        "payload": {
+          "document_type": "essay",
+          "context": [
+            {
+              "text": "Nhiều người hiện nay thường mở điện thoại mỗi sáng và lướt qua hàng chục mẩu tin chỉ trong vài phút, cảm giác như biết nhiều thông tin nhưng lại không ghi nhớ được nội dung chi tiết. Vấn đề được nêu ra là cách đọc hiện nay là đọc lướt qua, không đọc để hiểu sâu sắc.",
+              "sources": [
+                1
+              ]
+            }
+          ],
+          "core": [
+            {
+              "text": "Tác giả phân tích tại sao đọc nhanh hay đọc lướt không giúp ghi nhớ do mắt chỉ ghi nhận sự kiện mà không suy nghĩ về ý nghĩa hay mối liên hệ của tin tức đó với kiến thức đã biết. Việc đọc chậm giúp giữ lại nhiều hiểu biết hơn dù số lượng bài đọc ít hơn. Thói quen lướt cũng làm mất kiên nhẫn với những đoạn văn khó và tăng xu hướng chỉ đọc những gì đơn giản dễ hiểu.",
+              "sources": [
+                2
+              ]
+            },
+            {
+              "text": "Tác giả đề xuất ba thói quen đơn giản để đọc chậm và hiệu quả hơn gồm: dành thời gian cố định hàng ngày để đọc bài dài tắt thông báo, ghi chú tay tóm tắt ý chính sau mỗi phần và một tuần sau đọc lại các ghi chú đó để đánh giá lại quan điểm. Tác giả cũng thừa nhận thói quen này tốn thời gian nhưng bắt đầu từ 10 phút vẫn có lợi.",
+              "sources": [
+                3
+              ]
+            },
+            {
+              "text": "Người khác có thể phản biện rằng đọc lướt cần thiết để cập nhật tin tức nhanh chóng, tác giả không phủ nhận điều này mà nhấn mạnh lướt không thể thay thế việc đọc chậm khi muốn hiểu sâu vấn đề. Bài viết là bình luận dựa trên trải nghiệm cá nhân chứ không dựa trên nghiên cứu hay khảo sát cụ thể.",
+              "sources": [
+                4
+              ]
+            },
+            {
+              "text": "Kết luận bài viết là đọc chậm không phải là bỏ qua thời đại công nghệ mà là lựa chọn cách tập trung chú ý hiệu quả hơn. Các thói quen nhỏ và đều đặn sẽ giúp đọc ít hơn nhưng ghi nhớ nhiều hơn.",
+              "sources": [
+                5
+              ]
+            }
+          ],
+          "findings": [
+            {
+              "text": "Đọc lướt khiến ta biết sơ qua sự kiện nhưng không nhớ được ý nghĩa hay mối quan hệ của thông tin đó, trong khi đọc chậm giúp ghi nhớ sâu sắc hơn và hiểu thấu đáo hơn dù số lượng bài đọc ít hơn.",
+              "sources": [
+                2
+              ]
+            }
+          ],
+          "limitations": [
+            {
+              "text": "Bài viết là một bình luận cá nhân, không dựa trên kết quả nghiên cứu hay khảo sát khoa học, nên chưa có bằng chứng khoa học rõ ràng xác nhận các đề xuất.",
+              "sources": [
+                4
+              ]
+            }
+          ],
+          "questions": [
+            "Làm thế nào để kết hợp hiệu quả giữa đọc lướt và đọc chậm trong cuộc sống bận rộn?",
+            "Có các phương pháp hay thói quen nào khác giúp cải thiện khả năng đọc hiểu và ghi nhớ ngoài ba thói quen tác giả đề xuất?",
+            "Tác động lâu dài của thói quen đọc chậm đối với khả năng tập trung và tư duy như thế nào?",
+            "Các công cụ hỗ trợ kỹ thuật số có thể giúp con người đọc chậm và hiểu sâu hơn ra sao?",
+            "Có nghiên cứu khoa học nào chứng minh lợi ích hay hạn chế của việc đọc chậm so với đọc nhanh hay chưa?"
+          ],
+          "citations": [
+            {
+              "position": 1,
+              "page_number": null,
+              "heading": "Đọc chậm trong thời của những dòng tin ngắn",
+              "text": "# Đọc chậm trong thời của những dòng tin ngắn\n\nMỗi sáng, nhiều người trong chúng ta mở điện thoại và lướt qua hàng chục mẩu tin chỉ trong vài phút. Ta có cảm giác đã biết thêm rất nhiều, nhưng đến chiều thì gần như không nhớ nổi một ý nào. Bài viết này cho rằng vấn đề không nằm ở lượng thông tin, mà ở cách ta đọc: ta đọc để lướt qua, không đọc để hiểu."
+            },
+            {
+              "position": 2,
+              "page_number": null,
+              "heading": "Vì sao đọc nhanh không giúp ta nhớ",
+              "text": "## Vì sao đọc nhanh không giúp ta nhớ\n\nKhi lướt, mắt ta nhảy từ tiêu đề này sang tiêu đề khác, và đầu óc chỉ kịp ghi nhận rằng có một chuyện đã xảy ra. Ta không dừng lại để hỏi chuyện đó có nghĩa gì, nó liên quan thế nào tới điều ta đã biết. Theo tác giả, chính những câu hỏi ấy mới làm một ý ở lại trong trí nhớ. Một bài viết dài đọc chậm trong ba mươi phút có thể để lại nhiều hơn cả trăm mẩu tin đọc vội.\n\nTác giả cũng cho rằng thói quen lướt làm ta mất kiên nhẫn với những đoạn văn khó. Gặp một câu dài, ta bỏ qua thay vì đọc lại, và dần dần ta chỉ còn đọc những gì dễ đọc."
+            },
+            {
+              "position": 3,
+              "page_number": null,
+              "heading": "Ba thói quen đề xuất",
+              "text": "## Ba thói quen đề xuất\n\nBài viết đề xuất ba thói quen đơn giản. Thứ nhất, mỗi ngày dành ra một khoảng thời gian cố định để đọc một bài dài, tắt thông báo trong lúc đọc. Thứ hai, ghi chú bằng tay một hai câu sau mỗi phần, viết lại ý chính bằng lời của chính mình. Thứ ba, một tuần sau đọc lại những ghi chú đó và tự hỏi mình còn đồng ý với điều đã viết hay không.\n\nTác giả thừa nhận rằng ba thói quen này tốn thời gian, và không phải ai cũng có sẵn ba mươi phút yên tĩnh mỗi ngày. Nhưng theo tác giả, bắt đầu với mười phút vẫn tốt hơn là không bắt đầu."
+            },
+            {
+              "position": 4,
+              "page_number": null,
+              "heading": "Phản biện và giới hạn",
+              "text": "## Phản biện và giới hạn\n\nCó người sẽ nói rằng đọc lướt là cần thiết để theo kịp tin tức. Tác giả không phản đối điều đó: lướt vẫn có ích để biết có chuyện gì đang diễn ra. Điều tác giả muốn nói là lướt không thể thay thế cho đọc chậm khi ta muốn thật sự hiểu một vấn đề. Đây là một bài bình luận dựa trên trải nghiệm cá nhân của tác giả, không phải kết quả của một nghiên cứu hay khảo sát nào."
+            },
+            {
+              "position": 5,
+              "page_number": null,
+              "heading": "Kết luận",
+              "text": "## Kết luận\n\nĐọc chậm không phải là quay lưng với thời đại, mà là chọn lại cách dùng sự chú ý của mình. Theo tác giả, một vài thói quen nhỏ, lặp lại đều đặn, đủ để ta đọc ít hơn nhưng nhớ nhiều hơn."
+            }
+          ]
+        },
+        "seconds": 6.1,
+        "points": 7,
+        "with_source": 7,
+        "supported": 7,
+        "mean_support": 0.63,
+        "unsupported_numbers": [],
+        "document_type": "essay",
+        "type_ok": true
+      },
+      "analysis": {
+        "refused": true,
+        "document_type": "other",
+        "type_ok": true,
+        "seconds": 1.4
+      }
+    },
+    "answers": [
+      {
+        "question": "Bài viết đề xuất những thói quen nào?",
+        "quote": null,
+        "answer": "Bài viết đề xuất ba thói quen đơn giản để cải thiện chất lượng đọc:\n\n1. Mỗi ngày dành ra một khoảng thời gian cố định để đọc một bài dài và tắt thông báo trong lúc đọc.\n2. Ghi chú bằng tay một hai câu sau mỗi phần, viết lại ý chính bằng lời của chính mình.\n3. Một tuần sau đọc lại những ghi chú đó và tự hỏi mình còn đồng ý với điều đã viết hay không [3].",
+        "raw_citations": [
+          3
+        ],
+        "abstained": false,
+        "citations": [
+          {
+            "n": 3,
+            "text": "## Ba thói quen đề xuất\n\nBài viết đề xuất ba thói quen đơn giản. Thứ nhất, mỗi ngày dành ra một khoảng thời gian cố định để đọc một bài dài, tắt thông báo trong lúc đọc. Thứ hai, ghi chú bằng tay một hai câu sau mỗi phần, viết lại ý chính bằng lời của chính mình. Thứ ba, một tuần sau đọc lại những ghi chú đó và tự hỏi mình còn đồng ý với điều đã viết hay không.\n\nTác giả thừa nhận rằng ba thói quen này tốn thời gian, và không phải ai cũng có sẵn ba mươi phút yên tĩnh mỗi ngày. Nhưng theo tác giả, bắt đầu với mười phút vẫn tốt hơn là không bắt đầu."
+          }
+        ],
+        "verdict": {
+          "kind": "answer",
+          "ok": true,
+          "has_fact": true,
+          "cites_fact": true
+        }
+      },
+      {
+        "question": "Vì sao theo tác giả đọc nhanh không giúp ta nhớ?",
+        "quote": null,
+        "answer": "Theo tác giả, đọc nhanh không giúp ta nhớ vì khi lướt, mắt chỉ nhảy từ tiêu đề này sang tiêu đề khác và đầu óc chỉ kịp ghi nhận rằng có một chuyện đã xảy ra. Người đọc không dừng lại để hỏi chuyện đó có nghĩa gì hoặc nó liên quan thế nào tới những điều mình đã biết. Chính những câu hỏi ấy mới làm một ý ở lại trong trí nhớ. Một bài viết dài được đọc chậm sẽ để lại nhiều hơn cả trăm mẩu tin đọc vội[2].",
+        "raw_citations": [
+          2
+        ],
+        "abstained": false,
+        "citations": [
+          {
+            "n": 2,
+            "text": "## Vì sao đọc nhanh không giúp ta nhớ\n\nKhi lướt, mắt ta nhảy từ tiêu đề này sang tiêu đề khác, và đầu óc chỉ kịp ghi nhận rằng có một chuyện đã xảy ra. Ta không dừng lại để hỏi chuyện đó có nghĩa gì, nó liên quan thế nào tới điều ta đã biết. Theo tác giả, chính những câu hỏi ấy mới làm một ý ở lại trong trí nhớ. Một bài viết dài đọc chậm trong ba mươi phút có thể để lại nhiều hơn cả trăm mẩu tin đọc vội.\n\nTác giả cũng cho rằng thói quen lướt làm ta mất kiên nhẫn với những đoạn văn khó. Gặp một câu dài, ta bỏ qua thay vì đọc lại, và dần dần ta chỉ còn đọc những gì dễ đọc."
+          }
+        ],
+        "verdict": {
+          "kind": "answer",
+          "ok": true,
+          "has_fact": true,
+          "cites_fact": true
+        }
+      },
+      {
+        "question": "Bài viết đã khảo sát bao nhiêu người?",
+        "quote": null,
+        "answer": "Không tìm thấy thông tin đủ để kết luận trong tài liệu này. \n\nBạn có thể tìm trong phần mô tả phương pháp nghiên cứu hoặc các phần có đề cập đến khảo sát, số liệu cụ thể về số người tham gia để biết bài viết có thực hiện khảo sát và khảo sát bao nhiêu người.",
+        "raw_citations": [],
+        "abstained": true,
+        "citations": [],
+        "verdict": {
+          "kind": "abstain",
+          "ok": true,
+          "cited_before_guard": false
+        }
+      },
+      {
+        "question": "Tác giả của bài viết sinh năm nào?",
+        "quote": null,
+        "answer": "Không tìm thấy thông tin đủ để kết luận trong tài liệu này. Bạn có thể tìm kiếm thông tin về năm sinh của tác giả ở phần giới thiệu tác giả, lời mở đầu, hoặc các nguồn tham khảo ngoài bài viết.",
+        "raw_citations": [],
+        "abstained": true,
+        "citations": [],
+        "verdict": {
+          "kind": "abstain",
+          "ok": true,
+          "cited_before_guard": false
+        }
+      },
+      {
+        "question": "Giải thích đoạn này.",
+        "quote": "Gặp một câu dài, ta bỏ qua thay vì đọc lại, và dần dần ta chỉ còn đọc những gì dễ đọc.",
+        "answer": "Đoạn \"Gặp một câu dài, ta bỏ qua thay vì đọc lại, và dần dần ta chỉ còn đọc những gì dễ đọc.\" phản ánh một hệ quả tiêu cực của thói quen đọc lướt. Khi đã quen với việc đọc nhanh, mắt và đầu óc chỉ tập trung vào những thông tin dễ tiếp nhận, bỏ qua những đoạn văn hoặc câu có cấu trúc phức tạp, đòi hỏi suy nghĩ. Theo tác giả, điều này dần làm cho người đọc mất kiên nhẫn với các nội dung khó, và chỉ còn tập trung vào những gì đơn giản, dễ hiểu[2].\n\nBối cảnh của ý này là lập luận về lý do tại sao đọc nhanh không giúp ta nhớ lâu. Khi ta chỉ lướt qua thông tin mà không dừng lại để suy ngẫm hay đặt câu hỏi, nội dung khó sẽ bị loại bỏ khỏi sự chú ý của ta, từ đó làm hạn chế khả năng hiểu và ghi nhớ sâu sắc[2]. Đây cũng là cơ sở để tác giả đề xuất các thói quen đọc chậm ở phần sau của bài viết[3].",
+        "raw_citations": [
+          2,
+          3
+        ],
+        "abstained": false,
+        "citations": [
+          {
+            "n": 2,
+            "text": "## Vì sao đọc nhanh không giúp ta nhớ\n\nKhi lướt, mắt ta nhảy từ tiêu đề này sang tiêu đề khác, và đầu óc chỉ kịp ghi nhận rằng có một chuyện đã xảy ra. Ta không dừng lại để hỏi chuyện đó có nghĩa gì, nó liên quan thế nào tới điều ta đã biết. Theo tác giả, chính những câu hỏi ấy mới làm một ý ở lại trong trí nhớ. Một bài viết dài đọc chậm trong ba mươi phút có thể để lại nhiều hơn cả trăm mẩu tin đọc vội.\n\nTác giả cũng cho rằng thói quen lướt làm ta mất kiên nhẫn với những đoạn văn khó. Gặp một câu dài, ta bỏ qua thay vì đọc lại, và dần dần ta chỉ còn đọc những gì dễ đọc."
+          },
+          {
+            "n": 3,
+            "text": "## Ba thói quen đề xuất\n\nBài viết đề xuất ba thói quen đơn giản. Thứ nhất, mỗi ngày dành ra một khoảng thời gian cố định để đọc một bài dài, tắt thông báo trong lúc đọc. Thứ hai, ghi chú bằng tay một hai câu sau mỗi phần, viết lại ý chính bằng lời của chính mình. Thứ ba, một tuần sau đọc lại những ghi chú đó và tự hỏi mình còn đồng ý với điều đã viết hay không.\n\nTác giả thừa nhận rằng ba thói quen này tốn thời gian, và không phải ai cũng có sẵn ba mươi phút yên tĩnh mỗi ngày. Nhưng theo tác giả, bắt đầu với mười phút vẫn tốt hơn là không bắt đầu."
+          }
+        ],
+        "verdict": {
+          "kind": "answer",
+          "ok": true,
+          "has_fact": true,
+          "cites_fact": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "partial",
+    "language": "en",
+    "passages": 4,
+    "summaries": {
+      "quick": {
+        "payload": {
+          "tldr": "The Riverside Public Library experienced growth in 2025, with increased visits, membership, and programme participation. The library successfully expanded services such as the summer reading programme and evening hours, and plans to further extend hours and introduce new initiatives in 2026. Volunteers contributed significantly to the library's operations during the year.",
+          "tldr_sources": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "takeaways": [
+            {
+              "text": "Visitor numbers increased from 187,000 in 2024 to 212,000 in 2025, with membership reaching 9,400 and 154,000 items borrowed.",
+              "sources": [
+                2
+              ]
+            },
+            {
+              "text": "The summer reading programme had its largest participation ever, with 1,150 children involved.",
+              "sources": [
+                3
+              ]
+            },
+            {
+              "text": "The library offered 96 adult workshops including sessions to help older residents use online public services.",
+              "sources": [
+                3
+              ]
+            },
+            {
+              "text": "A new homework club met twice weekly during the school year with an average of 31 pupils attending.",
+              "sources": [
+                3
+              ]
+            },
+            {
+              "text": "Plans for 2026 include extending evening opening hours to Tuesdays, replacing public computers, and starting a teenage reading group.",
+              "sources": [
+                4
+              ]
+            }
+          ],
+          "citations": [
+            {
+              "position": 1,
+              "page_number": null,
+              "heading": "Letter from the director",
+              "text": "# Riverside Public Library — Annual Report 2025\n\n## Letter from the director\n\nThis report describes how the Riverside Public Library served the town in 2025. It was a year of steady growth: more people visited, more children joined the summer reading programme, and the new evening opening hours on Thursdays were well used. The library's budget and staffing figures for the year are set out in the financial section of this report."
+            },
+            {
+              "position": 2,
+              "page_number": null,
+              "heading": "Visitors and lending",
+              "text": "## Visitors and lending\n\nThe library welcomed 212,000 visits in 2025, up from 187,000 in 2024. Members borrowed 154,000 items, of which 38,000 were e-books and audiobooks. The number of registered members grew to 9,400. The busiest month was July, during the summer reading programme."
+            },
+            {
+              "position": 3,
+              "page_number": null,
+              "heading": "Programmes",
+              "text": "## Programmes\n\nThe summer reading programme had 1,150 children taking part, the largest number since the programme began. The library ran 96 workshops for adults, including 24 sessions helping older residents use online public services. A new homework club met twice a week during the school year and had an average attendance of 31 pupils."
+            },
+            {
+              "position": 4,
+              "page_number": null,
+              "heading": "Plans for 2026",
+              "text": "## Plans for 2026\n\nIn 2026 the library plans to extend Thursday evening opening to Tuesdays as well, to replace the public computers in the reading room, and to start a reading group for teenagers. The director thanks the volunteers who gave more than 3,000 hours of their time in 2025."
+            }
+          ]
+        },
+        "seconds": 3.2,
+        "points": 6,
+        "with_source": 6,
+        "supported": 5,
+        "mean_support": 0.66,
+        "unsupported_numbers": []
+      },
+      "deep": {
+        "payload": {
+          "document_type": "report",
+          "context": [
+            {
+              "text": "The Riverside Public Library is reporting on its services and performance in the year 2025, highlighting its role in the community and growth seen over the year.",
+              "sources": [
+                1
+              ]
+            }
+          ],
+          "core": [
+            {
+              "text": "The report presents data on library visits, lending figures, membership numbers, and programme participation, as well as planned initiatives and improvements for the following year.",
+              "sources": [
+                1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "findings": [
+            {
+              "text": "The library had 212,000 visits in 2025, an increase from 187,000 in 2024, with members borrowing 154,000 items, including 38,000 e-books and audiobooks.",
+              "sources": [
+                2
+              ]
+            },
+            {
+              "text": "Membership grew to 9,400 registered members, and the busiest month was July, coinciding with the summer reading programme participation.",
+              "sources": [
+                2,
+                3
+              ]
+            },
+            {
+              "text": "1,150 children participated in the summer reading programme, the highest number since its inception.",
+              "sources": [
+                3
+              ]
+            },
+            {
+              "text": "The library held 96 adult workshops, including 24 sessions aimed at helping older residents access online public services.",
+              "sources": [
+                3
+              ]
+            },
+            {
+              "text": "A new homework club met twice weekly during the school year with an average attendance of 31 pupils.",
+              "sources": [
+                3
+              ]
+            },
+            {
+              "text": "The library extended evening opening hours on Thursdays, which were well used, and plans to add similar Tuesday evening openings in 2026.",
+              "sources": [
+                1,
+                4
+              ]
+            },
+            {
+              "text": "Plans for 2026 include replacing public computers in the reading room and starting a reading group for teenagers.",
+              "sources": [
+                4
+              ]
+            },
+            {
+              "text": "Volunteers contributed more than 3,000 hours of service in 2025, supported and appreciated by the library director.",
+              "sources": [
+                4
+              ]
+            }
+          ],
+          "limitations": [],
+          "questions": [
+            "How does the increase in visits and membership compare to previous years beyond 2024?",
+            "What specific impacts have the adult workshops had on participants' ability to use online public services?",
+            "How will the library evaluate the success of the new teenage reading group planned for 2026?",
+            "What are the reasons behind the particular popularity of the summer reading programme in July?",
+            "How will the replacement of public computers impact overall user satisfaction and digital literacy?"
+          ],
+          "citations": [
+            {
+              "position": 1,
+              "page_number": null,
+              "heading": "Letter from the director",
+              "text": "# Riverside Public Library — Annual Report 2025\n\n## Letter from the director\n\nThis report describes how the Riverside Public Library served the town in 2025. It was a year of steady growth: more people visited, more children joined the summer reading programme, and the new evening opening hours on Thursdays were well used. The library's budget and staffing figures for the year are set out in the financial section of this report."
+            },
+            {
+              "position": 2,
+              "page_number": null,
+              "heading": "Visitors and lending",
+              "text": "## Visitors and lending\n\nThe library welcomed 212,000 visits in 2025, up from 187,000 in 2024. Members borrowed 154,000 items, of which 38,000 were e-books and audiobooks. The number of registered members grew to 9,400. The busiest month was July, during the summer reading programme."
+            },
+            {
+              "position": 3,
+              "page_number": null,
+              "heading": "Programmes",
+              "text": "## Programmes\n\nThe summer reading programme had 1,150 children taking part, the largest number since the programme began. The library ran 96 workshops for adults, including 24 sessions helping older residents use online public services. A new homework club met twice a week during the school year and had an average attendance of 31 pupils."
+            },
+            {
+              "position": 4,
+              "page_number": null,
+              "heading": "Plans for 2026",
+              "text": "## Plans for 2026\n\nIn 2026 the library plans to extend Thursday evening opening to Tuesdays as well, to replace the public computers in the reading room, and to start a reading group for teenagers. The director thanks the volunteers who gave more than 3,000 hours of their time in 2025."
+            }
+          ]
+        },
+        "seconds": 4.3,
+        "points": 10,
+        "with_source": 10,
+        "supported": 10,
+        "mean_support": 0.68,
+        "unsupported_numbers": [],
+        "document_type": "report",
+        "disclosed": false
+      },
+      "analysis": {
+        "payload": {
+          "document_type": "report",
+          "question": [],
+          "method": [],
+          "data": [],
+          "findings": [
+            {
+              "text": "The library welcomed 212,000 visits in 2025, up from 187,000 in 2024.",
+              "sources": [
+                1
+              ]
+            },
+            {
+              "text": "Members borrowed 154,000 items, of which 38,000 were e-books and audiobooks.",
+              "sources": [
+                1
+              ]
+            },
+            {
+              "text": "The number of registered members grew to 9,400.",
+              "sources": [
+                1
+              ]
+            },
+            {
+              "text": "The summer reading programme had 1,150 children taking part, the largest number since the programme began.",
+              "sources": [
+                2
+              ]
+            },
+            {
+              "text": "The library ran 96 workshops for adults, including 24 sessions helping older residents use online public services.",
+              "sources": [
+                2
+              ]
+            },
+            {
+              "text": "A new homework club met twice a week during the school year and had an average attendance of 31 pupils.",
+              "sources": [
+                2
+              ]
+            }
+          ],
+          "limitations": [],
+          "applicability": [],
+          "citations": [
+            {
+              "position": 1,
+              "page_number": null,
+              "heading": "Visitors and lending",
+              "text": "## Visitors and lending\n\nThe library welcomed 212,000 visits in 2025, up from 187,000 in 2024. Members borrowed 154,000 items, of which 38,000 were e-books and audiobooks. The number of registered members grew to 9,400. The busiest month was July, during the summer reading programme."
+            },
+            {
+              "position": 2,
+              "page_number": null,
+              "heading": "Programmes",
+              "text": "## Programmes\n\nThe summer reading programme had 1,150 children taking part, the largest number since the programme began. The library ran 96 workshops for adults, including 24 sessions helping older residents use online public services. A new homework club met twice a week during the school year and had an average attendance of 31 pupils."
+            }
+          ]
+        },
+        "seconds": 2.8,
+        "points": 6,
+        "with_source": 6,
+        "supported": 6,
+        "mean_support": 1.0,
+        "unsupported_numbers": [],
+        "document_type": "report",
+        "field_checks": {
+          "findings has 212,000/212000": true,
+          "method left empty": true,
+          "limitations left empty": true
+        },
+        "type_ok": true
+      }
+    },
+    "answers": [
+      {
+        "question": "How many visits did the library have in 2025?",
+        "quote": null,
+        "answer": "The library welcomed 212,000 visits in 2025 [2].",
+        "raw_citations": [
+          2
+        ],
+        "abstained": false,
+        "citations": [
+          {
+            "n": 2,
+            "text": "## Visitors and lending\n\nThe library welcomed 212,000 visits in 2025, up from 187,000 in 2024. Members borrowed 154,000 items, of which 38,000 were e-books and audiobooks. The number of registered members grew to 9,400. The busiest month was July, during the summer reading programme."
+          }
+        ],
+        "verdict": {
+          "kind": "answer",
+          "ok": true,
+          "has_fact": true,
+          "cites_fact": true
+        }
+      },
+      {
+        "question": "What was the library's total budget in 2025?",
+        "quote": null,
+        "answer": "This document does not contain enough information to answer that. The passages refer to the budget being set out in the financial section of the report, but that section is not included in the passages provided. You could look for the financial section in the full report, especially any tables or summaries listing the budget for 2025.",
+        "raw_citations": [
+          1
+        ],
+        "abstained": true,
+        "citations": [],
+        "verdict": {
+          "kind": "abstain",
+          "ok": true,
+          "cited_before_guard": true,
+          "disclosed": true
+        }
+      },
+      {
+        "question": "How many staff did the library employ?",
+        "quote": null,
+        "answer": "This document does not contain enough information to answer that. \n\nYou could look for a section detailing the library's staffing or refer to the financial section mentioned in the director's letter for these figures, but that information is not included in the passages provided.",
+        "raw_citations": [],
+        "abstained": true,
+        "citations": [],
+        "verdict": {
+          "kind": "abstain",
+          "ok": true,
+          "cited_before_guard": false,
+          "disclosed": true
+        }
+      }
+    ]
+  }
+]

@@ -9,6 +9,7 @@ export type HighlightColor = "yellow" | "green" | "blue" | "pink" | "purple";
 export type LineHeight = 1.5 | 1.65 | 1.8;
 export type ColumnWidth = 600 | 680 | 780;
 export type OpenMode = "clean" | "original";
+export type FontFamily = "serif" | "sans";
 
 export const HIGHLIGHT_COLORS: HighlightColor[] = ["yellow", "green", "blue", "pink", "purple"];
 
@@ -52,6 +53,12 @@ interface Prefs {
   width: ColumnWidth;
   defaultMode: OpenMode;
   language: Lang;
+  /** The face the clean text is set in (RD-104). */
+  fontFamily: FontFamily;
+  /** The page the reader reads on (RD-105); null follows the theme of the app. */
+  readingTheme: Theme | null;
+  /** Show the estimate of the reading time left (RD-112); it can be turned off. */
+  timeLeft: boolean;
   /** Empty means "use the name for this color in the current language". */
   colorLabels: Record<HighlightColor, string>;
 }
@@ -92,6 +99,9 @@ export const usePreferences = create<PreferencesState>()(
       width: 680,
       defaultMode: "clean",
       language: "vi",
+      fontFamily: "serif",
+      readingTheme: null,
+      timeLeft: true,
       colorLabels: EMPTY_LABELS,
       set: (p) => set(p),
       applyServer: (p) =>
@@ -102,18 +112,36 @@ export const usePreferences = create<PreferencesState>()(
           width: p.column_width ?? s.width,
           defaultMode: p.default_mode ?? s.defaultMode,
           language: p.language ?? s.language,
+          fontFamily: p.font_family ?? s.fontFamily,
+          // The account says "follow the app" with null, which is a choice too.
+          readingTheme: p.reading_theme !== undefined ? p.reading_theme : s.readingTheme,
+          timeLeft: p.time_left ?? s.timeLeft,
           colorLabels: p.color_labels ? unnamed(p.color_labels) : s.colorLabels,
         })),
     }),
     {
       name: "puremind-preferences",
-      partialize: ({ theme, fontSize, lineHeight, width, defaultMode, language, colorLabels }) => ({
+      partialize: ({
         theme,
         fontSize,
         lineHeight,
         width,
         defaultMode,
         language,
+        fontFamily,
+        readingTheme,
+        timeLeft,
+        colorLabels,
+      }) => ({
+        theme,
+        fontSize,
+        lineHeight,
+        width,
+        defaultMode,
+        language,
+        fontFamily,
+        readingTheme,
+        timeLeft,
         colorLabels,
       }),
       merge: (persisted, current) => {

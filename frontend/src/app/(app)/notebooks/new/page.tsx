@@ -140,7 +140,7 @@ function NewNotebook() {
   return (
     <div className="mx-auto flex max-w-[880px] flex-col gap-7">
       <div className="flex flex-col gap-2">
-        <Link href="/notebooks" className="flex items-center gap-1 text-sm text-muted hover:text-ink">
+        <Link href="/notebooks/archive" className="flex items-center gap-1 text-sm text-muted hover:text-ink">
           <Icon name="back" size={16} />
           {t("notebooks.title")}
         </Link>

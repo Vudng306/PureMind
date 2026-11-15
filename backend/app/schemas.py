@@ -17,6 +17,7 @@ from app.services import doi as doi_service
 HighlightColor = Literal["yellow", "green", "blue", "pink", "purple"]
 HighlightCategory = Literal["important", "concept", "question", "example", "review"]
 MAX_SELECTION = 5000  # FR-HL-01, MSG-22
+MAX_NOTE_TRANSLATION = 12000  # a translation of the longest selection, in the longer of the two languages
 MAX_NOTE = 10000  # FR-NOTE-01, MSG-24
 ColorLabel = Annotated[str, Field(max_length=24)]
 
@@ -45,6 +46,12 @@ class ReadingPreferences(BaseModel):
     ai_consent: bool | None = None
     # FR-ACC-04: the language of the interface, so it follows the account to another device.
     language: Literal["vi", "en"] | None = None
+    # RD-104: the face the clean text is set in.
+    font_family: Literal["serif", "sans"] | None = None
+    # RD-105: the page the reader reads on; null follows the theme of the app.
+    reading_theme: Literal["light", "sepia", "dark"] | None = None
+    # RD-112: show the estimate of the reading time left; it can be turned off.
+    time_left: bool | None = None
 
 
 class UserOut(BaseModel):
@@ -172,15 +179,39 @@ class DocumentListItem(BaseModel):
         return math.ceil(self.word_count / 230) if self.word_count else None
 
 
+class ReadPosition(BaseModel):
+    """RD-107: the place in the clean text, by the block at the top of the page."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    block_id: str = Field(min_length=1, max_length=64)
+    offset: float = Field(default=0, ge=0, le=1)  # how far into the block
+
+
+class ExtractionIssue(BaseModel):
+    """RD-111: something the extraction knows is not in the clean text as text. Only what was measured:
+    `scanned_pages` were left out, `ocr_pages` were read from a picture of the page, and the tables and
+    equations counted here are shown as pictures."""
+
+    code: Literal["scanned_pages", "ocr_pages", "tables_as_images", "equations_as_images"]
+    count: int
+    pages: list[int] | None = None
+
+
 class DocumentOut(DocumentListItem):
     content_clean: str
     note: str
+    read_position: ReadPosition | None = None
+    extraction_issues: list[ExtractionIssue] | None = None
+    # Which clean text this is; a highlight carries the one it was made on (AN-102).
+    content_version: str | None = None
 
 
 class DocumentUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=500)
     last_read_page: int | None = Field(default=None, ge=1)
     read_fraction: float | None = Field(default=None, ge=0, le=1)
+    read_position: ReadPosition | None = None
     is_read: bool | None = None
     note: str | None = Field(default=None, max_length=20000)
     citation: Citation | None = None
@@ -191,7 +222,7 @@ class DocumentUsage(BaseModel):
     """What else goes, or stays, when a document is removed from the library."""
 
     highlights: int
-    notes: int  # highlights with a note of their own
+    notes: int  # highlights with a note of their own, plus the document's own notes
     has_summary: bool
     notebooks: int
     posts: int
@@ -229,6 +260,9 @@ class HighlightBase(BaseModel):
     category: HighlightCategory | None = None
     note: str = ""
     page_number: int | None = Field(default=None, ge=1)
+    # The words around the passage in its block (AN-102), to find it again if the text is extracted anew.
+    prefix: str | None = Field(default=None, max_length=64)
+    suffix: str | None = Field(default=None, max_length=64)
 
     @field_validator("selected_text")
     @classmethod
@@ -297,6 +331,10 @@ class HighlightOut(BaseModel):
     category: str | None
     note: str
     page_number: int | None
+    prefix: str | None = None
+    suffix: str | None = None
+    # The text of the document it was made on; compare with DocumentOut.content_version.
+    content_version: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -608,3 +646,132 @@ class AdminUserDetail(AdminUserItem):
     ai_daily_quota: int
     chat_daily_quota: int
     recent_actions: list[AdminAuditEntry]
+
+
+# --- Notes, the reader's AI sidebar and the notebook by document -------------------------------------------
+
+MAX_NOTE_BODY = 20_000
+
+
+class NoteCreate(BaseModel):
+    # Chosen by the client, so sending the same note again (a retry) gives the note already saved.
+    id: uuid.UUID | None = None
+    body: str = Field(min_length=1, max_length=MAX_NOTE_BODY)
+
+    @field_validator("body")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Ghi chú không được để trống.")
+        return v
+
+
+class NoteUpdate(BaseModel):
+    body: str = Field(min_length=1, max_length=MAX_NOTE_BODY)
+
+    @field_validator("body")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Ghi chú không được để trống.")
+        return v
+
+
+class NoteFromAi(BaseModel):
+    """Keep a piece of what the AI wrote as a note. Only says which piece: the text and its citations are
+    read from the stored result on the server, never taken from the request."""
+
+    source: Literal["artifact", "chat"]
+    source_id: uuid.UUID
+    # artifact: "all", "tldr", "takeaway:2", "findings:0", "question:1", "node:n4"; chat: "all"
+    part: str = Field(default="all", max_length=60, pattern=r"^[a-z]+(:[A-Za-z0-9_-]{1,40})?$")
+
+
+class NoteFromTranslation(BaseModel):
+    """AN-107: keep the translation of a selected passage as a note. The passage itself is kept beside it,
+    unchanged; the translation is never written over the document."""
+
+    quote: str = Field(min_length=1, max_length=MAX_SELECTION)
+    translation: str = Field(min_length=1, max_length=MAX_NOTE_TRANSLATION)
+    target: Literal["vi", "en"]
+
+    @field_validator("quote", "translation")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("MSG-TR-EMPTY")
+        return v
+
+
+class NoteProvenance(BaseModel):
+    source: Literal["quick", "deep", "mindmap", "analysis", "chat", "translation"]
+    # A translation is not stored anywhere else, so it has no source id.
+    source_id: uuid.UUID | None = None
+    part: str
+    # translation only: the selected passage, as it is in the document.
+    quote: str | None = None
+    model: str | None = None
+    language: str | None = None
+    generated_at: datetime | None = None
+    citations: list[ChatCitation] = []
+
+
+class NoteOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    document_id: uuid.UUID
+    body: str
+    origin: Literal["user", "ai_saved"]
+    provenance: NoteProvenance | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ArtifactCreate(BaseModel):
+    language: Literal["vi", "en"] | None = None
+
+
+class ArtifactOut(BaseModel):
+    id: uuid.UUID
+    document_id: uuid.UUID
+    kind: Literal["quick", "deep", "mindmap", "analysis"]
+    language: str
+    payload: dict
+    ai_model: str
+    created_at: datetime
+    # Made from another text, prompt or model than it would be now; the reader decides whether to make it
+    # again. `stale_reason` says which, the text first (AI-107).
+    stale: bool
+    stale_reason: Literal["content", "prompt", "model"] | None = None
+    ai_quota_remaining: int
+
+
+class NotebookGroup(BaseModel):
+    """One document in the notebook: it is there because it has at least one highlight or note."""
+
+    document_id: uuid.UUID
+    title: str
+    file_type: Literal["pdf", "epub", "web"]
+    read_fraction: float | None
+    is_read: bool
+    highlight_count: int
+    # The reader's own notes: those written on a highlight plus the free ones.
+    note_count: int
+    # Notes saved from the AI.
+    insight_count: int
+    # With a search: how many of its highlights and notes match.
+    match_count: int | None = None
+    last_activity_at: datetime
+
+
+class NotebookGroupPage(BaseModel):
+    items: list[NotebookGroup]
+    total: int
+
+
+class NotebookGroupDetail(BaseModel):
+    group: NotebookGroup
+    highlights: list[HighlightOut]
+    notes: list[NoteOut]
