@@ -55,7 +55,7 @@ class PaperSearch(BaseModel):
 
 
 async def _with_copies(session: SessionDep, user: User | None, found: list[dict]) -> list[Paper]:
-    """The papers, each with the id of the user's copy: one imported by its DOI keeps the DOI's address."""
+    """The papers, each with the id of the user's copy: one saved from its doi.org link keeps that address."""
     copies: dict[str, str] = {}
     if user is not None and found:
         urls = {doi.url_of(p["doi"]): p["doi"] for p in found}

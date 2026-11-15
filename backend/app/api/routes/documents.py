@@ -49,7 +49,6 @@ from app.services.extraction import (
     reader_keys,
     scanned_pages,
 )
-from app.services.html_markdown import word_count
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -199,7 +198,7 @@ async def run_extraction(
             if left:
                 issues.append({"code": code, "count": len(left)})
         doc.extraction_issues = issues
-        if not doc.citation:  # a title that came with the DOI is the publisher's own
+        if not doc.citation:  # a document with its citation filled in keeps that title
             doc.title = result.title[:500]
         doc.content_clean = content
         doc.source_map = source_map or None
@@ -340,9 +339,8 @@ async def _save_fetched_pdf(
     session: AsyncSession,
     settings: Settings,
     background: BackgroundTasks,
-    work: doi.Work | None = None,
 ) -> Document | JSONResponse:
-    """Keep a PDF fetched from `url` and extract it. `work` is what its DOI says it is, when it came by one."""
+    """Keep a PDF fetched from `url` and extract it."""
     name = storage.sanitize_filename(Path(httpx.URL(fetched.url).path).name or "tai-lieu.pdf")
     if not name.lower().endswith(".pdf"):
         name += ".pdf"
@@ -354,11 +352,10 @@ async def _save_fetched_pdf(
         user_id=user.id,
         source_type=SourceType.manual,
         url=url,
-        title=work.title if work else Path(name).stem[:500],
+        title=Path(name).stem[:500],
         file_storage_path=relative,
         original_filename=name[:500],
         file_size=len(fetched.body),
-        citation=work.citation if work else None,
     )
     if (dup := await _commit_new_link(session, doc, user, url)) is not None:
         storage.delete_file(settings, relative)
@@ -441,10 +438,6 @@ async def save_url(
     return doc
 
 
-class DoiIn(BaseModel):
-    doi: str
-
-
 async def _lookup_doi(raw: str, user: User, settings: Settings) -> doi.Work:
     try:
         doi.parse(raw)
@@ -463,69 +456,6 @@ async def lookup_doi(doi: str, user: CurrentUser, settings: SettingsDep):
     """What a DOI names, to fill in the citation of a document the user already has."""
     work = await _lookup_doi(doi, user, settings)
     return {"title": work.title, "citation": work.citation}
-
-
-@router.post(
-    "/import-doi",
-    response_model=DocumentOut,
-    status_code=status.HTTP_201_CREATED,
-    responses={200: {"model": DocumentOut, "description": "The DOI was already imported"}},
-)
-async def import_doi(
-    payload: DoiIn,
-    background: BackgroundTasks,
-    user: CurrentUser,
-    session: SessionDep,
-    settings: SettingsDep,
-):
-    """Add a work by its DOI: the citation from doi.org, the text from wherever the DOI leads.
-
-    That is the publisher's page, or the PDF itself (for arXiv, always the PDF). A publisher that refuses
-    PureMind or shows nothing without a subscription leaves the abstract, if doi.org has one; with no text
-    at all nothing is saved, as a document that cannot be read is of no use in the library."""
-    try:
-        url = doi.url_of(doi.parse(payload.doi))
-    except doi.InvalidDoi:
-        raise HTTPException(422, MSG["MSG-DOI-INVALID"]) from None
-    existing = await session.scalar(select(Document).where(Document.user_id == user.id, Document.url == url))
-    if existing is not None:
-        return JSONResponse(DocumentOut.model_validate(existing).model_dump(mode="json"), status_code=200)
-
-    work = await _lookup_doi(payload.doi, user, settings)
-    rate_limited_upload(user)
-    fetched = None
-    for source in (*doi.open_pdf_urls(work.doi), url):
-        try:
-            fetched = await web.fetch_url(source, settings.web_contact)
-            break
-        except (web.InvalidUrl, web.BlockedAddress, web.FetchFailed):
-            continue
-
-    if fetched is not None and fetched.body.startswith(b"%PDF"):
-        return await _save_fetched_pdf(fetched, url, user, session, settings, background, work)
-    content = ""
-    if fetched is not None and not web.is_pdf(fetched):
-        article = await run_in_threadpool(web.extract_article, fetched.body, fetched.url)
-        # A page for subscribers shows a preview and its references: not the work's text, however long.
-        content = "" if article.paywalled else article.content
-    if word_count(content) < word_count(work.abstract):
-        content = work.abstract  # the page gave less than its own abstract: a paywall, or a cookie notice
-    if not content.strip():
-        raise HTTPException(422, MSG["MSG-DOI-NOTEXT"])
-    doc = Document(
-        user_id=user.id,
-        source_type=SourceType.manual,
-        url=url,
-        title=work.title,
-        content_clean=content,
-        word_count=word_count(content),
-        extraction_status=ExtractionStatus.done,
-        citation=work.citation,
-    )
-    if (dup := await _commit_new_link(session, doc, user, url)) is not None:
-        return dup
-    await session.refresh(doc)
-    return doc
 
 
 @router.get("/{document_id}", response_model=DocumentOut)

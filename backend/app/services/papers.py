@@ -1,7 +1,6 @@
 """Research papers to discover: collections chosen ahead of time, and a search of arXiv.
 
-Every paper is on arXiv, so its DOI leads to a PDF anyone may fetch (doi.open_pdf_urls): adding one to the
-library is an import by DOI. The collections come from data/papers.json, built from arXiv's own metadata.
+Every paper is on arXiv; one saved from its doi.org link counts as the user's copy. The collections come from data/papers.json, built from arXiv's own metadata.
 """
 
 import asyncio

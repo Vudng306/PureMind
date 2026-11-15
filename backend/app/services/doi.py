@@ -66,17 +66,6 @@ def url_of(doi: str) -> str:
     return RESOLVER + quote(doi, safe="/")
 
 
-ARXIV = re.compile(r"10\.48550/arxiv\.(.+)")
-
-
-def open_pdf_urls(doi: str) -> list[str]:
-    """Where the work itself is free to fetch, when the DOI alone tells: an arXiv DOI leads to the
-    abstract page, and the paper is one address away."""
-    if match := ARXIV.fullmatch(doi):
-        return ["https://arxiv.org/pdf/" + quote(match.group(1), safe="/")]
-    return []
-
-
 def _text(value) -> str:
     """A CSL string, which some agencies send as a one-item list and others decorate with markup."""
     if isinstance(value, list):

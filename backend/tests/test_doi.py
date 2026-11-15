@@ -6,7 +6,7 @@ import pytest
 from app.core.ratelimit import doi_limiter
 from app.services import doi, web
 from tests.pdfs import text_pdf
-from tests.test_epub_web import ARTICLE
+from tests.test_epub_web import FULL
 
 CSL = {
     "type": "article-journal",
@@ -117,106 +117,14 @@ def test_csl_becomes_a_citation():
     )
 
 
-async def test_import_article_by_doi(client, auth, fake_doi):
-    fake_doi.csl["doi.org/10.1038/nature14539"] = CSL
-    fake_doi.pages["doi.org/10.1038/nature14539"] = httpx.Response(
-        302, headers={"location": "https://www.nature.com/articles/nature14539"}
-    )
-    fake_doi.pages["www.nature.com/articles/nature14539"] = httpx.Response(
-        200, headers={"content-type": "text/html; charset=utf-8"}, content=ARTICLE
-    )
+async def test_lookup_rejects_bad_and_unknown_dois(client, auth, fake_doi):
     h = auth()
-
-    r = await client.post(
-        "/api/documents/import-doi", headers=h, json={"doi": "https://doi.org/10.1038/NATURE14539"}
-    )
-    assert r.status_code == 201, r.text
-    doc = r.json()
-    assert doc["title"] == "Deep learning"  # the registered title, not the page's
-    assert doc["citation"] == CITATION
-    assert doc["url"] == "https://doi.org/10.1038/nature14539" and doc["file_type"] == "web"
-    assert "Doc cham giup ghi nho lau hon" in doc["content_clean"]
-
-    listed = (await client.get("/api/documents", headers=h)).json()
-    assert listed[0]["citation"]["authors"][0] == {"family": "LeCun", "given": "Yann"}
-
-    asked = len(fake_doi.requests)
-    again = await client.post("/api/documents/import-doi", headers=h, json={"doi": "10.1038/nature14539"})
-    assert again.status_code == 200 and again.json()["id"] == doc["id"]
-    assert len(fake_doi.requests) == asked  # known already: nothing is fetched again
-
-
-async def test_import_pdf_by_doi_keeps_the_registered_title(client, auth, fake_doi):
-    fake_doi.csl["doi.org/10.1000/paper"] = {**CSL, "title": "Attention is all you need"}
-    fake_doi.pages["doi.org/10.1000/paper"] = httpx.Response(
-        200, headers={"content-type": "application/pdf"}, content=text_pdf(2, title="untitled-3.dvi")
-    )
-    h = auth()
-    r = await client.post("/api/documents/import-doi", headers=h, json={"doi": "10.1000/paper"})
-    assert r.status_code == 201, r.text
-    doc = r.json()
-    assert doc["file_type"] == "pdf" and doc["page_count"] == 2 and doc["extraction_status"] == "done"
-    assert doc["title"] == "Attention is all you need"
-    assert doc["citation"]["doi"] == "10.1000/paper"
-    assert (await client.get(f"/api/documents/{doc['id']}/file", headers=h)).status_code == 200
-
-
-async def test_arxiv_doi_fetches_the_paper_not_its_abstract_page(client, auth, fake_doi):
-    assert doi.open_pdf_urls("10.48550/arxiv.1706.03762") == ["https://arxiv.org/pdf/1706.03762"]
-    assert doi.open_pdf_urls("10.1038/nature14539") == []
-    fake_doi.csl["doi.org/10.48550/arxiv.1706.03762"] = {**CSL, "title": "Attention Is All You Need"}
-    fake_doi.pages["arxiv.org/pdf/1706.03762"] = httpx.Response(
-        200, headers={"content-type": "application/pdf"}, content=text_pdf(3)
-    )
-    h = auth()
-    r = await client.post("/api/documents/import-doi", headers=h, json={"doi": "10.48550/arXiv.1706.03762"})
-    assert r.status_code == 201, r.text
-    doc = r.json()
-    assert doc["file_type"] == "pdf" and doc["page_count"] == 3
-    assert doc["url"] == "https://doi.org/10.48550/arxiv.1706.03762"
-    assert doc["original_filename"] == "1706.03762.pdf"
-
-
-async def test_paywalled_work_keeps_its_abstract_or_is_not_saved(client, auth, fake_doi):
-    abstract = "<jats:p>We show that reading slowly helps students remember what they read.</jats:p>"
-    fake_doi.csl["doi.org/10.1000/closed"] = {**CSL, "abstract": abstract}
-    fake_doi.csl["doi.org/10.1000/bare"] = CSL
-    for key in ("doi.org/10.1000/closed", "doi.org/10.1000/bare"):
-        fake_doi.pages[key] = httpx.Response(403)
-    h = auth()
-
-    r = await client.post("/api/documents/import-doi", headers=h, json={"doi": "10.1000/closed"})
-    assert r.status_code == 201, r.text
-    assert r.json()["content_clean"] == "We show that reading slowly helps students remember what they read."
-
-    r = await client.post("/api/documents/import-doi", headers=h, json={"doi": "10.1000/bare"})
-    assert r.status_code == 422 and "PDF" in r.json()["detail"]
-    assert len((await client.get("/api/documents", headers=h)).json()) == 1
-
-
-async def test_a_subscribers_page_gives_the_abstract_not_its_references(client, auth, fake_doi):
-    from tests.test_epub_web import PAYWALLED
-
-    abstract = "<jats:p>We show that reading slowly helps students remember what they read.</jats:p>"
-    fake_doi.csl["doi.org/10.1000/preview"] = {**CSL, "abstract": abstract}
-    fake_doi.pages["doi.org/10.1000/preview"] = httpx.Response(
-        200, headers={"content-type": "text/html"}, content=PAYWALLED
-    )
-    r = await client.post("/api/documents/import-doi", headers=auth(), json={"doi": "10.1000/preview"})
-    assert r.status_code == 201, r.text
-    # The page has hundreds of words, all of them references; the work's own abstract is what is kept.
-    assert r.json()["content_clean"] == "We show that reading slowly helps students remember what they read."
-
-
-async def test_import_rejects_bad_and_unknown_dois(client, auth, fake_doi):
-    h = auth()
-    r = await client.post("/api/documents/import-doi", headers=h, json={"doi": "not a doi"})
+    r = await client.get("/api/documents/doi-lookup", params={"doi": "not a doi"}, headers=h)
     assert r.status_code == 422 and "10.1038" in r.json()["detail"]
     assert fake_doi.requests == []
 
-    r = await client.post("/api/documents/import-doi", headers=h, json={"doi": "10.1000/unknown"})
+    r = await client.get("/api/documents/doi-lookup", params={"doi": "10.1000/unknown"}, headers=h)
     assert r.status_code == 422 and "Không tìm thấy" in r.json()["detail"]
-    assert (await client.get("/api/documents/doi-lookup", params={"doi": "x"}, headers=h)).status_code == 422
     assert (await client.get("/api/documents/doi-lookup", params={"doi": "10.1/x"})).status_code == 401
 
 
@@ -250,3 +158,19 @@ async def test_lookup_fills_the_citation_of_an_uploaded_document(client, auth, f
     monkeypatch.setattr(doi_limiter, "limit", 1)
     r = await client.get("/api/documents/doi-lookup", params={"doi": "10.1038/nature14539"}, headers=h)
     assert r.status_code == 429
+
+
+async def test_adding_by_doi_is_gone_but_a_doi_link_saves_like_any_link(client, auth, fake_doi):
+    """Import by DOI was removed: a doi.org address is an ordinary link, and the document keeps it."""
+    h = auth()
+    r = await client.post("/api/documents/import-doi", headers=h, json={"doi": "10.1038/nature14539"})
+    assert r.status_code in (404, 405)
+
+    fake_doi.pages["doi.org/10.1038/nature14539"] = httpx.Response(
+        200, headers={"content-type": "text/html; charset=utf-8"}, content=FULL
+    )
+    r = await client.post(
+        "/api/documents/save-url", headers=h, json={"url": "https://doi.org/10.1038/nature14539"}
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["url"] == "https://doi.org/10.1038/nature14539" and r.json()["citation"] is None

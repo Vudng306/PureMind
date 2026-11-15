@@ -3,8 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { parseDoi } from "@/lib/citation";
-import { useImportDoi, useSaveUrl, useUploadDocument } from "@/lib/documents";
+import { useSaveUrl, useUploadDocument } from "@/lib/documents";
 import { useT, type Key } from "@/lib/i18n";
 import { MAX_UPLOAD_BYTES, MSG, messageFor } from "@/lib/messages";
 import type { DocumentDetail } from "@/lib/types";
@@ -13,18 +12,17 @@ import { useUi } from "@/lib/ui-store";
 import { Icon } from "./icons";
 import { Alert, useModal } from "./ui";
 
-type Tab = "file" | "link" | "doi";
+type Tab = "file" | "link";
 
-const TABS: [Tab, "upload" | "link" | "quote", Key][] = [
+const TABS: [Tab, "upload" | "link", Key][] = [
   ["file", "upload", "add.tabFile"],
   ["link", "link", "add.tabLink"],
-  ["doi", "quote", "add.tabDoi"],
 ];
 
 const formatSize = (bytes: number) =>
   bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
-/** UI-03 upload / save-link / import-by-DOI dialog (FR-DOC-01, FR-DOC-03). */
+/** UI-03 upload / save-link dialog (FR-DOC-01, FR-DOC-03). */
 export function AddDocumentDialog() {
   const t = useT();
   const router = useRouter();
@@ -34,19 +32,16 @@ export function AddDocumentDialog() {
   const [tab, setTab] = useState<Tab>("file");
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
-  const [doi, setDoi] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(0);
   const upload = useUploadDocument();
   const saveUrl = useSaveUrl();
-  const importDoi = useImportDoi();
-  const busy = upload.isPending || saveUrl.isPending || importDoi.isPending;
+  const busy = upload.isPending || saveUrl.isPending;
 
   useEffect(() => {
     if (!open) return;
     setError(null);
     setUrl("");
-    setDoi("");
     setFile(null);
   }, [open]);
 
@@ -98,18 +93,6 @@ export function AddDocumentDialog() {
       return;
     }
     done(doc.id, doc.extraction_status, doc.extraction_error);
-  }
-
-  async function submitDoi(e?: React.FormEvent) {
-    e?.preventDefault();
-    setError(null);
-    const value = parseDoi(doi);
-    if (!value) return setError(t("add.doiInvalid"));
-    try {
-      added(await importDoi.mutateAsync(value));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : MSG["MSG-99"]);
-    }
   }
 
   async function submitLink(e?: React.FormEvent) {
@@ -196,24 +179,6 @@ export function AddDocumentDialog() {
               <span className="text-[13px]">{t("add.fileHint")}</span>
             </button>
           )
-        ) : tab === "doi" ? (
-          <form onSubmit={submitDoi} className="flex flex-col gap-3.5" id="add-doi-form">
-            <label className="field-label">
-              {t("add.doiLabel")}
-              <input
-                className="input h-[50px] bg-page"
-                inputMode="url"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="10.1038/nature14539"
-                value={doi}
-                onChange={(e) => setDoi(e.target.value)}
-                disabled={busy}
-                autoFocus
-              />
-            </label>
-            <span className="text-[13px] leading-normal text-muted">{t("add.doiNote")}</span>
-          </form>
         ) : (
           <form onSubmit={submitLink} className="flex flex-col gap-3.5" id="add-link-form">
             <label className="field-label">
@@ -238,7 +203,6 @@ export function AddDocumentDialog() {
 
         {upload.isPending && file && <UploadProgress size={file.size} sent={sent} />}
         {saveUrl.isPending && <UploadProgress />}
-        {importDoi.isPending && <UploadProgress label={t("add.doiFetchingNote")} />}
 
         {error && <Alert>{error}</Alert>}
 
@@ -249,10 +213,6 @@ export function AddDocumentDialog() {
           {tab === "file" ? (
             <button type="button" className="btn-primary h-12 px-[22px]" onClick={submitFile} disabled={busy}>
               {t(upload.isPending ? "add.uploading" : file ? "add.doUpload" : "add.chooseFile")}
-            </button>
-          ) : tab === "doi" ? (
-            <button type="submit" form="add-doi-form" className="btn-primary h-12 px-[22px]" disabled={busy || !doi.trim()}>
-              {t(importDoi.isPending ? "add.importingDoi" : "add.importDoi")}
             </button>
           ) : (
             <button type="submit" form="add-link-form" className="btn-primary h-12 px-[22px]" disabled={busy || !url.trim()}>
@@ -267,13 +227,13 @@ export function AddDocumentDialog() {
 
 /**
  * The bytes of a file as they are sent, then (all sent, the server reading and cleaning it) a bar with no end;
- * a link or a DOI has only the second: the server fetches the page itself.
+ * a link has only the second: the server fetches the page itself.
  */
-function UploadProgress({ size, sent, label: fetching }: { size?: number; sent?: number; label?: string }) {
+function UploadProgress({ size, sent }: { size?: number; sent?: number }) {
   const t = useT();
   const sending = size !== undefined && sent !== undefined && sent < 1;
   const pct = Math.round((sent ?? 0) * 100);
-  const label = size === undefined ? (fetching ?? t("add.fetchingNote")) : sending ? t("add.sent", { sent: formatSize(size * (sent ?? 0)), total: formatSize(size) }) : t("add.processing");
+  const label = size === undefined ? t("add.fetchingNote") : sending ? t("add.sent", { sent: formatSize(size * (sent ?? 0)), total: formatSize(size) }) : t("add.processing");
 
   return (
     <div className="flex flex-col gap-2">

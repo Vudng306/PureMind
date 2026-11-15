@@ -499,13 +499,7 @@ const VI = {
   "add.linkNote": "PureMind tải trang về, bỏ quảng cáo và menu, giữ phần nội dung chính. Địa chỉ nội bộ bị chặn.",
   "add.doUpload": "Tải lên",
   "add.saveLink": "Lưu link",
-  "add.tabDoi": "Nhập DOI",
-  "add.doiLabel": "Mã DOI của bài báo",
-  "add.doiNote": "PureMind lấy tên bài, tác giả và tạp chí từ DOI, rồi tải nội dung từ trang của nhà xuất bản. Bài không mở miễn phí có thể chỉ lấy được phần tóm tắt.",
   "add.doiInvalid": "Mã DOI không hợp lệ. DOI có dạng 10.1038/nature14539.",
-  "add.importDoi": "Nhập tài liệu",
-  "add.importingDoi": "Đang tra cứu…",
-  "add.doiFetchingNote": "Đang tra cứu DOI và tải nội dung…",
 
   // --- bảng tin --------------------------------------------------------
   "feed.title": "Bảng tin",
@@ -2007,13 +2001,7 @@ const EN: Record<Key, string> = {
   "add.linkNote": "PureMind fetches the page, drops the ads and menus and keeps the main text. Internal addresses are blocked.",
   "add.doUpload": "Upload",
   "add.saveLink": "Save the link",
-  "add.tabDoi": "Enter a DOI",
-  "add.doiLabel": "The DOI of the work",
-  "add.doiNote": "PureMind reads the title, authors and journal from the DOI, then fetches the text from the publisher's page. A work that is not open access may come with its abstract only.",
   "add.doiInvalid": "That DOI is not valid. A DOI looks like 10.1038/nature14539.",
-  "add.importDoi": "Import",
-  "add.importingDoi": "Looking it up…",
-  "add.doiFetchingNote": "Looking the DOI up and fetching the text…",
 
   // --- feed -------------------------------------------------------------
   "feed.title": "Your feed",

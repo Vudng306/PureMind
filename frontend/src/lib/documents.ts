@@ -55,16 +55,6 @@ export function useSaveUrl() {
   });
 }
 
-/** Add a work by its DOI: the citation from doi.org, the text from the publisher's page or PDF. */
-export function useImportDoi() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (doi: string) =>
-      api<DocumentDetail>("/documents/import-doi", { method: "POST", body: JSON.stringify({ doi }) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: documentsKey }),
-  });
-}
-
 /** What a DOI names, to fill in the citation of a document already in the library. */
 export function lookupDoi(doi: string) {
   return api<{ title: string; citation: Citation }>(`/documents/doi-lookup?doi=${encodeURIComponent(doi)}`);

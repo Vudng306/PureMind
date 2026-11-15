@@ -5,7 +5,7 @@ import pytest
 
 from app.services import papers
 from tests.pdfs import text_pdf
-from tests.test_doi import CSL, fake_doi  # noqa: F401  (fixture)
+from tests.test_doi import fake_doi  # noqa: F401  (fixture)
 
 FEED = b"""<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/"
@@ -87,12 +87,12 @@ async def test_collections_are_public_and_mark_the_users_copies(client, auth, ar
     first = r.json()[0]["papers"][0]
     assert first["arxiv_id"] == "1706.03762" and first["document_id"] is None
 
-    fake.csl["doi.org/10.48550/arxiv.1706.03762"] = {**CSL, "title": "Attention Is All You Need"}
-    fake.pages["arxiv.org/pdf/1706.03762"] = httpx.Response(
+    fake.pages["doi.org/10.48550/arxiv.1706.03762"] = httpx.Response(
         200, headers={"content-type": "application/pdf"}, content=text_pdf(2)
     )
     h = auth()
-    doc = (await client.post("/api/documents/import-doi", headers=h, json={"doi": first["doi"]})).json()
+    link = f"https://doi.org/{first['doi']}"
+    doc = (await client.post("/api/documents/save-url", headers=h, json={"url": link})).json()
 
     mine = (await client.get("/api/papers", headers=h)).json()
     assert mine[0]["papers"][0]["document_id"] == doc["id"]

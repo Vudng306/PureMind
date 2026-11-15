@@ -29,11 +29,9 @@ VI: dict[str, str] = {
     "MSG-18-PAYWALL": "Trang này chỉ cho xem trước: toàn văn dành cho người có quyền truy cập, nên PureMind không lấy được bài đầy đủ. Nếu bạn có quyền, hãy tải bản PDF về rồi tải lên.",
     "MSG-18-SHORT": "Trang này có quá ít nội dung để thành một bài đọc hoàn chỉnh (có thể chỉ là phần tóm tắt, trang danh mục, hoặc bài cần đăng nhập), nên PureMind không lưu. Nếu bài có bản PDF, hãy tải về rồi tải lên.",
     "MSG-19": "Không tìm thấy tài liệu.",
-    # Import by DOI and citations (not in SRS Appendix B).
+    # DOI lookup for citations (not in SRS Appendix B).
     "MSG-DOI-INVALID": "Mã DOI không hợp lệ. DOI có dạng 10.1038/nature14539.",
     "MSG-DOI-NOTFOUND": "Không tìm thấy thông tin cho DOI này. Kiểm tra lại mã hoặc thử lại sau.",
-    "MSG-DOI-NOTEXT": "Đã tìm thấy bài nhưng không tải được nội dung (bài có thể không mở miễn phí). "
-    "Hãy tải tệp PDF lên, rồi điền DOI trong mục Thông tin trích dẫn của tài liệu.",
     "MSG-DOI-LIMIT": "Bạn đã tra cứu quá nhiều DOI trong một giờ. Vui lòng thử lại sau.",
     # Explore page: searching arXiv (not in SRS Appendix B).
     "MSG-PAPERS-LIMIT": "Bạn đã tìm kiếm quá nhiều lần trong một giờ. Vui lòng thử lại sau.",
@@ -131,8 +129,6 @@ EN: dict[str, str] = {
     "MSG-19": "Document not found.",
     "MSG-DOI-INVALID": "That DOI is not valid. A DOI looks like 10.1038/nature14539.",
     "MSG-DOI-NOTFOUND": "Nothing was found for this DOI. Check it or try again later.",
-    "MSG-DOI-NOTEXT": "The work was found but its text could not be fetched (it may not be open access). "
-    "Upload the PDF, then enter the DOI under the document's Citation details.",
     "MSG-DOI-LIMIT": "You have looked up too many DOIs in an hour. Please try again later.",
     "MSG-PAPERS-LIMIT": "You have searched too many times in an hour. Please try again later.",
     "MSG-PAPERS-UNAVAILABLE": "arXiv cannot be searched right now. Please try again in a few minutes.",
