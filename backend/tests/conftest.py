@@ -79,7 +79,6 @@ def make_token(user_id: uuid.UUID | None = None, email: str | None = None, **ove
 def _reset_rate_limits():
     from app.core.ratelimit import (
         comment_limiter,
-        doi_limiter,
         explore_check_limiter,
         explore_search_limiter,
         papers_search_limiter,
@@ -92,7 +91,6 @@ def _reset_rate_limits():
     )
 
     upload_limiter.reset()
-    doi_limiter.reset()
     papers_search_limiter.reset()
     translate_minute_limiter.reset()
     translate_day_limiter.reset()

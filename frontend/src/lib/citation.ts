@@ -14,18 +14,6 @@ export const EMPTY_CITATION: Citation = {
   doi: "",
 };
 
-/** The bare DOI in what was pasted ("10.1000/x", "doi:10.1000/x" or a doi.org link), or null. */
-export function parseDoi(raw: string): string | null {
-  let value = raw.trim().replace(/^(?:https?:\/\/(?:dx\.)?doi\.org\/|doi:\s*)/i, "");
-  try {
-    value = decodeURIComponent(value);
-  } catch {
-    /* a stray "%" is part of the DOI */
-  }
-  if (!/^10\.\d{4,9}\/\S+$/i.test(value) || value.length > 300) return null;
-  return value.replace(/[.,;]+$/, "").toLowerCase();
-}
-
 /** One author per line, "Family, Given"; a line without a comma is a name kept whole (an organisation). */
 export function authorsToText(authors: CitationAuthor[]): string {
   return authors.map((a) => (a.given ? `${a.family}, ${a.given}` : a.family)).join("\n");
@@ -83,7 +71,7 @@ const TEX: Record<string, string> = {
 
 /** Text as LaTeX reads it. Accented letters stay as they are: BibTeX files are UTF-8 nowadays. */
 const tex = (s: string) => s.replace(/[\\{}%&$#_~^]/g, (c) => TEX[c]);
-/** A link or a DOI is not typeset, only kept from closing the field early. */
+/** A link is not typeset, only kept from closing the field early. */
 const verbatim = (s: string) => s.replace(/[{}]/g, "");
 
 const ascii = (s: string) =>
@@ -127,10 +115,8 @@ export function bibtexEntry(doc: BibDoc, key = citeKey(doc)): string {
     if (c.volume) fields.push(["volume", tex(c.volume)]);
     if (c.issue) fields.push(["number", tex(c.issue)]);
     if (c.pages) fields.push(["pages", tex(c.pages.replace(/\s*[-–—]+\s*/g, "--"))]);
-    if (c.doi) fields.push(["doi", verbatim(c.doi)]);
   }
-  const doiLink = /^https?:\/\/(dx\.)?doi\.org\//i.test(doc.url ?? "");
-  if (doc.url && !(doiLink && c?.doi)) {
+  if (doc.url) {
     fields.push(["url", verbatim(doc.url)]);
     // A web page has no year of its own to cite: the day it was saved is the day it was read.
     if (!c?.year) fields.push(["note", `Accessed: ${doc.created_at.slice(0, 10)}`]);

@@ -29,10 +29,6 @@ VI: dict[str, str] = {
     "MSG-18-PAYWALL": "Trang này chỉ cho xem trước: toàn văn dành cho người có quyền truy cập, nên PureMind không lấy được bài đầy đủ. Nếu bạn có quyền, hãy tải bản PDF về rồi tải lên.",
     "MSG-18-SHORT": "Trang này có quá ít nội dung để thành một bài đọc hoàn chỉnh (có thể chỉ là phần tóm tắt, trang danh mục, hoặc bài cần đăng nhập), nên PureMind không lưu. Nếu bài có bản PDF, hãy tải về rồi tải lên.",
     "MSG-19": "Không tìm thấy tài liệu.",
-    # DOI lookup for citations (not in SRS Appendix B).
-    "MSG-DOI-INVALID": "Mã DOI không hợp lệ. DOI có dạng 10.1038/nature14539.",
-    "MSG-DOI-NOTFOUND": "Không tìm thấy thông tin cho DOI này. Kiểm tra lại mã hoặc thử lại sau.",
-    "MSG-DOI-LIMIT": "Bạn đã tra cứu quá nhiều DOI trong một giờ. Vui lòng thử lại sau.",
     # Explore page: searching arXiv (not in SRS Appendix B).
     "MSG-PAPERS-LIMIT": "Bạn đã tìm kiếm quá nhiều lần trong một giờ. Vui lòng thử lại sau.",
     "MSG-PAPERS-UNAVAILABLE": "Chưa tìm được trên arXiv lúc này. Vui lòng thử lại sau ít phút.",
@@ -127,9 +123,6 @@ EN: dict[str, str] = {
     "MSG-18-PAYWALL": "This page is only a preview: the full text is for readers with access, so PureMind cannot get the whole document. If you have access, download the PDF and upload it.",
     "MSG-18-SHORT": "This page has too little text to be a whole article (it may be an abstract, a listing page, or a page that needs sign-in), so PureMind did not save it. If the article has a PDF, download it and upload it.",
     "MSG-19": "Document not found.",
-    "MSG-DOI-INVALID": "That DOI is not valid. A DOI looks like 10.1038/nature14539.",
-    "MSG-DOI-NOTFOUND": "Nothing was found for this DOI. Check it or try again later.",
-    "MSG-DOI-LIMIT": "You have looked up too many DOIs in an hour. Please try again later.",
     "MSG-PAPERS-LIMIT": "You have searched too many times in an hour. Please try again later.",
     "MSG-PAPERS-UNAVAILABLE": "arXiv cannot be searched right now. Please try again in a few minutes.",
     "MSG-EXPLORE-LIMIT": "You have searched too many times in an hour. Please try again later.",

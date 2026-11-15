@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { authorsToText, bibFileName, bibtex, bibtexEntry, citeKey, parseDoi, textToAuthors, type BibDoc } from "./citation";
+import { authorsToText, bibFileName, bibtex, bibtexEntry, citeKey, textToAuthors, type BibDoc } from "./citation";
 import type { Citation } from "./types";
 
 const citation = (over: Partial<Citation> = {}): Citation => ({
@@ -25,28 +25,6 @@ const doc = (over: Partial<BibDoc> = {}): BibDoc => ({
   citation: citation(),
   created_at: "2026-10-12T03:00:00Z",
   ...over,
-});
-
-describe("parseDoi", () => {
-  it("reads a DOI however it was pasted", () => {
-    for (const raw of [
-      "10.1038/nature14539",
-      " 10.1038/NATURE14539 ",
-      "doi:10.1038/nature14539",
-      "DOI: 10.1038/nature14539",
-      "https://doi.org/10.1038/nature14539",
-      "http://dx.doi.org/10.1038/nature14539.",
-    ]) {
-      expect(parseDoi(raw)).toBe("10.1038/nature14539");
-    }
-    expect(parseDoi("https://doi.org/10.1002/(SICI)1097%3A1")).toBe("10.1002/(sici)1097:1");
-  });
-
-  it("refuses what is not one", () => {
-    for (const raw of ["", "nature14539", "11.1038/x", "10.1038/", "10.1038/a b", "https://example.com/10.1/x"]) {
-      expect(parseDoi(raw)).toBeNull();
-    }
-  });
 });
 
 describe("authors as text", () => {
@@ -75,7 +53,7 @@ describe("bibtex", () => {
         "  volume = {521},",
         "  number = {7553},",
         "  pages = {436--444},",
-        "  doi = {10.1038/nature14539}",
+        "  url = {https://doi.org/10.1038/nature14539}",
         "}",
       ].join("\n"),
     );

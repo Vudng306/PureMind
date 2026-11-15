@@ -499,7 +499,6 @@ const VI = {
   "add.linkNote": "PureMind tải trang về, bỏ quảng cáo và menu, giữ phần nội dung chính. Địa chỉ nội bộ bị chặn.",
   "add.doUpload": "Tải lên",
   "add.saveLink": "Lưu link",
-  "add.doiInvalid": "Mã DOI không hợp lệ. DOI có dạng 10.1038/nature14539.",
 
   // --- bảng tin --------------------------------------------------------
   "feed.title": "Bảng tin",
@@ -734,9 +733,6 @@ const VI = {
   "library.bibExportedBare": "Đã xuất {n} tài liệu. {bare} tài liệu chưa có thông tin trích dẫn nên chỉ ghi tên.",
   "cite.title": "Thông tin trích dẫn",
   "cite.lede": "Dùng khi xuất BibTeX, để đưa tài liệu vào danh mục tham khảo.",
-  "cite.fill": "Điền từ DOI",
-  "cite.filling": "Đang tra cứu…",
-  "cite.filled": "Đã điền thông tin từ DOI. Kiểm tra lại rồi bấm Lưu.",
   "cite.docTitle": "Tiêu đề",
   "cite.authors": "Tác giả",
   "cite.authorsHint": "Mỗi dòng một tác giả, dạng “Họ, Tên”. Tên tổ chức thì ghi nguyên, không có dấu phẩy.",
@@ -2001,7 +1997,6 @@ const EN: Record<Key, string> = {
   "add.linkNote": "PureMind fetches the page, drops the ads and menus and keeps the main text. Internal addresses are blocked.",
   "add.doUpload": "Upload",
   "add.saveLink": "Save the link",
-  "add.doiInvalid": "That DOI is not valid. A DOI looks like 10.1038/nature14539.",
 
   // --- feed -------------------------------------------------------------
   "feed.title": "Your feed",
@@ -2236,9 +2231,6 @@ const EN: Record<Key, string> = {
   "library.bibExportedBare": "Exported {n} documents. {bare} have no citation details yet, so only their title is written.",
   "cite.title": "Citation details",
   "cite.lede": "Used by the BibTeX export, to put the document in your reference list.",
-  "cite.fill": "Fill in from DOI",
-  "cite.filling": "Looking it up…",
-  "cite.filled": "Filled in from the DOI. Check the details, then save.",
   "cite.docTitle": "Title",
   "cite.authors": "Authors",
   "cite.authorsHint": "One author per line, as “Family name, Given name”. Write an organisation's name as it is, without a comma.",

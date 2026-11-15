@@ -139,11 +139,6 @@ class Citation(BaseModel):
             raise ValueError("invalid DOI") from None
 
 
-class DoiLookup(BaseModel):
-    title: str
-    citation: Citation
-
-
 class DocumentListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

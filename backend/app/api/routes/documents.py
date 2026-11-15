@@ -17,7 +17,7 @@ from starlette.concurrency import run_in_threadpool
 from app.api.deps import CurrentUser, SessionDep, SettingsDep
 from app.core.config import Settings
 from app.core.messages import MSG
-from app.core.ratelimit import doi_limiter, upload_limiter
+from app.core.ratelimit import upload_limiter
 from app.db.session import SessionLocal
 from app.models import (
     AiArtifact,
@@ -36,8 +36,8 @@ from app.models import (
     User,
 )
 from app.models import Article as CatalogArticle
-from app.schemas import DocumentListItem, DocumentOut, DocumentUpdate, DocumentUsage, DoiLookup
-from app.services import doi, equation_ocr, figure_notes, page_ocr, rights, storage, table_ocr, web
+from app.schemas import DocumentListItem, DocumentOut, DocumentUpdate, DocumentUsage
+from app.services import equation_ocr, figure_notes, page_ocr, rights, storage, table_ocr, web
 from app.services.epub import extract_epub, looks_like_epub
 from app.services.extraction import (
     IMAGE_NAME,
@@ -436,26 +436,6 @@ async def save_url(
         return dup
     await session.refresh(doc)
     return doc
-
-
-async def _lookup_doi(raw: str, user: User, settings: Settings) -> doi.Work:
-    try:
-        doi.parse(raw)
-    except doi.InvalidDoi:
-        raise HTTPException(422, MSG["MSG-DOI-INVALID"]) from None
-    if not doi_limiter.hit(str(user.id)):
-        raise HTTPException(429, MSG["MSG-DOI-LIMIT"])
-    try:
-        return await doi.lookup(raw, settings.web_contact)
-    except doi.DoiNotFound:
-        raise HTTPException(422, MSG["MSG-DOI-NOTFOUND"]) from None
-
-
-@router.get("/doi-lookup", response_model=DoiLookup)
-async def lookup_doi(doi: str, user: CurrentUser, settings: SettingsDep):
-    """What a DOI names, to fill in the citation of a document the user already has."""
-    work = await _lookup_doi(doi, user, settings)
-    return {"title": work.title, "citation": work.citation}
 
 
 @router.get("/{document_id}", response_model=DocumentOut)
