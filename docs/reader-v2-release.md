@@ -21,7 +21,7 @@ Cập nhật 16/11/2026, sau Giai đoạn 5 và các thay đổi ở mục 8. Đ
 | AT-08 Highlight còn sau reload | done | Màn hình GĐ2; `test_highlights.py` (idempotent theo id, giữ prefix/suffix) |
 | AT-09 Note → Notebook, không trùng nhóm | done | Màn hình GĐ2; `test_reader_notebook.py` |
 | AT-10 Từ Notebook nhảy về đoạn | done | Màn hình GĐ2 (cả trường hợp anchor stale → "cần xem lại"); link `?hl=` trong bản xuất (GĐ4) |
-| AT-11 Re-extract đổi đoạn gốc | partial | Chỉ unit test `anchor.test.ts`; chưa có route trích xuất lại chung để thử đầu-cuối |
+| AT-11 Re-extract đổi đoạn gốc | done | Từ Clean Reader GĐ4: `POST /documents/{id}/reprocess`, `test_reprocess.py` (đoạn đổi khối vẫn `mapped`, đoạn mất `unresolved`, không highlight nào bị xoá); thử đầu-cuối trên màn hình (`docs/clean-reader-release.md`) |
 | AT-12 Quick Summary có trích dẫn | done | `test_quick_summary_is_made_once_and_cites_real_passages`; eval: 73/73 ý có nguồn |
 | AT-13 Deep Summary cho essay không bịa phương pháp | done | Eval `evals/reader_ai` (essay); 0 số liệu bịa |
 | AT-14 Deep Summary cho paper | done | Eval (paper: giữ số mẫu 84/81, kết quả 62%) |
@@ -34,7 +34,7 @@ Cập nhật 16/11/2026, sau Giai đoạn 5 và các thay đổi ở mục 8. Đ
 | AT-21 Tài liệu chỉ có metadata | partial | Màn hình GĐ1 chỉ với phản hồi API giả lập trong trình duyệt; `test_a_document_without_text_cannot_be_chatted_with` |
 | AT-22 Bàn phím | done | GĐ5: Tab đi qua 20 điểm theo thứ tự hợp lý, điểm nào cũng có viền focus, vòng lại không kẹt; vùng PDF nhận focus và cuộn bằng PageDown |
 | AT-23 Dịch/giải thích đoạn chọn | done | Màn hình GĐ4 (nhãn AI, ghi chú dịch giữ đoạn gốc, văn bản tài liệu không đổi); `test_enhanced_reading.py`; eval 2/2 |
-| AT-24 Khôi phục khi PDF đổi version | partial | Chỉ unit test `anchor.test.ts` (giữ quote, trạng thái unresolved) |
+| AT-24 Khôi phục khi PDF đổi version | partial | `anchor.test.ts`; xử lý lại cùng tệp (Clean Reader GĐ4) giữ quote và ghi `anchor_status` trên server. Chưa có cách thay bằng một tệp PDF khác |
 
 ## 2. NFR (SRS §11, TSD §9.1)
 

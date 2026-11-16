@@ -1,6 +1,6 @@
 {
  "adapter": "current",
- "run_at": "2026-11-16T15:10:43.721004+00:00",
+ "run_at": "2026-11-16T15:27:38.421051+00:00",
  "totals": {
   "main_kept": {
    "hit": 81,
@@ -52,6 +52,12 @@
    "hit": 161,
    "of": 162,
    "rate": 0.994
+  },
+  "provenance": {
+   "hit": 73,
+   "of": 73,
+   "rate": 1.0,
+   "unmeasured": 3
   }
  },
  "docs": [
@@ -59,7 +65,7 @@
    "id": "paper-volume-change",
    "group": "two_column",
    "lang": "en",
-   "seconds": 1.65,
+   "seconds": 1.77,
    "error": null,
    "flow_blocks": 57,
    "side_blocks": 18,
@@ -299,13 +305,85 @@
    "hyphens": {
     "broken": 0,
     "left_split": []
-   }
+   },
+   "provenance": [
+    {
+     "type": "ABSTRACT",
+     "text": "The chemical and mechanical behaviours of saturated bentonite were experimentally",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "1 Introduction",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Expansive soils, of which bentonite is an example, are widely distributed around the world",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "in this study. During the mechanical consolidation and swelling in oedometer tests",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "2.1 Experimental methods",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "All the experiments were conducted on initially water-saturated specimens",
+     "result": "unmeasured"
+    },
+    {
+     "type": "CAPTION",
+     "text": "Table 1. Basic properties of bentonite (Kunipia F).",
+     "result": "ok"
+    },
+    {
+     "type": "CAPTION",
+     "text": "Fig. 1. Schematic drawing of oedometer apparatus used.",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "The series of experiments mainly consists of two parts",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "patterns of oedometer tests were carried out",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Element test simulations were conducted based on the constitutive model proposed by Kyokawa",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "constitutive model for clay. In this study, the modified Cam clay model",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "4 Conclusion",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "were carried out in this study. From the comparison of experimental and simulation results",
+     "result": "ok"
+    }
+   ]
   },
   {
    "id": "paper-soil-water",
    "group": "two_column",
    "lang": "en",
-   "seconds": 4.44,
+   "seconds": 3.9,
    "error": null,
    "flow_blocks": 71,
    "side_blocks": 29,
@@ -563,13 +641,80 @@
    "hyphens": {
     "broken": 0,
     "left_split": []
-   }
+   },
+   "provenance": [
+    {
+     "type": "ABSTRACT",
+     "text": "Expansive (or swelling) clays are the most prolific problem soil across Southern Africa",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "1 Introduction",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Reports of the presence of expansive soils and the associated consequences",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "The soil-water retention curve (SWRC) is known to be dependent on sample density",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "2 Unsaturated expansive clays",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Expansive clays exhibit large volume changes with changes in water content",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "partially saturated soils to predict heaving of swelling clays",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "The selected site near Vredefort, South Africa is underlain",
+     "result": "ok"
+    },
+    {
+     "type": "CAPTION",
+     "text": "Fig. 2. Simplified borehole log of selected site.",
+     "result": "ok"
+    },
+    {
+     "type": "CAPTION",
+     "text": "Table 1. Properties of the expansive clay sampled at 3.0 m.",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "5 Results and discussion",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "6 Conclusions",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Gravimetric water content soil-water retention curves in this study were found to be nearly independent",
+     "result": "ok"
+    }
+   ]
   },
   {
    "id": "paper-elsevier-separation",
    "group": "media_heavy",
    "lang": "en",
-   "seconds": 4.68,
+   "seconds": 3.81,
    "error": null,
    "flow_blocks": 171,
    "side_blocks": 109,
@@ -865,13 +1010,80 @@
    "hyphens": {
     "broken": 73,
     "left_split": []
-   }
+   },
+   "provenance": [
+    {
+     "type": "ABSTRACT",
+     "text": "Increasing levels of atmospheric CO2 are the main cause of human-induced climate change",
+     "result": "unmeasured"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "1. Introduction",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Climate change is becoming a global challenge, primarily due to high emissions",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "enough for everyone to use. This approach is essential for protecting our planet",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Despite its critical role in human socio-economic development",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "2. Methodology",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "2.2. Pyrolysis process",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "The pyrolysis was conducted in a Nabertherm muffle furnace",
+     "result": "ok"
+    },
+    {
+     "type": "CAPTION",
+     "text": "Fig. 1. Schematic of biochar activation via KOH.",
+     "result": "ok"
+    },
+    {
+     "type": "CAPTION",
+     "text": "Elemental Composition of Biochars Derived from Birch and Pine",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Overall, the excellent agreement of the pseudo",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "4. Conclusions",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Isosteric heats of adsorption",
+     "result": "ok"
+    }
+   ]
   },
   {
    "id": "paper-arxiv-ai",
    "group": "two_column",
    "lang": "en",
-   "seconds": 1.76,
+   "seconds": 1.57,
    "error": null,
    "flow_blocks": 103,
    "side_blocks": 124,
@@ -1135,13 +1347,90 @@
     "left_split": [
      "there-fore"
     ]
-   }
+   },
+   "provenance": [
+    {
+     "type": "ABSTRACT",
+     "text": "Everyone from AI executives and researchers to doomsayers",
+     "result": "ok"
+    },
+    {
+     "type": "ABSTRACT",
+     "text": "they often don't seem to agree on its exact definition",
+     "result": "unmeasured"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "1. Introduction",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "The AI community has become increasingly fractured over where the field is headed",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Central to all of these views is the concept of Artificial General Intelligence",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "widely public debates, much of the disagreement stems less from evidence",
+     "result": "ok"
+    },
+    {
+     "type": "LIST",
+     "text": "Human intelligence is not general in any meaningful way",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "2. Human Intelligence is Specialized",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Evolution has honed humanity over time to be highly",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "Alternative Views",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "3.1. A Survey of Definitions",
+     "result": "ok"
+    },
+    {
+     "type": "CAPTION",
+     "text": "Figure 2. Illustration of the task space overlap between the human",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Given the utility of specialization, we propose Superhuman Adaptable Intelligence",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "6. Discussion",
+     "result": "ok"
+    },
+    {
+     "type": "QUOTE",
+     "text": "The AI that folds our proteins should not be the AI that folds our laundry!",
+     "result": "ok"
+    }
+   ]
   },
   {
    "id": "book-sommerville",
    "group": "unusual_layout",
    "lang": "en",
-   "seconds": 0.45,
+   "seconds": 0.38,
    "error": null,
    "flow_blocks": 177,
    "side_blocks": 20,
@@ -1291,13 +1580,50 @@
    "hyphens": {
     "broken": 0,
     "left_split": []
-   }
+   },
+   "provenance": [
+    {
+     "type": "BODY",
+     "text": "Software Engineering presents a broad perspective on software systems engineering",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Extensive market research has ensured that this new edition is useful",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "Changes from the fifth edition",
+     "result": "ok"
+    },
+    {
+     "type": "LIST",
+     "text": "Program examples are now in Java and graphical system models",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "widely used techniques for developing large",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Includes bibliographical references",
+     "result": "ok"
+    },
+    {
+     "type": "LIST",
+     "text": "Requirements elicitation and analysis.",
+     "result": "ok"
+    }
+   ]
   },
   {
    "id": "report-vi-quy-dinh",
    "group": "one_column_report",
    "lang": "vi",
-   "seconds": 6.77,
+   "seconds": 5.48,
    "error": null,
    "flow_blocks": 492,
    "side_blocks": 428,
@@ -1541,7 +1867,54 @@
    "hyphens": {
     "broken": 0,
     "left_split": []
-   }
+   },
+   "provenance": [
+    {
+     "type": "SECTION_HEADING",
+     "text": "MỞ ĐẦU",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "Bối cảnh và lý do chọn đề tài",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Khi đọc giáo trình, bài báo khoa học và bài viết kỹ thuật, sinh viên thường",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "dễ mất ngữ cảnh gồm trích xuất tài liệu, lưu vị trí đánh dấu",
+     "result": "ok"
+    },
+    {
+     "type": "SECTION_HEADING",
+     "text": "Chương 1: TỔNG QUAN VÀ CƠ SỞ KỸ THUẬT",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Một thư viện số cá nhân cần lưu được cả đối tượng đọc",
+     "result": "ok"
+    },
+    {
+     "type": "CAPTION",
+     "text": "Hình 3.4 - Biểu đồ tuần tự tải tệp lên và trích xuất",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Trước khi tìm đoạn, backend xem chỉ mục hiện có có khớp",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Khi dịch vụ ngoài trả lỗi, API cần giữ trạng thái nhất quán",
+     "result": "ok"
+    }
+   ]
   },
   {
    "id": "synthetic-reader-test",
@@ -1628,7 +2001,34 @@
    "hyphens": {
     "broken": 0,
     "left_split": []
-   }
+   },
+   "provenance": [
+    {
+     "type": "SECTION_HEADING",
+     "text": "1. Section 1 of the reading test",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Paragraph 1.1. A reader who is interrupted loses the thread",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Paragraph 2.6. A reader who is interrupted loses the thread",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Paragraph 4.1. The position in a document should survive",
+     "result": "ok"
+    },
+    {
+     "type": "BODY",
+     "text": "Paragraph 6.6. Tools that help with reading should wait",
+     "result": "ok"
+    }
+   ]
   },
   {
    "id": "scan-paper-volume-change",
@@ -1665,7 +2065,8 @@
    "hyphens": {
     "broken": 0,
     "left_split": []
-   }
+   },
+   "provenance": []
   }
  ]
 }

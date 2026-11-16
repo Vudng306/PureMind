@@ -32,6 +32,10 @@ The scores (SRS CR-NFR-01..03, proposed targets in brackets):
 - words rejoined: of the words the PDF breaks at a line end with a hyphen ("defi-" / "nition") and prints whole
   elsewhere in the same file, the share that the flow never shows split ("defi-nition", or with a soft
   hyphen U+00AD left inside) (TC-11). Found from the PDF's own text, not from labels.
+- source on the PDF: of the body labels in the flow (abstract, headings, body, captions…), the share whose
+  block opens a box on the page where the PDF prints those words [>= 95 %, CR-NFR-04]. The words' place is
+  found with PyMuPDF's search, not labelled; a label it cannot find is left out and counted apart.
+- time to extract: p50 and p95 seconds by group (CR-NFR-07), without OCR or AI.
 
 The checks match text, so they are a floor: a label found means its words are there in that place, not that
 the block around it is right. Labels are short and taken from the PDF's own text layer.
@@ -40,6 +44,7 @@ the block around it is right. Labels are short and taken from the PDF's own text
 import argparse
 import hashlib
 import json
+import math
 import re
 import sys
 import tempfile
@@ -86,6 +91,25 @@ class Output:
     ocr_pages: list[int] = field(default_factory=list)
     page_count: int = 0
     error: str | None = None
+    # Each block of the flow as the reader has it, with the boxes on the PDF the reader opens for it.
+    places: list[tuple[str, list]] = field(default_factory=list)
+
+
+def places_of(content: str, source_map: list) -> list[tuple[str, list]]:
+    """The reader's blocks and their boxes, matched as the reader matches them (lib/documents.ts sourceBoxes):
+    the nth block with a key gets the nth source-map entry with that key."""
+    entries: dict[str, list] = {}
+    for key, boxes in source_map:
+        entries.setdefault(key, []).append(boxes)
+    seen: dict[str, int] = {}
+    out = []
+    for raw in extraction.reader_blocks(content):
+        key = extraction.block_key(raw)
+        n = seen.get(key, 0)
+        seen[key] = n + 1
+        found = entries.get(key, [])
+        out.append((raw, found[n] if n < len(found) else []))
+    return out
 
 
 def current(path: Path) -> Output:
@@ -104,6 +128,7 @@ def current(path: Path) -> Output:
     return Output(
         flow=flow, side=side, title=result.title or "", ocr_pages=result.ocr_pages,
         page_count=result.page_count or 0, error=error,
+        places=places_of(result.content, result.source_map),
     )  # fmt: skip
 
 
@@ -152,6 +177,46 @@ def broken_words(path: Path) -> list[tuple[str, str]]:
     whole = {w.lower() for w in re.findall(r"[^\W\d_]+", raw)}
     pairs = set(re.findall(r"([^\W\d_]{2,})[-­]\n([^\W\d_]{2,})", raw))
     return sorted((a, b) for a, b in pairs if (a + b).lower() in whole)
+
+
+# Passages whose place on the PDF the reader opens (CR-NFR-04). The title is drawn apart, not as a block.
+PLACED = {"ABSTRACT", "SECTION_HEADING", "BODY", "LIST", "QUOTE", "CAPTION", "FOOTNOTE"}
+
+
+def _covers(box: list, page: int, hit: "pymupdf.Rect", area: "pymupdf.Rect") -> bool:
+    """A source-map box [page, x, y, w, h] (fractions of the page) over a place the PDF prints the words."""
+    n, x, y, w, h = box
+    shown = pymupdf.Rect(
+        area.x0 + x * area.width, area.y0 + y * area.height,
+        area.x0 + (x + w) * area.width, area.y0 + (y + h) * area.height,
+    )  # fmt: skip
+    return n == page and shown.intersects(hit)
+
+
+def provenance(path: Path, doc: dict, places: list[tuple[str, list]]) -> list[dict]:
+    """For each body label in the flow: does the box the reader opens for its block lie where the PDF prints
+    those words? Where the words are is asked of the PDF itself (search_for), so no page needs labelling; a
+    label the PDF's search cannot find (split across a column, ligatures) is not measured."""
+    blocks = [(norm(raw), boxes) for raw, boxes in places]
+    out = []
+    with pymupdf.open(path) as pdf:
+        for label in doc["labels"]:
+            if label["type"] not in PLACED:
+                continue
+            text = norm(label["text"])
+            block = next((boxes for t, boxes in blocks if text in t), None)
+            if block is None:
+                continue  # not in the flow: counted under main kept
+            hits = [(page.number + 1, r, page.rect) for page in pdf for r in page.search_for(label["text"])]
+            if not hits:
+                result = "unmeasured"
+            elif not block:
+                result = "no box"
+            else:
+                right = any(_covers(box, page, hit, area) for box in block for page, hit, area in hits)
+                result = "ok" if right else "wrong"
+            out.append({"type": label["type"], "text": label["text"], "result": result})
+    return out
 
 
 def ensure_derived(doc: dict) -> None:
@@ -241,6 +306,7 @@ def evaluate(doc: dict, adapter: Callable[[Path], Output], dump: bool = False) -
         "order": pairs,
         "checks": checks,
         "hyphens": hyphens,
+        "provenance": provenance(path, doc, out.places),
     }
 
 
@@ -257,6 +323,8 @@ def score(docs: list[dict]) -> dict:
     # A main label also printed as something else (the title in the running header) is not a typing error.
     in_side = [lab for lab in labels if lab["in_side"] and (lab["group"] != "MAIN" or lab["in_flow"] == 0)]
     evaluable = [p for p in pairs if p["result"] != "missing"]
+    places = [p for d in docs for p in d.get("provenance", [])]
+    placed = [p for p in places if p["result"] != "unmeasured"]
     return {
         "main_kept": share(by["MAIN"], lambda x: x["in_flow"] > 0),
         "furniture_suppressed": share(by["FURNITURE"], lambda x: x["in_flow"] == 0),
@@ -269,6 +337,8 @@ def score(docs: list[dict]) -> dict:
         "typed_right": share(in_side, lambda x: GROUP_OF.get(x["in_side"]) == x["group"]),
         "checks": share([c for d in docs for c in d.get("checks", [])], lambda x: x["ok"]),
         "words_rejoined": words_rejoined(docs),
+        "provenance": share(placed, lambda x: x["result"] == "ok")
+        | {"unmeasured": len(places) - len(placed)},
     }
 
 
@@ -286,6 +356,7 @@ TARGETS = {
     "main_kept": ("≥ 99 %", "CR-NFR-01"),
     "furniture_suppressed": ("≥ 90 %", "CR-NFR-02"),
     "reading_order": ("≥ 95 %", "CR-NFR-03"),
+    "provenance": ("≥ 95 %", "CR-NFR-04"),
     "kept_somewhere": ("100 %", "R1"),
     "words_rejoined": ("100 %", "TC-11"),
 }
@@ -300,6 +371,7 @@ NAMES = {
     "typed_right": "Side-store blocks filed under the right group",
     "checks": "Other checks (scanned pages flagged)",
     "words_rejoined": "Words broken at a line end shown whole",
+    "provenance": "Body passages that open the right place on the PDF",
 }
 
 
@@ -307,6 +379,26 @@ def pct(s: dict | None) -> str:
     if not s or s["rate"] is None:
         return "—"
     return f"{s['rate'] * 100:.1f} % ({s['hit']}/{s['of']})"
+
+
+def quantile(values: list[float], q: float) -> float:
+    """Nearest rank: with a handful of documents a group's p95 is its slowest one."""
+    ordered = sorted(values)
+    return ordered[min(len(ordered) - 1, max(0, math.ceil(q * len(ordered)) - 1))]
+
+
+def timing(run: list[dict]) -> list[str]:
+    """CR-NFR-07: seconds to extract, p50 and p95 by group (no OCR, no AI: the app adds those)."""
+    groups: dict[str, list[float]] = {}
+    for d in run:
+        groups.setdefault(d["group"], []).append(d["seconds"])
+    groups["all"] = [d["seconds"] for d in run]
+    lines = ["", "## Time to extract", "", "| Group | PDFs | p50 s | p95 s |", "|---|---|---|---|"]
+    for group, seconds in groups.items():
+        lines.append(
+            f"| {group} | {len(seconds)} | {quantile(seconds, 0.5):.2f} | {quantile(seconds, 0.95):.2f} |"
+        )
+    return lines
 
 
 def report(adapter: str, docs: list[dict], totals: dict, before: dict | None) -> str:
@@ -349,6 +441,7 @@ def report(adapter: str, docs: list[dict], totals: dict, before: dict | None) ->
             f"| {pct(noise)} | {pct(s['reading_order'])} | {d['error'] or ''} |"
         )
 
+    lines += timing(run)
     lines += [
         "",
         "## Misses",
@@ -360,7 +453,8 @@ def report(adapter: str, docs: list[dict], totals: dict, before: dict | None) ->
         misses = [lab for lab in d["labels"] if not lab["ok"]]
         bad = [p for p in d["order"] if p["result"] != "ok"]
         failed = [c for c in d["checks"] if not c["ok"]]
-        if not (misses or bad or failed or d["hyphens"]["left_split"]):
+        misplaced = [p for p in d.get("provenance", []) if p["result"] in ("wrong", "no box")]
+        if not (misses or bad or failed or misplaced or d["hyphens"]["left_split"]):
             continue
         lines.append(f"### {d['id']}")
         lines.append("")
@@ -372,6 +466,8 @@ def report(adapter: str, docs: list[dict], totals: dict, before: dict | None) ->
             lines.append(f"- order {p['result']}: “{p['a']}” → “{p['b']}”")
         for c in failed:
             lines.append(f"- {c['check']}: want {c['want']}, got {c['got']}")
+        for p in misplaced:
+            lines.append(f"- source on the PDF {p['result']}: {p['type']} “{p['text']}”")
         if split := d["hyphens"]["left_split"]:
             more = f" and {len(split) - 12} more" if len(split) > 12 else ""
             lines.append(

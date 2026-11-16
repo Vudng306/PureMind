@@ -209,7 +209,7 @@ Thứ tự đọc đạt 100 % vì các cặp hiện có khá dễ. Cần thêm 
   Có thể vẫn còn nhãn sai.
 - **Chỉ có 8 PDF**, phần lớn tiếng Anh, chỉ một PDF thật sự nhiều hình/bảng. Chưa nên dùng các con số để kết luận theo nhóm.
 - **So khớp bằng chữ.** Một đoạn bị trộn với khối khác vẫn được tính là "còn". Chỉ số từ bị ngắt chỉ đếm những từ mà chính PDF có in nguyên ở chỗ khác, nên là cận dưới.
-- **Chưa có thước đo** cho CR-NFR-04 (provenance) và độ đúng của kiểu khối. Kiểu khối sẽ đo được khi có kho phụ: chỉ số "Side-store blocks filed under the right group".
+- **Chưa có thước đo** cho CR-NFR-04 (provenance) và độ đúng của kiểu khối. Kiểu khối sẽ đo được khi có kho phụ: chỉ số "Side-store blocks filed under the right group". (GĐ5 đã thêm thước đo provenance: §11.)
 
 ## 7. Đề xuất cho Giai đoạn 2
 
@@ -398,3 +398,10 @@ Header, footer và số trang không bao giờ được đưa vào.
 Chưa làm:
 - Hiện `anchor_status` trên thẻ highlight. Reader vẫn tự dò lại vị trí khi mở, và báo highlight không đặt được (AN-104).
 - Test trên PostgreSQL thật (GĐ5).
+
+## 11. Giai đoạn 5: Nghiệm thu (16/11/2026)
+
+Tình trạng phát hành, đối chiếu TC-01..20, CR-NFR, CR-FR và hướng dẫn vận hành: `docs/clean-reader-release.md`. Việc làm ở GĐ5:
+- Toàn bộ backend chạy trên PostgreSQL 16.15: 454 passed. Rollback migration 0037 → 0034 rồi nâng lại đều sạch.
+- Test mới `test_reprocess_asked_at_once_runs_once`: 5 request cùng lúc chỉ đọc tệp một lần. Test fail nếu bỏ điều kiện giữ chỗ.
+- Benchmark thêm thước đo provenance (CR-NFR-04): 73/73 đoạn thân bài mở đúng trang và vùng trên PDF. Benchmark cũng thêm thời gian p50/p95 theo nhóm (CR-NFR-07).

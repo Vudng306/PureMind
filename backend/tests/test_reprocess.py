@@ -1,6 +1,7 @@
 """Clean Reader GĐ4: reading a document's file again (UC-04) — the text in use is kept until a new one is
 whole, the highlights are checked against it and kept either way, and asking twice starts it once."""
 
+import asyncio
 import uuid
 from datetime import timedelta
 
@@ -161,6 +162,33 @@ async def test_reprocess_asked_twice_runs_once(client, auth, extract):
     await _set(doc, reprocess_started_at=utcnow() - timedelta(hours=1))  # cut off by a restart
     assert (await client.post(f"/api/documents/{doc}/reprocess", headers=h)).status_code == 202
     assert extract["calls"] == 1
+
+
+async def test_reprocess_asked_at_once_runs_once(client, auth, extract, monkeypatch):
+    """TC-20, CR-NFR-08: requests arriving together — only one claims the document (on PostgreSQL, the
+    UPDATE's row lock makes the others see it running)."""
+    h = auth()
+    doc = await doc_with(client, h, OLD)
+    extract["calls"] = 0
+    gate = asyncio.Event()
+    reading = documents.extract_file
+
+    async def held(*args):
+        await gate.wait()  # the first reading stays running while the other requests come in
+        return await reading(*args)
+
+    monkeypatch.setattr(documents, "extract_file", held)
+
+    async def open_gate():
+        await asyncio.sleep(0.3)
+        gate.set()
+
+    *answers, _ = await asyncio.gather(
+        *(client.post(f"/api/documents/{doc}/reprocess", headers=h) for _ in range(5)), open_gate()
+    )
+    assert [r.status_code for r in answers] == [202] * 5
+    assert extract["calls"] == 1
+    assert (await get(client, h, doc))["reprocess_state"] == "done"
 
 
 async def test_read_position_in_a_block_gone_falls_back(client, auth, extract):
