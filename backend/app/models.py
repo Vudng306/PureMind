@@ -190,6 +190,10 @@ class Document(TimestampMixin, Base):
     # {image name: chart} of the charts drawn as vector paths, their data read from the drawing at
     # extraction (services/chart_data): for the reader's data table and the AI. Loaded on demand.
     chart_data: Mapped[dict | None] = mapped_column(JsonType, deferred=True)
+    # Clean Reader (CR-FR): the blocks taken out of the reading flow, never deleted — authors, affiliations,
+    # running headers, references, funding… as {"classifier": …, "blocks": [{type, text, page, box,
+    # confidence, reason}, …]} in document order (services/block_roles). Loaded on demand.
+    content_aside: Mapped[dict | None] = mapped_column(JsonType, deferred=True)
     # How to cite the document (schemas.Citation): filled from its DOI or by the user, for BibTeX export.
     citation: Mapped[dict | None] = mapped_column(JsonType)
     # The shelf it is on, if any.

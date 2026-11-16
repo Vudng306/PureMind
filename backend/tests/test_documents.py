@@ -297,7 +297,8 @@ async def test_pdf_layout_in_clean_text(client, auth):
     assert first_page.rindex("Left column") < first_page.index("Right column")
     assert first_page.index("Right column") < first_page.index(r"\* These authors contributed equally.")
     assert "Corresponding author" not in content and "@example.com" not in content
-    assert "1Test University." in content and "Correspondence" not in content
+    # Clean Reader: the affiliation note goes to the side store, not away (CR-FR: nothing is deleted).
+    assert "Test University" not in content and "Correspondence" not in content
     # The two masked strips of the table are one picture, and it is not blank.
     names = re.findall(r"pm-image:([0-9a-f]{16}\.webp)", content)
     assert len(names) == 1
@@ -322,7 +323,8 @@ def test_symbol_font_and_bold_runs():
         _Line([("water-", False)], 10, (0, 0, 1, 1)),
         _Line([("saturated clay", False)], 10, (0, 1, 1, 2)),
     ]
-    assert _markdown_runs(hyphen) == "water-saturated clay"
+    # A hyphen at a line end is marked; the whole document says later whether it splits a word.
+    assert _markdown_runs(hyphen) == "water-⁣saturated clay"
 
     from app.services.extraction import _span_text
 
@@ -333,6 +335,49 @@ def test_symbol_font_and_bold_runs():
     assert _span_text(span("1,*", 1)) == "¹,*"  # an author's affiliation and note marks
     assert _span_text(span("see", 1)) == "see"  # raised words stay words
     assert _span_text(span("3")) == "3"
+
+
+def test_side_store_keeps_what_left_the_flow(tmp_path):
+    from app.services.extraction import extract_pdf
+    from tests.pdfs import paper_pdf
+
+    path = tmp_path / "p.pdf"
+    path.write_bytes(paper_pdf())
+    result = extract_pdf(path, "p")
+    assert result.aside["classifier"] == "rules-1"
+    blocks = result.aside["blocks"]
+    kinds = {b["type"] for b in blocks}
+    assert {"RUNNING_HEADER", "PAGE_NUMBER", "WATERMARK", "AFFILIATIONS"} <= kinds
+    texts = " ".join(b["text"] for b in blocks)
+    assert "Journal of Tests" in texts and "arXiv:2401.00001v1" in texts and "Test University" in texts
+    assert "someone@example.com" in texts  # the contact line too: out of the flow, still held
+    for b in blocks:
+        assert b["page"] >= 1 and len(b["box"]) == 4 and 0 < b["confidence"] <= 1 and b["reason"]
+    assert result.title == "A study of reading order"  # no title in the PDF's metadata: the largest type
+
+
+def test_words_cut_at_a_line_end_are_rejoined():
+    from app.services.extraction import HYPHEN_BREAK, _rejoin
+
+    cut = f"the water-{HYPHEN_BREAK}saturated clay and a satu-{HYPHEN_BREAK}rated layer"
+    # "saturated" is printed whole elsewhere: a word cut in two. "water-saturated" stays hyphenated.
+    assert _rejoin([cut, "a saturated sample"]) == [
+        "the water-saturated clay and a saturated layer",
+        "a saturated sample",
+    ]
+    # A soft hyphen at a line end is a break; one inside a line (a browser's print) shows as a hyphen.
+    assert _rejoin([f"exam­{HYPHEN_BREAK}ple"]) == ["example"]
+    # …and at a line end it is then any hyphen: joined only when the word is printed whole elsewhere.
+    shown = ["widely­used", f"exam­{HYPHEN_BREAK}ple", f"well-{HYPHEN_BREAK}known", "an example"]
+    assert _rejoin(shown) == ["widely-used", "example", "well-known", "an example"]
+
+
+def test_roman_page_numbers_are_furniture():
+    from app.services.extraction import PAGE_NUMBER
+
+    for n in ("iv", "xii", "12", "Page 3 of 10"):
+        assert PAGE_NUMBER.match(n), n
+    assert not PAGE_NUMBER.match("vivid")
 
 
 def test_tables_drawn_with_rules_only(tmp_path):

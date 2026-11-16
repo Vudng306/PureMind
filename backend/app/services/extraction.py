@@ -18,7 +18,7 @@ from typing import NamedTuple
 import pymupdf
 from PIL import Image, ImageFilter, ImageStat
 
-from app.services import chart_data, math_glyphs
+from app.services import block_roles, chart_data, math_glyphs
 
 PAGE_SEPARATOR = "\n\n---\n\n"
 BOLD_FLAG = 1 << 4
@@ -59,6 +59,9 @@ class ExtractionResult:
     # Pages that are scans (a picture of the page, no text to read), numbered from 1: each one stands in the
     # content as its OCR_MARK line until page_ocr reads it.
     ocr_pages: list[int] = field(default_factory=list)
+    # The blocks kept out of the reading flow (see Document.content_aside): {"classifier": …, "blocks": [{type,
+    # text, page, box, confidence, reason}, …]} in the order they come in the document. None: not classified.
+    aside: dict | None = None
 
 
 def _digest(block: dict) -> str:
@@ -255,6 +258,15 @@ class _Item:
     text: str
     # "text" | "table" | "image" | "equation" | "note" (a footnote, read at the end of its page) | "ocr"
     kind: str = "text"
+    size: float = 0.0  # the type size of its largest line (text only)
+    # What it is when it is not the text to read (block_roles): moved to the side store, never deleted.
+    role: str | None = None
+    confidence: float = 0.0
+    reason: str = ""
+
+    @property
+    def aside(self) -> bool:
+        return self.role is not None and self.confidence >= block_roles.AUTO_HIDE
 
 
 CAPTION = re.compile(r"^\**\s*(Fig\.|Figure|Table|Tab\.|Hình|Bảng)\s*\d", re.I)
@@ -268,10 +280,13 @@ NAMED_HEADINGS = {
 MAX_HEADING_CHARS = 120
 
 
-def _lines(block: dict) -> list[_Line]:
+def _lines(block: dict, rotated: list | None = None) -> list[_Line]:
+    """`rotated`, when given, collects (box, text) of the lines that do not run left to right."""
     lines = []
     for line in block["lines"]:
         if abs(line["dir"][1]) > 0.1:  # rotated text: a margin stamp ("arXiv:… 27 Feb 2026"), an axis label
+            if rotated is not None:
+                rotated.append((tuple(line["bbox"]), "".join(s["text"] for s in line["spans"]).strip()))
             continue
         runs: list[tuple[str, bool]] = []
         spans: list[tuple[float, float]] = []
@@ -332,8 +347,13 @@ def _markdown_runs(lines: list[_Line]) -> str:
         for n, (text, bold) in enumerate(line.runs):
             if n == 0 and i > 0:
                 before = runs[-1][0].rstrip() if runs else ""
-                # "water-" + "saturated": the hyphen stays, the line break does not become a space.
-                joiner = "" if before.endswith("-") and text.lstrip()[:1].islower() else " "
+                if before.endswith(SOFT_HYPHEN) or (before.endswith("-") and text.lstrip()[:1].islower()):
+                    # "water-" + "saturated" or "defi-" + "nition": which one is told once the whole
+                    # document is read (_rejoin); the line break does not become a space either way.
+                    runs[-1][0] = before
+                    joiner = HYPHEN_BREAK
+                else:
+                    joiner = " "
                 text = joiner + text.lstrip()
             if runs and (runs[-1][1] == bold or not text.strip()):
                 runs[-1][0] += text
@@ -353,6 +373,34 @@ def _markdown_runs(lines: list[_Line]) -> str:
     return re.sub(r"[ \t]+", " ", "".join(out)).strip()
 
 
+SOFT_HYPHEN = "­"
+HYPHEN_BREAK = "⁣"  # marks a hyphen that ended a line, until _rejoin decides about it
+BROKEN_WORD = re.compile(r"([^\W\d_]+)-⁣([^\W\d_]+)")
+SHOWN_SOFT_HYPHEN = re.compile(r"­(?![⁣\s]|$)")
+
+
+def _rejoin(texts: list[str]) -> list[str]:
+    """Words a line break cut with a hyphen: "defi-" + "nition" is one word when the document prints
+    "definition" whole somewhere else; otherwise the hyphen is the word's own ("water-saturated") and stays
+    (TSD §5.3: join only when sure).
+
+    A soft hyphen (U+00AD) is where a typesetter broke a word at a line end (Elsevier): the word is joined.
+    Some writers (a browser's "print to PDF") put it for every hyphen they draw, inside lines too: in such
+    a document it is a hyphen like any other."""
+    if any(SHOWN_SOFT_HYPHEN.search(t) for t in texts):
+        texts = [t.replace(SOFT_HYPHEN, "-") for t in texts]
+    else:
+        texts = [t.replace(SOFT_HYPHEN + HYPHEN_BREAK, "").replace(SOFT_HYPHEN, "") for t in texts]
+    whole = BROKEN_WORD.sub(" ", "\n".join(texts))
+    seen = {w.lower() for w in re.findall(r"[^\W\d_]+", whole)}
+
+    def join(m: re.Match) -> str:
+        a, b = m.groups()
+        return a + b if (a + b).lower() in seen else f"{a}-{b}"
+
+    return [BROKEN_WORD.sub(join, t).replace(HYPHEN_BREAK, "") for t in texts]
+
+
 def _heading(lines: list[_Line], text: str, body_size: float) -> str | None:
     """A Markdown heading for the paragraph, or None when it is body text."""
     plain = re.sub(r"\s+", " ", text.replace("**", "")).strip()
@@ -364,11 +412,11 @@ def _heading(lines: list[_Line], text: str, body_size: float) -> str | None:
     bold = all(b for line in lines for t, b in line.runs if t.strip())
     if not (bold or size >= body_size * 1.1):
         return None
-    if m := NUMBERED_HEADING.match(plain):  # "2.1 Experimental methods"
+    if m := NUMBERED_HEADING.match(plain):  # "2.1 Experimental methods", "1. Introduction"
         number, title = m.groups()
         if title.endswith(".") or not title[0].isupper():
             return None
-        return ("## " if "." not in number else "### ") + f"{number} {title}"
+        return ("## " if "." not in number else "### ") + plain  # numbered as the PDF numbers it
     if plain.rstrip(".:").lower() in NAMED_HEADINGS:
         return "## " + plain.rstrip(".:")
     return None
@@ -467,7 +515,16 @@ def _page_items(page: "pymupdf.Page", body_size: float, images: ImageSink) -> li
     # Word's subscripts come out as glyph numbers (boxes in the reader): their letters, for everything below.
     math_fixes = math_glyphs.repair(data["blocks"])
     blocks = _stack_images(data["blocks"])
-    block_lines = {id(b): _lines(b) for b in blocks if b["type"] == 0}
+    rotated: list[tuple[tuple, str]] = []
+    block_lines = {id(b): _lines(b, rotated) for b in blocks if b["type"] == 0}
+    width = page.rect.width
+    for bbox, text in rotated:  # a stamp up the margin ("arXiv:2401.00001v1 [cs.AI] 1 Jan 2024")
+        # Long, at the edge: an axis label turned beside a chart near the margin is short.
+        long = bbox[3] - bbox[1] >= page.rect.height * 0.25 or bbox[2] - bbox[0] >= width * 0.25
+        if text and long and (bbox[2] < width * 0.12 or bbox[0] > width * 0.88):
+            items.append(
+                _Item(bbox, text, role="WATERMARK", confidence=0.9, reason="turned text in the margin")
+            )
     page_lines = [line for lines in block_lines.values() for line in lines]
 
     ruled: list[tuple[pymupdf.Rect, str]] = []
@@ -544,21 +601,29 @@ def _page_items(page: "pymupdf.Page", body_size: float, images: ImageSink) -> li
                 max(line.bbox[3] for line in group),
             )
             size = max(line.size for line in group)
+            for contact in CONTACT_SENTENCE.findall(text):  # kept with the authors, out of the text
+                items.append(_Item(bbox, contact.strip(), size=size, role="AUTHORS", confidence=0.9,
+                                   reason="“Correspondence to” sentence"))  # fmt: skip
             text = CONTACT_SENTENCE.sub("", text).strip()
             if not text:
                 continue
             if BOILERPLATE.search(text) and (
                 bbox[1] > page.rect.height * 0.8 or bbox[3] < page.rect.height * 0.1
             ):
-                continue  # the publisher's copyright and licence line at the foot of a page is not the text
+                # The publisher's copyright and licence line at the foot of a page is not the text.
+                items.append(_Item(bbox, text, size=size, role="PUBLISHER_INFO", confidence=0.9,
+                                   reason="copyright or licence line at the page edge"))  # fmt: skip
+                continue
             if FOOTNOTE.match(text) and size < body_size * 0.95 and bbox[1] > page.rect.height * 0.6:
-                if CONTACT.search(text):
-                    continue  # "* Corresponding author: name@…": contact details, not part of the paper
+                if CONTACT.search(text):  # "* Corresponding author: name@…": contact details, not the paper
+                    items.append(_Item(bbox, text, size=size, role="AUTHORS", confidence=0.9,
+                                       reason="contact note"))  # fmt: skip
+                    continue
                 # "* Equal contribution" would otherwise sit between the two columns' text; the
                 # escape keeps the mark from being read as a list bullet.
-                items.append(_Item(bbox, re.sub(r"^\*", r"\\*", text), "note"))
+                items.append(_Item(bbox, re.sub(r"^\*", r"\\*", text), "note", size=size))
                 continue
-            items.append(_Item(bbox, _heading(group, text, body_size) or text))
+            items.append(_Item(bbox, _heading(group, text, body_size) or text, size=size))
     return items
 
 
@@ -986,7 +1051,7 @@ BOILERPLATE = re.compile(
 )
 CONTACT = re.compile(r"corresponding author|correspondence to|e-?mail\s*:|\S+@\S+\.\w{2,}", re.I)
 # "Correspondence to: Name <name@…>." inside the affiliations paragraph.
-CONTACT_SENTENCE = re.compile(r"\s*Correspon-?\s?dence to:[^<\n]{0,200}<[^>\s]+@[^>\s]+>\.?", re.I)
+CONTACT_SENTENCE = re.compile(r"\s*Correspon-?[\s⁣]?dence to:[^<\n]{0,200}<[^>\s]+@[^>\s]+>\.?", re.I)
 FOOTNOTE = re.compile(r"^(?:\*(?!\*)|[†‡§])")  # "* Corresponding author", not "**bold**"
 STACK_GAP = 2.0  # points between two image strips that are one picture on the page
 
@@ -1077,20 +1142,27 @@ def _reading_order(items: list[_Item]) -> list[_Item]:
 
 
 MARGIN = 0.1  # the top and bottom tenth of a page, where running headers, footers and page numbers sit
-PAGE_NUMBER = re.compile(r"^(?:(?:page|trang)\s*)?\d{1,4}(?:\s*(?:/|of|trên)\s*\d{1,4})?$", re.I)
+PAGE_NUMBER = re.compile(
+    r"^(?:(?:page|trang)\s*)?(?:\d{1,4}|[ivxlc]{1,7})(?:\s*(?:/|of|trên)\s*\d{1,4})?$", re.I
+)
 
 
 def _running_key(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"\d+", "#", text.replace("**", ""))).strip().lower()
 
 
-def _drop_running_text(pages: list[list[_Item]], heights: list[float]) -> list[list[_Item]]:
-    """Leave out running headers and footers (the same line in the margin of several pages, page numbers
-    aside) and bare page numbers: in clean text they would interrupt a sentence at every page break."""
+def _mark_running_text(pages: list[list[_Item]], heights: list[float], body_size: float) -> None:
+    """Running headers and footers (the same line in the margin of several pages, page numbers aside) and
+    bare page numbers, typed so they leave the clean text: there they would interrupt a sentence at every
+    page break. A header printed once, on the first page, counts when its words are those of a running one
+    ("Separation and Purification Technology 382 (2026)" over the title, the same beside the authors'
+    names on the pages after it)."""
 
     def in_margin(item: _Item, height: float) -> bool:
-        return item.kind == "text" and (
-            item.bbox[3] < height * MARGIN or item.bbox[1] > height * (1 - MARGIN)
+        return (
+            item.kind == "text"
+            and item.role is None
+            and (item.bbox[3] < height * MARGIN or item.bbox[1] > height * (1 - MARGIN))
         )
 
     seen: dict[str, set[int]] = defaultdict(set)
@@ -1099,16 +1171,26 @@ def _drop_running_text(pages: list[list[_Item]], heights: list[float]) -> list[l
             if in_margin(item, height):
                 seen[_running_key(item.text)].add(n)
     repeated = min(3, len(pages))
+    running_keys = [set(k.split()) for k, on in seen.items() if len(on) >= repeated] if len(pages) > 1 else []
 
-    def running(item: _Item) -> bool:
-        if PAGE_NUMBER.match(item.text.replace("**", "").strip()):
-            return True
-        return len(pages) > 1 and len(seen[_running_key(item.text)]) >= repeated
+    def like_running(key: str) -> bool:
+        words = {w for w in key.split() if len(w) >= 3}
+        return len(words) >= 3 and any(len(words & r) >= 0.75 * len(words) for r in running_keys)
 
-    return [
-        [i for i in items if not (in_margin(i, height) and running(i))]
-        for items, height in zip(pages, heights, strict=True)
-    ]
+    for items, height in zip(pages, heights, strict=True):
+        for item in items:
+            if not in_margin(item, height):
+                continue
+            top = item.bbox[3] < height * MARGIN
+            key = _running_key(item.text)
+            if PAGE_NUMBER.match(item.text.replace("**", "").strip()):
+                item.role, item.confidence, item.reason = "PAGE_NUMBER", 0.95, "page number in the margin"
+            elif len(pages) > 1 and len(seen[key]) >= repeated:
+                item.role, item.confidence = ("RUNNING_HEADER" if top else "RUNNING_FOOTER"), 0.95
+                item.reason = f"same line in the margin of {len(seen[key])} pages"
+            elif item.size <= body_size * 1.1 and like_running(key):  # not the page's own title
+                item.role, item.confidence = ("RUNNING_HEADER" if top else "RUNNING_FOOTER"), 0.85
+                item.reason = "the words of a running header, printed once"
 
 
 # A paragraph that runs on to the next page: it ends mid-sentence and the next page goes on in lower case.
@@ -1133,7 +1215,7 @@ def _carried_over(pages: list[list[str]], sources: list[list[list]] | None = Non
             or not CARRIED_START.match(tail)
         ):
             continue
-        prev[-1] = f"{head[:-1]}{tail}" if head.endswith("-") else f"{head} {tail}"
+        prev[-1] = f"{head}{HYPHEN_BREAK}{tail}" if head.endswith(("-", SOFT_HYPHEN)) else f"{head} {tail}"
         del page[0]
         if sources is not None:
             sources[n][-1] += sources[n + 1].pop(0)
@@ -1238,6 +1320,7 @@ def _table_images(items: list[_Item]) -> list[str]:
     return names
 
 
+FILE_LIKE_TITLE = re.compile(r"\.(docx?|pdf|tex|odt|pptx?)$|^microsoft (word|powerpoint) -|^untitled", re.I)
 MIN_PAGE_TEXT = 20  # characters: fewer, and the page has no text layer worth reading
 SCAN_COVERAGE = 0.5  # of the page covered by pictures: a scan
 DEFAULT_BODY_SIZE = 10.0
@@ -1301,19 +1384,45 @@ def extract_pdf(path: Path, fallback_title: str, image_dir: Path | None = None) 
             else _page_items(page, body_size, images)
             for page in doc
         ]
-        page_items = _drop_running_text(page_items, [page.rect.height for page in doc])
-        ordered = [_reading_order(items) for items in page_items]
+        heights = [page.rect.height for page in doc]
+        _mark_running_text(page_items, heights, body_size)
+        # Reading order is worked out on the text alone, as before anything was kept aside.
+        # What was set aside on sight (headers, stamps, licence lines), page by page from the top.
+        early = [
+            sorted((i for i in items if i.aside), key=lambda i: (i.bbox[1], i.bbox[0]))
+            for items in page_items
+        ]
+        ordered = [_reading_order([i for i in items if not i.aside]) for items in page_items]
+        found_title = block_roles.classify(ordered, heights, body_size)
+
+        # The side store in document order: on each page what was set aside on sight where it sits, around
+        # what the classifier took out of the reading flow.
+        aside: list[tuple[_Item, pymupdf.Page]] = []
+        for top, flow, page in zip(early, ordered, doc, strict=True):
+            half = page.rect.height / 2
+            aside += [(i, page) for i in top if i.bbox[1] < half]
+            aside += [(i, page) for i in flow if i.aside]
+            aside += [(i, page) for i in top if i.bbox[1] >= half]
+        ordered = [[i for i in items if not i.aside] for items in ordered]
+
         kept = [(items, page) for items, page in zip(ordered, doc, strict=True) if items]
         pages = [[i.text for i in items] for items, _ in kept]
         sources = [[[_source_box(i, page)] for i in items] for items, page in kept]
         pages = _carried_over(pages, sources)
+        # Words cut at a line end are told from hyphenated ones by the whole document, the side store too.
+        texts = _rejoin([t for p in pages for t in p] + [i.text for i, _ in aside])
+        it = iter(texts)
+        pages = [[next(it) for _ in p] for p in pages]
+        aside_texts = list(it)
         content = PAGE_SEPARATOR.join("\n\n".join(p) for p in pages)
         if not content.strip():
             raise ExtractionError("MSG-15")
 
-        meta_title = (doc.metadata or {}).get("title") or ""
+        meta_title = ((doc.metadata or {}).get("title") or "").strip()
+        if found_title and (not meta_title or FILE_LIKE_TITLE.search(meta_title)):
+            meta_title = found_title[:500]
         return ExtractionResult(
-            title=meta_title.strip() or fallback_title,
+            title=meta_title or fallback_title,
             content=content,
             page_count=doc.page_count,
             word_count=len(re.findall(r"\w+", content)),
@@ -1329,6 +1438,20 @@ def extract_pdf(path: Path, fallback_title: str, image_dir: Path | None = None) 
                 for key in reader_keys(text)
             ],
             ocr_pages=sorted(n + 1 for n in scanned),
+            aside={
+                "classifier": block_roles.CLASSIFIER,
+                "blocks": [
+                    {
+                        "type": item.role,
+                        "text": text,
+                        "page": page.number + 1,
+                        "box": _source_box(item, page)[1:],
+                        "confidence": item.confidence,
+                        "reason": item.reason,
+                    }
+                    for (item, page), text in zip(aside, aside_texts, strict=True)
+                ],
+            },
         )
 
 

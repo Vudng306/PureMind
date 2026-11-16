@@ -202,6 +202,7 @@ async def run_extraction(
             doc.title = result.title[:500]
         doc.content_clean = content
         doc.source_map = source_map or None
+        doc.content_aside = result.aside
         doc.figure_notes = None  # the figures of the earlier text, if any, are gone
         doc.chart_data = result.charts or None
         doc.page_count = result.page_count

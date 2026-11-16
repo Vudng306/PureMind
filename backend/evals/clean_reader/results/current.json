@@ -1,0 +1,1671 @@
+{
+ "adapter": "current",
+ "run_at": "2026-11-16T09:03:56.529632+00:00",
+ "totals": {
+  "main_kept": {
+   "hit": 81,
+   "of": 81,
+   "rate": 1.0
+  },
+  "furniture_suppressed": {
+   "hit": 21,
+   "of": 23,
+   "rate": 0.913
+  },
+  "figure_text_suppressed": {
+   "hit": 3,
+   "of": 3,
+   "rate": 1.0
+  },
+  "metadata_separated": {
+   "hit": 27,
+   "of": 29,
+   "rate": 0.931
+  },
+  "supplementary_separated": {
+   "hit": 18,
+   "of": 18,
+   "rate": 1.0
+  },
+  "kept_somewhere": {
+   "hit": 70,
+   "of": 70,
+   "rate": 1.0
+  },
+  "reading_order": {
+   "hit": 34,
+   "of": 34,
+   "rate": 1.0,
+   "missing": 0
+  },
+  "typed_right": {
+   "hit": 66,
+   "of": 66,
+   "rate": 1.0
+  },
+  "checks": {
+   "hit": 2,
+   "of": 2,
+   "rate": 1.0
+  },
+  "words_rejoined": {
+   "hit": 161,
+   "of": 162,
+   "rate": 0.994
+  }
+ },
+ "docs": [
+  {
+   "id": "paper-volume-change",
+   "group": "two_column",
+   "lang": "en",
+   "seconds": 1.94,
+   "error": null,
+   "flow_blocks": 57,
+   "side_blocks": 18,
+   "labels": [
+    {
+     "type": "TITLE",
+     "group": "MAIN",
+     "text": "Experimental and analytical investigations of volume change",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "Misa Hiraga",
+     "in_flow": 0,
+     "in_side": "AUTHORS",
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "Corresponding author: misahiraga",
+     "in_flow": 0,
+     "in_side": "AUTHORS",
+     "ok": true
+    },
+    {
+     "type": "AFFILIATIONS",
+     "group": "METADATA",
+     "text": "The University of Tokyo, Department of Civil Engineering",
+     "in_flow": 0,
+     "in_side": "AFFILIATIONS",
+     "ok": true
+    },
+    {
+     "type": "ABSTRACT",
+     "group": "MAIN",
+     "text": "The chemical and mechanical behaviours of saturated bentonite were experimentally",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "1 Introduction",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Expansive soils, of which bentonite is an example, are widely distributed around the world",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "in this study. During the mechanical consolidation and swelling in oedometer tests",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "2.1 Experimental methods",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "All the experiments were conducted on initially water-saturated specimens",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "CAPTION",
+     "group": "MAIN",
+     "text": "Table 1. Basic properties of bentonite (Kunipia F).",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "CAPTION",
+     "group": "MAIN",
+     "text": "Fig. 1. Schematic drawing of oedometer apparatus used.",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "The series of experiments mainly consists of two parts",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "patterns of oedometer tests were carried out",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Element test simulations were conducted based on the constitutive model proposed by Kyokawa",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "constitutive model for clay. In this study, the modified Cam clay model",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "4 Conclusion",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "were carried out in this study. From the comparison of experimental and simulation results",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "REFERENCES",
+     "group": "SUPPLEMENTARY",
+     "text": "C.D. Curtis, J. Geol. Soc. 147, 351 (1990)",
+     "in_flow": 0,
+     "in_side": "REFERENCES",
+     "ok": true
+    },
+    {
+     "type": "REFERENCES",
+     "group": "SUPPLEMENTARY",
+     "text": "H. Komine, Y. Kazuya, S. Murakami",
+     "in_flow": 0,
+     "in_side": "REFERENCES",
+     "ok": true
+    },
+    {
+     "type": "RUNNING_HEADER",
+     "group": "FURNITURE",
+     "text": "E3S Web of Conferences 92, 10006 (2019)",
+     "in_flow": 0,
+     "in_side": "RUNNING_HEADER",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "published by EDP Sciences",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "2",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "5",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    }
+   ],
+   "order": [
+    {
+     "a": "widely distributed around the world",
+     "b": "especially the osmotic volume change behaviour",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "especially the osmotic volume change behaviour",
+     "b": "in this study. during the mechanical consolidation",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "in this study. During the mechanical consolidation",
+     "b": "2.1 experimental methods",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "the series of experiments mainly consists of two",
+     "b": "patterns of oedometer tests were carried out",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "can be regarded as an extension of the derjaguin",
+     "b": "constitutive model for clay. in this study",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "from the comparison of experimental and simulation results",
+     "b": "modelling will be future work",
+     "next": false,
+     "result": "ok"
+    }
+   ],
+   "checks": [],
+   "hyphens": {
+    "broken": 0,
+    "left_split": []
+   }
+  },
+  {
+   "id": "paper-soil-water",
+   "group": "two_column",
+   "lang": "en",
+   "seconds": 4.51,
+   "error": null,
+   "flow_blocks": 71,
+   "side_blocks": 29,
+   "labels": [
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "White Rose Research Online URL for this paper",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "If you consider content in White Rose Research Online to be in breach of UK law",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "Murison, R.A., Jacobsz, S.W.",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "Ruan A. Murison",
+     "in_flow": 0,
+     "in_side": "AUTHORS",
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "Corresponding author: ruan.murison",
+     "in_flow": 0,
+     "in_side": "AUTHORS",
+     "ok": true
+    },
+    {
+     "type": "AFFILIATIONS",
+     "group": "METADATA",
+     "text": "University of Pretoria, Department of Civil Engineering, Lynnwood Rd",
+     "in_flow": 0,
+     "in_side": "AFFILIATIONS",
+     "ok": true
+    },
+    {
+     "type": "ABSTRACT",
+     "group": "MAIN",
+     "text": "Expansive (or swelling) clays are the most prolific problem soil across Southern Africa",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "1 Introduction",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Reports of the presence of expansive soils and the associated consequences",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "The soil-water retention curve (SWRC) is known to be dependent on sample density",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "2 Unsaturated expansive clays",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Expansive clays exhibit large volume changes with changes in water content",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "partially saturated soils to predict heaving of swelling clays",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "The selected site near Vredefort, South Africa is underlain",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "CAPTION",
+     "group": "MAIN",
+     "text": "Fig. 2. Simplified borehole log of selected site.",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "CAPTION",
+     "group": "MAIN",
+     "text": "Table 1. Properties of the expansive clay sampled at 3.0 m.",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "5 Results and discussion",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "6 Conclusions",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Gravimetric water content soil-water retention curves in this study were found to be nearly independent",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "FUNDING",
+     "group": "SUPPLEMENTARY",
+     "text": "The authors would like to express their gratitude to the UK EPSRC Global Challenges Fund",
+     "in_flow": 0,
+     "in_side": "FUNDING",
+     "ok": true
+    },
+    {
+     "type": "REFERENCES",
+     "group": "SUPPLEMENTARY",
+     "text": "T.A.V. Gaspar. Centrifuge modelling of piled foundations",
+     "in_flow": 0,
+     "in_side": "REFERENCES",
+     "ok": true
+    },
+    {
+     "type": "RUNNING_HEADER",
+     "group": "FURNITURE",
+     "text": "E3S Web of Conferences 382, 09005 (2023)",
+     "in_flow": 0,
+     "in_side": "RUNNING_HEADER",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "published by EDP Sciences",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "3",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    },
+    {
+     "type": "FIGURE_TEXT",
+     "group": "FIGURE_TEXT",
+     "text": "Fraction finer by mass (%)",
+     "in_flow": 0,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "FIGURE_TEXT",
+     "group": "FIGURE_TEXT",
+     "text": "Proportion of whole sample by mass (%)",
+     "in_flow": 0,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "FIGURE_TEXT",
+     "group": "FIGURE_TEXT",
+     "text": "Capillary regime",
+     "in_flow": 0,
+     "in_side": null,
+     "ok": true
+    }
+   ],
+   "order": [
+    {
+     "a": "reports of the presence of expansive soils",
+     "b": "the soil-water retention curve (swrc) is known",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "the soil-water retention curve (swrc) is known",
+     "b": "2 unsaturated expansive clays",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "expansive clays exhibit large volume changes",
+     "b": "partially saturated soils to predict heaving",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "partially saturated soils to predict heaving",
+     "b": "the selected site near vredefort",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "6 conclusions",
+     "b": "gravimetric water content soil-water retention curves in this study",
+     "next": false,
+     "result": "ok"
+    }
+   ],
+   "checks": [],
+   "hyphens": {
+    "broken": 0,
+    "left_split": []
+   }
+  },
+  {
+   "id": "paper-elsevier-separation",
+   "group": "media_heavy",
+   "lang": "en",
+   "seconds": 4.0,
+   "error": null,
+   "flow_blocks": 171,
+   "side_blocks": 109,
+   "labels": [
+    {
+     "type": "TITLE",
+     "group": "MAIN",
+     "text": "Isotherms and kinetics of CO2 adsorption on biochar-based activated carbon",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "Ilias-Maximilian Kropik",
+     "in_flow": 0,
+     "in_side": "AUTHORS",
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "E-mail address: selma.kuloglija@tuwien.ac.at",
+     "in_flow": 0,
+     "in_side": "AUTHORS",
+     "ok": true
+    },
+    {
+     "type": "AFFILIATIONS",
+     "group": "METADATA",
+     "text": "Institute of Chemical, Environmental & Bioscience Engineering",
+     "in_flow": 0,
+     "in_side": "AFFILIATIONS",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "Contents lists available at ScienceDirect",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "journal homepage: www.elsevier.com/locate/seppur",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "Received 29 July 2025; Received in revised form",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "Editor name: S Shouliang Yi",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "KEYWORDS",
+     "group": "METADATA",
+     "text": "Keywords: Biochar KOH activation",
+     "in_flow": 0,
+     "in_side": "KEYWORDS",
+     "ok": true
+    },
+    {
+     "type": "ABSTRACT",
+     "group": "MAIN",
+     "text": "Increasing levels of atmospheric CO2 are the main cause of human-induced climate change",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "1. Introduction",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Climate change is becoming a global challenge, primarily due to high emissions",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "enough for everyone to use. This approach is essential for protecting our planet",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Despite its critical role in human socio-economic development",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "2. Methodology",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "2.2. Pyrolysis process",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "The pyrolysis was conducted in a Nabertherm muffle furnace",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "CAPTION",
+     "group": "MAIN",
+     "text": "Fig. 1. Schematic of biochar activation via KOH.",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "CAPTION",
+     "group": "MAIN",
+     "text": "Elemental Composition of Biochars Derived from Birch and Pine",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Overall, the excellent agreement of the pseudo",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "4. Conclusions",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Isosteric heats of adsorption",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "AUTHOR_CONTRIBUTIONS",
+     "group": "SUPPLEMENTARY",
+     "text": "CRediT authorship contribution statement",
+     "in_flow": 0,
+     "in_side": "AUTHOR_CONTRIBUTIONS",
+     "ok": true
+    },
+    {
+     "type": "CONFLICT_OF_INTEREST",
+     "group": "SUPPLEMENTARY",
+     "text": "The authors declare that they have no known competing financial interests",
+     "in_flow": 0,
+     "in_side": "CONFLICT_OF_INTEREST",
+     "ok": true
+    },
+    {
+     "type": "FUNDING",
+     "group": "SUPPLEMENTARY",
+     "text": "This research was funded by the Austrian Science Fund (FWF)",
+     "in_flow": 0,
+     "in_side": "ACKNOWLEDGEMENTS",
+     "ok": true
+    },
+    {
+     "type": "DATA_AVAILABILITY",
+     "group": "SUPPLEMENTARY",
+     "text": "Data will be made available on request.",
+     "in_flow": 0,
+     "in_side": "DATA_AVAILABILITY",
+     "ok": true
+    },
+    {
+     "type": "REFERENCES",
+     "group": "SUPPLEMENTARY",
+     "text": "A.N. Shafawi, A.R. Mohamed, P. Lahijani",
+     "in_flow": 0,
+     "in_side": "REFERENCES",
+     "ok": true
+    },
+    {
+     "type": "REFERENCES",
+     "group": "SUPPLEMENTARY",
+     "text": "M. Karimi, M. Shirzad",
+     "in_flow": 0,
+     "in_side": "REFERENCES",
+     "ok": true
+    },
+    {
+     "type": "RUNNING_HEADER",
+     "group": "FURNITURE",
+     "text": "S. Kuloglija et al.",
+     "in_flow": 0,
+     "in_side": "RUNNING_HEADER",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "7",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "12",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    }
+   ],
+   "order": [
+    {
+     "a": "climate change is becoming a global challenge",
+     "b": "enough for everyone to use",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "enough for everyone to use",
+     "b": "gas emissions, making it particularly significant",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "for the activation process, koh was dissolved in distilled water",
+     "b": "prepare solutions with impregnation ratios",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "2.2. pyrolysis process",
+     "b": "the pyrolysis was conducted in a nabertherm",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "adsorption properties of pine- and birch-derived",
+     "b": "biochars is systematically evaluated",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "4. conclusions",
+     "b": "isosteric heats of adsorption",
+     "next": false,
+     "result": "ok"
+    }
+   ],
+   "checks": [],
+   "hyphens": {
+    "broken": 73,
+    "left_split": []
+   }
+  },
+  {
+   "id": "paper-arxiv-ai",
+   "group": "two_column",
+   "lang": "en",
+   "seconds": 1.78,
+   "error": null,
+   "flow_blocks": 103,
+   "side_blocks": 124,
+   "labels": [
+    {
+     "type": "TITLE",
+     "group": "MAIN",
+     "text": "AI Must Embrace Specialization via Superhuman Adaptable Intelligence",
+     "in_flow": 1,
+     "in_side": "RUNNING_HEADER",
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "Philippe Wyder",
+     "in_flow": 0,
+     "in_side": "AUTHORS",
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "jag2396@columbia.edu",
+     "in_flow": 0,
+     "in_side": "AUTHORS",
+     "ok": true
+    },
+    {
+     "type": "AFFILIATIONS",
+     "group": "METADATA",
+     "text": "Columbia University, New York, NY, USA",
+     "in_flow": 0,
+     "in_side": "AFFILIATIONS",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "Preprint. March 2, 2026.",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "WATERMARK",
+     "group": "FURNITURE",
+     "text": "arXiv:2602.23643v1",
+     "in_flow": 0,
+     "in_side": "WATERMARK",
+     "ok": true
+    },
+    {
+     "type": "ABSTRACT",
+     "group": "MAIN",
+     "text": "Everyone from AI executives and researchers to doomsayers",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "ABSTRACT",
+     "group": "MAIN",
+     "text": "they often don't seem to agree on its exact definition",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "1. Introduction",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "The AI community has become increasingly fractured over where the field is headed",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Central to all of these views is the concept of Artificial General Intelligence",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "widely public debates, much of the disagreement stems less from evidence",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "LIST",
+     "group": "MAIN",
+     "text": "Human intelligence is not general in any meaningful way",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "2. Human Intelligence is Specialized",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Evolution has honed humanity over time to be highly",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "Alternative Views",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "3.1. A Survey of Definitions",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "CAPTION",
+     "group": "MAIN",
+     "text": "Figure 2. Illustration of the task space overlap between the human",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Given the utility of specialization, we propose Superhuman Adaptable Intelligence",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "6. Discussion",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "QUOTE",
+     "group": "MAIN",
+     "text": "The AI that folds our proteins should not be the AI that folds our laundry!",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "REFERENCES",
+     "group": "SUPPLEMENTARY",
+     "text": "Chollet, F. On the measure of intelligence",
+     "in_flow": 0,
+     "in_side": "REFERENCES",
+     "ok": true
+    },
+    {
+     "type": "REFERENCES",
+     "group": "SUPPLEMENTARY",
+     "text": "Legg, S. and Hutter, M. Universal intelligence",
+     "in_flow": 0,
+     "in_side": "REFERENCES",
+     "ok": true
+    },
+    {
+     "type": "RUNNING_HEADER",
+     "group": "FURNITURE",
+     "text": "AI Must Embrace Specialization via Superhuman Adaptable Intelligence",
+     "in_flow": 0,
+     "in_side": "RUNNING_HEADER",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "2",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "9",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    }
+   ],
+   "order": [
+    {
+     "a": "the ai community has become increasingly fractured",
+     "b": "central to all of these views",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "central to all of these views",
+     "b": "widely public debates, much of the disagreement",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "widely public debates, much of the disagreement",
+     "b": "much of the discourse uses human intelligence",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "much of the discourse uses human intelligence",
+     "b": "human intelligence is not general in any meaningful way",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "evolution has honed humanity",
+     "b": "the above argument serves to dispel",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "the above argument serves to dispel",
+     "b": "in general are bad at chess",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "5.2. the substrate for fast adaptation",
+     "b": "5.3. on the importance of diversity",
+     "next": false,
+     "result": "ok"
+    }
+   ],
+   "checks": [],
+   "hyphens": {
+    "broken": 89,
+    "left_split": [
+     "there-fore"
+    ]
+   }
+  },
+  {
+   "id": "book-sommerville",
+   "group": "unusual_layout",
+   "lang": "en",
+   "seconds": 0.44,
+   "error": null,
+   "flow_blocks": 177,
+   "side_blocks": 20,
+   "labels": [
+    {
+     "type": "TITLE",
+     "group": "MAIN",
+     "text": "Software Engineering 6TH Edition",
+     "in_flow": 1,
+     "in_side": "RUNNING_HEADER",
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "by Ian Sommerville",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": false
+    },
+    {
+     "type": "RUNNING_HEADER",
+     "group": "FURNITURE",
+     "text": "07/07/2016",
+     "in_flow": 0,
+     "in_side": "RUNNING_HEADER",
+     "ok": true
+    },
+    {
+     "type": "RUNNING_HEADER",
+     "group": "FURNITURE",
+     "text": "Hardcover: 9780201398151",
+     "in_flow": 0,
+     "in_side": "RUNNING_HEADER",
+     "ok": true
+    },
+    {
+     "type": "RUNNING_FOOTER",
+     "group": "FURNITURE",
+     "text": "www.powells.com/book/software",
+     "in_flow": 0,
+     "in_side": "RUNNING_FOOTER",
+     "ok": true
+    },
+    {
+     "type": "WEB_CHROME",
+     "group": "FURNITURE",
+     "text": "Comment on this title and you could win free books!",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": false
+    },
+    {
+     "type": "WEB_CHROME",
+     "group": "FURNITURE",
+     "text": "All Product Details",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": false
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Software Engineering presents a broad perspective on software systems engineering",
+     "in_flow": 2,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Extensive market research has ensured that this new edition is useful",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "Changes from the fifth edition",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "LIST",
+     "group": "MAIN",
+     "text": "Program examples are now in Java and graphical system models",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BIOGRAPHY",
+     "group": "METADATA",
+     "text": "Ian Sommerville is Professor of Software Engineering at Lancaster University",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": false
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "widely used techniques for developing large",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Includes bibliographical references",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "LIST",
+     "group": "MAIN",
+     "text": "Requirements elicitation and analysis.",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    }
+   ],
+   "order": [
+    {
+     "a": "changes from the fifth edition",
+     "b": "program examples are now in java",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "ian sommerville is professor of software engineering",
+     "b": "widely used techniques for developing large",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "table of contents",
+     "b": "requirements elicitation and analysis.",
+     "next": false,
+     "result": "ok"
+    }
+   ],
+   "checks": [],
+   "hyphens": {
+    "broken": 0,
+    "left_split": []
+   }
+  },
+  {
+   "id": "report-vi-quy-dinh",
+   "group": "one_column_report",
+   "lang": "vi",
+   "seconds": 5.97,
+   "error": null,
+   "flow_blocks": 492,
+   "side_blocks": 428,
+   "labels": [
+    {
+     "type": "TITLE",
+     "group": "MAIN",
+     "text": "XÂY DỰNG NỀN TẢNG ĐỌC TÀI LIỆU VÀ",
+     "in_flow": 1,
+     "in_side": "FRONT_MATTER",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "TRƯỜNG ĐẠI HỌC XÂY DỰNG KHOA CÔNG NGHỆ THÔNG TIN",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "PUBLISHER_INFO",
+     "group": "METADATA",
+     "text": "NGÀNH: CÔNG NGHỆ THÔNG TIN",
+     "in_flow": 0,
+     "in_side": "PUBLISHER_INFO",
+     "ok": true
+    },
+    {
+     "type": "DECORATION",
+     "group": "FURNITURE",
+     "text": "o0o",
+     "in_flow": 0,
+     "in_side": "DECORATION",
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "DƯƠNG VĂN VŨ",
+     "in_flow": 0,
+     "in_side": "AUTHORS",
+     "ok": true
+    },
+    {
+     "type": "AUTHORS",
+     "group": "METADATA",
+     "text": "ThS. Đào Thị Ngọc Hân",
+     "in_flow": 0,
+     "in_side": "AUTHORS",
+     "ok": true
+    },
+    {
+     "type": "DECLARATION",
+     "group": "SUPPLEMENTARY",
+     "text": "Em cam đoan đồ án tốt nghiệp",
+     "in_flow": 0,
+     "in_side": "DECLARATION",
+     "ok": true
+    },
+    {
+     "type": "ACKNOWLEDGEMENTS",
+     "group": "SUPPLEMENTARY",
+     "text": "Em xin chân thành cảm ơn ThS. Đào Thị Ngọc Hân",
+     "in_flow": 0,
+     "in_side": "ACKNOWLEDGEMENTS",
+     "ok": true
+    },
+    {
+     "type": "TABLE_OF_CONTENTS",
+     "group": "SUPPLEMENTARY",
+     "text": "Lưu tệp song song với dữ liệu quan hệ ....",
+     "in_flow": 0,
+     "in_side": "TABLE_OF_CONTENTS",
+     "ok": true
+    },
+    {
+     "type": "TABLE_OF_CONTENTS",
+     "group": "SUPPLEMENTARY",
+     "text": "Thiết kế truy xuất cho hỏi đáp....",
+     "in_flow": 0,
+     "in_side": "TABLE_OF_CONTENTS",
+     "ok": true
+    },
+    {
+     "type": "RUNNING_HEADER",
+     "group": "FURNITURE",
+     "text": "Xây dựng nền tảng đọc tài liệu và tổ chức kiến thức cá nhân PureMind",
+     "in_flow": 0,
+     "in_side": "RUNNING_HEADER",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "ii",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "v",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "27",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    },
+    {
+     "type": "PAGE_NUMBER",
+     "group": "FURNITURE",
+     "text": "63",
+     "in_flow": 0,
+     "in_side": "PAGE_NUMBER",
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "MỞ ĐẦU",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "Bối cảnh và lý do chọn đề tài",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Khi đọc giáo trình, bài báo khoa học và bài viết kỹ thuật, sinh viên thường",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "dễ mất ngữ cảnh gồm trích xuất tài liệu, lưu vị trí đánh dấu",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "Chương 1: TỔNG QUAN VÀ CƠ SỞ KỸ THUẬT",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Một thư viện số cá nhân cần lưu được cả đối tượng đọc",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "CAPTION",
+     "group": "MAIN",
+     "text": "Hình 3.4 - Biểu đồ tuần tự tải tệp lên và trích xuất",
+     "in_flow": 1,
+     "in_side": "TABLE_OF_CONTENTS",
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Trước khi tìm đoạn, backend xem chỉ mục hiện có có khớp",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Khi dịch vụ ngoài trả lỗi, API cần giữ trạng thái nhất quán",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "REFERENCES",
+     "group": "SUPPLEMENTARY",
+     "text": "RFC Editor. [Online]. Available: https://www.rfc-editor.org/rfc/rfc7519",
+     "in_flow": 0,
+     "in_side": "REFERENCES",
+     "ok": true
+    },
+    {
+     "type": "APPENDIX",
+     "group": "SUPPLEMENTARY",
+     "text": "Lệnh tái lập kiểm thử",
+     "in_flow": 0,
+     "in_side": "TABLE_OF_CONTENTS",
+     "ok": true
+    }
+   ],
+   "order": [
+    {
+     "a": "khi đọc giáo trình, bài báo khoa học",
+     "b": "puremind được xây dựng để nối ba hoạt động",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "các yêu cầu được phân nhóm theo luồng người dùng",
+     "b": "dễ mất ngữ cảnh gồm trích xuất tài liệu",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "3.6 thiết kế phân quyền và quản lý lỗi",
+     "b": "quyền truy cập có hai cấp chính",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "3.7.1 trạng thái tài liệu trong quá trình trích xuất",
+     "b": "khi tiếp nhận tệp, backend tạo metadata",
+     "next": false,
+     "result": "ok"
+    }
+   ],
+   "checks": [],
+   "hyphens": {
+    "broken": 0,
+    "left_split": []
+   }
+  },
+  {
+   "id": "synthetic-reader-test",
+   "group": "unusual_layout",
+   "lang": "en",
+   "seconds": 0.05,
+   "error": null,
+   "flow_blocks": 35,
+   "side_blocks": 0,
+   "labels": [
+    {
+     "type": "SECTION_HEADING",
+     "group": "MAIN",
+     "text": "1. Section 1 of the reading test",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Paragraph 1.1. A reader who is interrupted loses the thread",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Paragraph 2.6. A reader who is interrupted loses the thread",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Paragraph 4.1. The position in a document should survive",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    },
+    {
+     "type": "BODY",
+     "group": "MAIN",
+     "text": "Paragraph 6.6. Tools that help with reading should wait",
+     "in_flow": 1,
+     "in_side": null,
+     "ok": true
+    }
+   ],
+   "order": [
+    {
+     "a": "paragraph 1.6.",
+     "b": "paragraph 2.1.",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "paragraph 2.6.",
+     "b": "paragraph 4.1.",
+     "next": false,
+     "result": "ok"
+    },
+    {
+     "a": "paragraph 5.6.",
+     "b": "paragraph 6.1.",
+     "next": false,
+     "result": "ok"
+    }
+   ],
+   "checks": [
+    {
+     "check": "scanned pages flagged",
+     "want": [
+      3
+     ],
+     "got": [
+      3
+     ],
+     "ok": true
+    }
+   ],
+   "hyphens": {
+    "broken": 0,
+    "left_split": []
+   }
+  },
+  {
+   "id": "scan-paper-volume-change",
+   "group": "scan",
+   "lang": "en",
+   "seconds": 0.01,
+   "error": "MSG-15",
+   "flow_blocks": 0,
+   "side_blocks": 0,
+   "labels": [],
+   "order": [],
+   "checks": [
+    {
+     "check": "scanned pages flagged",
+     "want": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+     ],
+     "got": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+     ],
+     "ok": true
+    }
+   ],
+   "hyphens": {
+    "broken": 0,
+    "left_split": []
+   }
+  }
+ ]
+}
