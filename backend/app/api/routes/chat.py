@@ -396,6 +396,12 @@ async def ask(
     question, quote = payload.content, (payload.quote or "").strip() or None
     title, language, user_id = doc.title, conv.language, user.id
     coverage = doc_chat.coverage_note(doc.extraction_issues)
+    # Who wrote it, what it cites…: not in the body the passages come from, but kept on the side.
+    aside = (
+        await session.scalar(select(Document.content_aside).where(Document.id == doc.id))
+        if doc_chat.wants_aside(question)
+        else None
+    )
     await session.commit()  # hold no database connection while the AI works
 
     async def work() -> AsyncIterator[tuple[str, dict]]:
@@ -422,6 +428,7 @@ async def ask(
             # AI-110: a selected passage is answered from where it is in this document first.
             near = doc_chat.around_quote(await _all_passages(document_id), quote)
             chunks = doc_chat.merge_passages(near, chunks, settings.chat_context_chunks)
+        chunks += doc_chat.aside_passages(aside, question)
         yield "sources", {"sources": [_source(n, c) for n, c in enumerate(chunks, 1)]}
 
         messages = doc_chat.build_messages(

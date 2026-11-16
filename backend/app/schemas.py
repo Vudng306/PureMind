@@ -200,6 +200,9 @@ class DocumentOut(DocumentListItem):
     extraction_issues: list[ExtractionIssue] | None = None
     # Which clean text this is; a highlight carries the one it was made on (AN-102).
     content_version: str | None = None
+    # Clean Reader UC-04: reading the file again — running, done or failed — and what came of it.
+    reprocess_state: Literal["running", "done", "failed"] | None = None
+    reprocess_report: dict | None = None
 
 
 class DocumentUpdate(BaseModel):
@@ -330,6 +333,8 @@ class HighlightOut(BaseModel):
     suffix: str | None = None
     # The text of the document it was made on; compare with DocumentOut.content_version.
     content_version: str | None = None
+    # Where it stood when the document was last read again: mapped, ambiguous or unresolved (models).
+    anchor_status: Literal["mapped", "ambiguous", "unresolved"] | None = None
     created_at: datetime
     updated_at: datetime
 

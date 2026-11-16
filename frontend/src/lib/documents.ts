@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 
 import { highlightsKey } from "./annotations";
 import { api, apiUpload } from "./api";
@@ -26,12 +27,52 @@ export function useDocuments(sort: LibrarySort, source: SourceFilter = "all") {
   });
 }
 
+const isReprocessing = (d?: DocumentDetail) => d?.reprocess_state === "running";
+
 export function useDocument(id: string) {
   return useQuery({
     queryKey: [...documentsKey, "detail", id],
     queryFn: () => api<DocumentDetail>(`/documents/${id}`),
-    refetchInterval: (q) => (isExtracting(q.state.data) ? 2000 : false),
+    refetchInterval: (q) => (isExtracting(q.state.data) || isReprocessing(q.state.data) ? 2000 : false),
   });
+}
+
+/**
+ * Clean Reader UC-04: read the uploaded file again with the current extraction. The text in use stays until
+ * the new one is whole; asking while it runs starts nothing new.
+ */
+export function useReprocess(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<DocumentDetail>(`/documents/${id}/reprocess`, { method: "POST" }),
+    onSuccess: (doc) => qc.setQueryData([...documentsKey, "detail", id], doc),
+  });
+}
+
+/** Only an uploaded PDF still has its file to read again. */
+export const canReprocess = (doc: DocumentDetail) =>
+  doc.source_type === "upload" && doc.file_type === "pdf" && (doc.extraction_status === "done" || doc.extraction_status === "failed");
+
+/**
+ * Once a reading-again ends while the reader is open: everything made from the old text is fetched anew (the
+ * side store, where blocks sit on the PDF, charts, highlights, the AI's results), and the reader is told how
+ * its highlights fared, or that the text it has is kept.
+ */
+export function useReprocessOutcome(doc: DocumentDetail | undefined, tell: (outcome: "done" | "failed", report: DocumentDetail["reprocess_report"]) => void) {
+  const qc = useQueryClient();
+  const last = useRef<string | null | undefined>(undefined);
+  const state = doc?.reprocess_state;
+  useEffect(() => {
+    const was = last.current;
+    last.current = state;
+    if (was !== "running" || !doc || (state !== "done" && state !== "failed")) return;
+    if (state === "done") {
+      void qc.invalidateQueries({ queryKey: documentsKey });
+      void qc.invalidateQueries({ queryKey: highlightsKey });
+      void qc.invalidateQueries({ queryKey: ["reader-ai", doc.id] });
+    }
+    tell(state, doc.reprocess_report);
+  }, [state, doc, qc, tell]);
 }
 
 export function useUploadDocument() {

@@ -347,3 +347,54 @@ Còn lại, đã có từ trước:
 - Tiêu đề lặp lại ở đầu bài đọc dưới dạng heading.
 - Tóm tắt của bài Springer mất khoảng trắng ("Gestaltpsychologyisans…"). Đây là lỗi lớp chữ của PDF, nên đưa vào nhãn benchmark.
 - Nên gán nhãn hai PDF này vào `evals/clean_reader/labels.json` để các quy tắc mới được đo, không chỉ được thử.
+
+## 10. Giai đoạn 4: Xử lý lại an toàn và AI (16/11/2026)
+
+Phạm vi theo đồ án: không có bảng phiên bản hay job, không có hàng đợi worker. Dùng lại `content_version`, neo prefix/suffix của Reader v2 và cơ chế làm mới cache AI theo `chunks_hash` / `AiArtifact.content_hash`.
+
+### 10.1. Xử lý lại (UC-04)
+
+`POST /api/documents/{id}/reprocess` trả 202 ngay. Việc đọc lại chạy nền:
+- Chỉ áp dụng cho tài liệu còn tệp gốc và đã trích xuất xong hoặc lỗi. Không có tệp: 409.
+- **Giữ bản đang đọc tới khi bản mới xong.** `extract_file` đọc tệp mà không chạm vào tài liệu. Chỉ khi thành công mới thay `content_clean`, `source_map`, `content_aside`, biểu đồ. Ảnh đặt tên theo hash nội dung nên ảnh mới nằm cạnh ảnh cũ; ảnh không còn dùng được xoá sau cùng. Lỗi: `reprocess_state = failed`, `reprocess_report.error` ghi mã lỗi, văn bản giữ nguyên (TC-14).
+- **Bấm hai lần chỉ chạy một lần (TC-20).** Lệnh `UPDATE … WHERE reprocess_state <> 'running' OR reprocess_started_at < now − 15 phút` giữ chỗ nguyên tử. Lần chạy bị cắt ngang bởi khởi động lại sẽ được chạy lại sau 15 phút.
+- **Highlight không bao giờ bị xoá (CR-NFR-05).** Mỗi highlight được dò lại trên văn bản mới bằng `services/anchors.py`, cùng quy tắc với `lib/anchor.ts`. Kết quả ghi vào `highlights.anchor_status`:
+  - `mapped`: còn nguyên khối; hoặc đoạn trích dài, chỉ có một chỗ; hoặc có một chỗ khớp ngữ cảnh. `content_version` được cập nhật sang bản mới.
+  - `ambiguous`: có nhiều chỗ, ngữ cảnh không phân định được.
+  - `unresolved`: không tìm thấy. Highlight giữ trích dẫn, ghi chú và phiên bản cũ.
+- **Vị trí đọc:** nếu khối đang đọc không còn, `read_position` về null và vị trí cũ được lưu trong báo cáo.
+- **Báo cáo:** `reprocess_report = {finished_at, from_version, to_version, anchors: {mapped, ambiguous, unresolved}, read_position?, error?}`. Migration `0037_safe_reprocess`.
+- **AI theo bản mới, tự động.** Đoạn chat được dựng lại khi `chunks_hash` khác. Tóm tắt và sơ đồ cũ không khớp `content_hash` nên được tạo lại khi mở. Hình được mô tả lại chỉ khi văn bản đổi.
+
+Reader:
+- Tab Thông tin có nút "Xử lý lại tài liệu", kèm hộp xác nhận.
+- Hộp "Nội dung bị ẩn" của tài liệu trích xuất trước GĐ2 cũng có nút này.
+- Trong khi chạy, trang hỏi lại mỗi 2 giây. Khi xong, mọi dữ liệu dựng từ văn bản cũ được tải lại (side store, source map, biểu đồ, highlight, kết quả AI) và hiện thông báo "Đã xử lý lại: N highlight giữ đúng chỗ, M cần bạn xem lại". Lỗi thì báo bản hiện tại được giữ.
+
+### 10.2. AI chỉ đọc bài, hỏi tác giả thì đọc side store
+
+Mặc định AI chỉ lấy đoạn từ `content_clean` (bài đọc), nên tác giả, header và tài liệu tham khảo không chen vào câu trả lời. Khi câu hỏi nhắc tới các phần ngoài bài, `doc_chat.aside_passages` thêm đoạn tương ứng từ side store, kèm trang để trích dẫn:
+- tác giả, đơn vị, tạp chí, từ khoá;
+- tài trợ, lời cảm ơn, xung đột lợi ích, đóng góp, dữ liệu, đạo đức;
+- tài liệu tham khảo.
+
+Header, footer và số trang không bao giờ được đưa vào.
+
+### 10.3. Kiểm tra
+
+- `tests/test_reprocess.py` (6 test):
+  - trạng thái neo và số đếm;
+  - lỗi giữ văn bản;
+  - bấm hai lần;
+  - lần chạy cũ quá hạn;
+  - vị trí đọc;
+  - thiếu tệp;
+  - quy tắc neo.
+- `tests/test_clean_reader.py`: AI trả lời "ai viết bài" từ side store, có trích dẫn trang 1, không lẫn header; câu hỏi thường không kèm side store.
+- `test_access_sweep.py`: thêm các route mới, gồm reprocess, aside, extraction-reports.
+- Toàn bộ: backend 453 test qua (SQLite), vitest 198, tsc và eslint sạch. Benchmark không đổi so với §8.
+- Thử trên trình duyệt với tài liệu test 6eef6fa2 (trích xuất trước GĐ2): xử lý lại xong trong khoảng 10 giây, side store được ghi (`rules-1`), 2/2 highlight `mapped`, vị trí đọc giữ nguyên.
+
+Chưa làm:
+- Hiện `anchor_status` trên thẻ highlight. Reader vẫn tự dò lại vị trí khi mở, và báo highlight không đặt được (AN-104).
+- Test trên PostgreSQL thật (GĐ5).

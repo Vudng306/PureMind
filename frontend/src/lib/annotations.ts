@@ -102,6 +102,8 @@ export interface HighlightDto {
   prefix?: string | null;
   suffix?: string | null;
   content_version?: string | null;
+  /** Where the highlight stood when the file was last read again (UC-04); null before that. */
+  anchor_status?: "mapped" | "ambiguous" | "unresolved" | null;
 }
 
 export interface HighlightPage {

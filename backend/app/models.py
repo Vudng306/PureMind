@@ -146,6 +146,10 @@ class Document(TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("user_id", "url", name="uq_documents_user_url"),
         Index("ix_documents_user_created", "user_id", "created_at"),
+        CheckConstraint(
+            "reprocess_state IS NULL OR reprocess_state IN ('running', 'done', 'failed')",
+            name="ck_documents_reprocess_state",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
@@ -194,6 +198,13 @@ class Document(TimestampMixin, Base):
     # running headers, references, funding… as {"classifier": …, "blocks": [{type, text, page, box,
     # confidence, reason}, …]} in document order (services/block_roles). Loaded on demand.
     content_aside: Mapped[dict | None] = mapped_column(JsonType, deferred=True)
+    # Clean Reader UC-04: the last time the owner had the file read again. The text in use stays until the
+    # new one is ready (`running`), and stays as it was if that fails (`failed`). The report says what came
+    # of it: {"finished_at", "error"?, "from_version", "to_version", "anchors": {"mapped": n, …},
+    # "read_position"?: the place the reader had stopped, when it is not in the new text}.
+    reprocess_state: Mapped[str | None] = mapped_column(String(16))
+    reprocess_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reprocess_report: Mapped[dict | None] = mapped_column(JsonType)
     # How to cite the document (schemas.Citation): filled from its DOI or by the user, for BibTeX export.
     citation: Mapped[dict | None] = mapped_column(JsonType)
     # The shelf it is on, if any.
@@ -275,6 +286,10 @@ class Highlight(TimestampMixin, Base):
         ),
         CheckConstraint("color IN ('yellow', 'green', 'blue', 'pink', 'purple')", name="ck_highlights_color"),
         CheckConstraint(
+            "anchor_status IS NULL OR anchor_status IN ('mapped', 'ambiguous', 'unresolved')",
+            name="ck_highlights_anchor_status",
+        ),
+        CheckConstraint(
             "category IS NULL OR category IN ('important', 'concept', 'question', 'example', 'review')",
             name="ck_highlights_category",
         ),
@@ -305,6 +320,11 @@ class Highlight(TimestampMixin, Base):
     prefix: Mapped[str | None] = mapped_column(String(64))
     suffix: Mapped[str | None] = mapped_column(String(64))
     content_version: Mapped[str | None] = mapped_column(String(16))
+    # Clean Reader UC-04: where the passage stood when the document was last read again — `mapped` (found
+    # once, or the words around it settle where), `ambiguous` (found in several places: not placed on a
+    # guess), `unresolved` (not in the new text). The highlight and its note stay either way. None: the
+    # document has not been read again since the highlight was made.
+    anchor_status: Mapped[str | None] = mapped_column(String(12))
 
 
 class Summary(Base):

@@ -115,4 +115,18 @@ export interface DocumentDetail extends DocumentListItem {
   read_position: ReadPosition | null;
   /** Empty when the extraction found nothing left out; null when it was never recorded. */
   extraction_issues: ExtractionIssue[] | null;
+  /** Clean Reader UC-04: the file read again. Null when it never was. */
+  reprocess_state?: "running" | "done" | "failed" | null;
+  reprocess_report?: ReprocessReport | null;
+}
+
+/** How the last reading-again went: the highlights checked against the new text, or why it failed. */
+export interface ReprocessReport {
+  finished_at?: string;
+  error?: string;
+  from_version?: string | null;
+  to_version?: string | null;
+  anchors?: { mapped: number; ambiguous: number; unresolved: number };
+  /** The place the reader was at, in a block the new text no longer has. */
+  read_position?: ReadPosition;
 }

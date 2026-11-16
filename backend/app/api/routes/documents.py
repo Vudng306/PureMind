@@ -1,6 +1,9 @@
 import logging
 import re
 import uuid
+from collections import Counter
+from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -8,7 +11,7 @@ import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
@@ -36,10 +39,11 @@ from app.models import (
     SourceType,
     Summary,
     User,
+    utcnow,
 )
 from app.models import Article as CatalogArticle
 from app.schemas import DocumentListItem, DocumentOut, DocumentUpdate, DocumentUsage
-from app.services import equation_ocr, figure_notes, page_ocr, rights, storage, table_ocr, web
+from app.services import anchors, equation_ocr, figure_notes, page_ocr, rights, storage, table_ocr, web
 from app.services.epub import extract_epub, looks_like_epub
 from app.services.extraction import (
     IMAGE_NAME,
@@ -130,6 +134,102 @@ def _with_scanned_pages(content: str, source_map: list, read: dict[int, str]) ->
     return re.sub(r"\n{3,}", "\n\n", content).strip(), placed
 
 
+@dataclass
+class Extracted:
+    """What reading a document's file gave, before any of it is put on the document."""
+
+    content: str
+    source_map: list
+    aside: dict | None
+    issues: list[dict]
+    title: str
+    charts: dict | None
+    page_count: int | None
+
+
+async def extract_file(doc: Document, settings: Settings, ai: bool) -> Extracted | str:
+    """Read the document's file into a clean text, or the code of what went wrong. Touches nothing on the
+    document; the pictures it finds are written beside those of the text in use (named by their content, so
+    the two never clash)."""
+    path = storage.resolve(settings, doc.file_storage_path)
+    fallback_title = Path(doc.original_filename or "Tài liệu").stem
+    images = storage.images_path(doc.id)
+    try:
+        suffix = path.suffix.lower()
+        extractor = EXTRACTORS[suffix]
+        args = (path, fallback_title) + ((storage.resolve(settings, images),) if suffix == ".pdf" else ())
+        result = await run_in_threadpool(extractor, *args)
+    except ExtractionError as e:
+        return e.code
+    except Exception:
+        return "MSG-99"
+    content, source_map = result.content, result.source_map
+    issues: list[dict] = []  # RD-111: only what is known, never a guess at completeness
+    if result.ocr_pages:
+        read = await page_ocr.read_pages(settings, path, result.ocr_pages) if ai else {}
+        content, source_map = _with_scanned_pages(content, source_map, read)
+        for code, pages in (
+            ("scanned_pages", [p for p in result.ocr_pages if p not in read]),
+            ("ocr_pages", sorted(p for p, text in read.items() if text)),
+        ):
+            if pages:
+                issues.append({"code": code, "count": len(pages), "pages": pages[:MAX_ISSUE_PAGES]})
+    if not re.sub(r"^---$", "", content, flags=re.M).strip():  # a scan that could not be read
+        return "MSG-15"
+    for name, pictures, transcribe in (
+        ("table_ocr", result.table_images, table_ocr.transcribe_tables),
+        ("equation_ocr", result.equation_images, equation_ocr.transcribe_equations),
+    ):
+        if not pictures or not ai:
+            continue
+        try:
+            content, replaced = await transcribe(settings, doc.id, content, pictures)
+        except Exception:  # OCR is a bonus: the table or equation stays a picture
+            log.exception("%s failed document=%s", name, doc.id)
+            continue
+        # A block read from its picture is a new block: its place on the PDF is the picture's.
+        keys = {block_key(old): block_key(new) for old, new in replaced.items()}
+        source_map = [[keys.get(key, key), boxes] for key, boxes in source_map]
+    # A table or an equation still shown as its picture: the reader sees it, the AI and search do not.
+    for code, pictures in (
+        ("tables_as_images", result.table_images),
+        ("equations_as_images", result.equation_images),
+    ):
+        left = [name for name in dict.fromkeys(pictures) if f"pm-image:{name}" in content]
+        if left:
+            issues.append({"code": code, "count": len(left)})
+    return Extracted(
+        content, source_map, result.aside, issues, result.title, result.charts or None, result.page_count
+    )
+
+
+def apply_extraction(doc: Document, out: Extracted) -> None:
+    """Put a new clean text on the document."""
+    doc.extraction_issues = out.issues
+    if not doc.citation:  # a document with its citation filled in keeps that title
+        doc.title = out.title[:500]
+    if doc.content_clean != out.content:
+        doc.figure_notes = None  # the figures of the earlier text, if any, are gone
+    doc.content_clean = out.content
+    doc.source_map = out.source_map or None
+    doc.content_aside = out.aside
+    doc.chart_data = out.charts
+    doc.page_count = out.page_count
+    doc.word_count = len(re.findall(r"\w+", out.content))
+    doc.extraction_status = ExtractionStatus.done
+    doc.extraction_error = None
+
+
+def drop_unused_images(settings: Settings, doc: Document) -> None:
+    """The pictures no longer in the document's text: those of an earlier text, or of a failed reading."""
+    folder = storage.resolve(settings, storage.images_path(doc.id))
+    if not folder.is_dir():
+        return
+    for file in folder.iterdir():
+        if IMAGE_NAME.match(file.name) and f"pm-image:{file.name}" not in doc.content_clean:
+            file.unlink(missing_ok=True)
+
+
 async def run_extraction(
     session: AsyncSession, doc: Document, settings: Settings, background: BackgroundTasks | None = None
 ) -> None:
@@ -141,76 +241,15 @@ async def run_extraction(
     doc.extraction_issues = None  # what the last extraction left out says nothing about this one
     await session.commit()
     ai = ai_consented(await session.get(User, doc.user_id))
-
-    path = storage.resolve(settings, doc.file_storage_path)
-    fallback_title = Path(doc.original_filename or "Tài liệu").stem
     images = storage.images_path(doc.id)
-    storage.delete_dir(settings, images)  # a re-extraction starts from no images
-    try:
-        suffix = path.suffix.lower()
-        extractor = EXTRACTORS[suffix]
-        args = (path, fallback_title) + ((storage.resolve(settings, images),) if suffix == ".pdf" else ())
-        result = await run_in_threadpool(extractor, *args)
-    except ExtractionError as e:
+    storage.delete_dir(settings, images)  # a first extraction, or a retry, starts from no images
+    out = await extract_file(doc, settings, ai)
+    if isinstance(out, str):
         doc.extraction_status = ExtractionStatus.failed
-        doc.extraction_error = e.code
-        storage.delete_dir(settings, images)
-    except Exception:
-        doc.extraction_status = ExtractionStatus.failed
-        doc.extraction_error = "MSG-99"
+        doc.extraction_error = out
         storage.delete_dir(settings, images)
     else:
-        content, source_map = result.content, result.source_map
-        issues: list[dict] = []  # RD-111: only what is known, never a guess at completeness
-        if result.ocr_pages:
-            read = await page_ocr.read_pages(settings, path, result.ocr_pages) if ai else {}
-            content, source_map = _with_scanned_pages(content, source_map, read)
-            for code, pages in (
-                ("scanned_pages", [p for p in result.ocr_pages if p not in read]),
-                ("ocr_pages", sorted(p for p, text in read.items() if text)),
-            ):
-                if pages:
-                    issues.append({"code": code, "count": len(pages), "pages": pages[:MAX_ISSUE_PAGES]})
-        if not re.sub(r"^---$", "", content, flags=re.M).strip():  # a scan that could not be read
-            doc.extraction_status = ExtractionStatus.failed
-            doc.extraction_error = "MSG-15"
-            storage.delete_dir(settings, images)
-            await session.commit()
-            return
-        for name, pictures, transcribe in (
-            ("table_ocr", result.table_images, table_ocr.transcribe_tables),
-            ("equation_ocr", result.equation_images, equation_ocr.transcribe_equations),
-        ):
-            if not pictures or not ai:
-                continue
-            try:
-                content, replaced = await transcribe(settings, doc.id, content, pictures)
-            except Exception:  # OCR is a bonus: the table or equation stays a picture
-                log.exception("%s failed document=%s", name, doc.id)
-                continue
-            # A block read from its picture is a new block: its place on the PDF is the picture's.
-            keys = {block_key(old): block_key(new) for old, new in replaced.items()}
-            source_map = [[keys.get(key, key), boxes] for key, boxes in source_map]
-        # A table or an equation still shown as its picture: the reader sees it, the AI and search do not.
-        for code, pictures in (
-            ("tables_as_images", result.table_images),
-            ("equations_as_images", result.equation_images),
-        ):
-            left = [name for name in dict.fromkeys(pictures) if f"pm-image:{name}" in content]
-            if left:
-                issues.append({"code": code, "count": len(left)})
-        doc.extraction_issues = issues
-        if not doc.citation:  # a document with its citation filled in keeps that title
-            doc.title = result.title[:500]
-        doc.content_clean = content
-        doc.source_map = source_map or None
-        doc.content_aside = result.aside
-        doc.figure_notes = None  # the figures of the earlier text, if any, are gone
-        doc.chart_data = result.charts or None
-        doc.page_count = result.page_count
-        doc.word_count = len(re.findall(r"\w+", content))
-        doc.extraction_status = ExtractionStatus.done
-        doc.extraction_error = None
+        apply_extraction(doc, out)
     await session.commit()
     if background is not None and doc.extraction_status == ExtractionStatus.done:
         background.add_task(describe_figures, doc.id, settings)
@@ -263,6 +302,103 @@ async def _extract_in_background(document_id: uuid.UUID, settings: Settings) -> 
         done = doc.extraction_status == ExtractionStatus.done
     if done:
         await describe_figures(document_id, settings)
+
+
+# A reprocess still `running` after this long was cut off (the server restarted): it may be asked for again.
+REPROCESS_STALE = timedelta(minutes=15)
+
+
+async def reprocess(document_id: uuid.UUID, settings: Settings) -> None:
+    """Clean Reader UC-04: read the file again. The text in use stays readable all along and is replaced only
+    by a new text that came out whole; then each highlight is checked against it (services/anchors). The
+    AI's index and summaries follow the text they were made from (chunks_hash, content_hash), so they are
+    made again from the new one when next asked for."""
+    async with SessionLocal() as session:
+        doc = await session.get(Document, document_id)
+        if doc is None:
+            return
+        ai = ai_consented(await session.get(User, doc.user_id))
+        before = doc.content_version
+        try:
+            out = await extract_file(doc, settings, ai)
+        except Exception:  # never leave it `running`
+            log.exception("reprocess failed document=%s", document_id)
+            out = "MSG-99"
+        # The owner may have changed it meanwhile (its citation, the place read) or deleted it.
+        doc = await session.get(Document, document_id, populate_existing=True)
+        if doc is None:
+            return
+        report: dict = {"finished_at": utcnow().isoformat(), "from_version": before}
+        new_text = not isinstance(out, str) and out.content != doc.content_clean  # its figures to describe
+        if isinstance(out, str):
+            doc.reprocess_state = "failed"
+            report["error"] = out
+        else:
+            apply_extraction(doc, out)
+            blocks = anchors.text_blocks(out.content, out.source_map)
+            counts = Counter({anchors.MAPPED: 0, anchors.AMBIGUOUS: 0, anchors.UNRESOLVED: 0})
+            for h in await session.scalars(select(Highlight).where(Highlight.document_id == doc.id)):
+                h.anchor_status = anchors.status(
+                    blocks,
+                    anchors.Highlighted(
+                        h.block_id, h.selected_text, h.page_number, h.prefix, h.suffix, h.rects is not None
+                    ),
+                )
+                if h.anchor_status == anchors.MAPPED:
+                    h.content_version = doc.content_version  # checked against this text
+                counts[h.anchor_status] += 1
+            report["anchors"] = dict(counts)
+            # TSD §9.1 step 6: a place in a block the new text no longer has falls back to the page and the
+            # fraction read; the old place is kept in the report.
+            place = doc.read_position or {}
+            if place.get("block_id") and place["block_id"] not in {b.id for b in blocks}:
+                report["read_position"] = place
+                doc.read_position = None
+            report["to_version"] = doc.content_version
+            doc.reprocess_state = "done"
+        doc.reprocess_report = report
+        drop_unused_images(settings, doc)
+        await session.commit()
+        done = doc.reprocess_state == "done" and new_text
+        log.info("reprocess document=%s state=%s", document_id, doc.reprocess_state)  # no text in the log
+    if done:
+        await describe_figures(document_id, settings)
+
+
+@router.post("/{document_id}/reprocess", response_model=DocumentOut, status_code=status.HTTP_202_ACCEPTED)
+async def reprocess_document(
+    document_id: uuid.UUID,
+    background: BackgroundTasks,
+    user: CurrentUser,
+    session: SessionDep,
+    settings: SettingsDep,
+):
+    """Clean Reader CR-FR-15/16: read the document's file again, after the response. Asked for again while
+    it runs (TC-20), it starts nothing new and gives the same state."""
+    doc = await _owned_document(session, user, document_id)
+    if not doc.file_storage_path:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Tài liệu này không có tệp gốc để xử lý lại.")
+    if doc.extraction_status not in (ExtractionStatus.done, ExtractionStatus.failed):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Tài liệu đang được trích xuất, vui lòng chờ.")
+    now = utcnow()
+    claimed = await session.execute(
+        update(Document)
+        .where(
+            Document.id == doc.id,
+            or_(
+                Document.reprocess_state.is_(None),
+                Document.reprocess_state != "running",
+                Document.reprocess_started_at < now - REPROCESS_STALE,
+            ),
+        )
+        .values(reprocess_state="running", reprocess_started_at=now)
+        .execution_options(synchronize_session=False)
+    )
+    await session.commit()
+    if claimed.rowcount:
+        background.add_task(reprocess, doc.id, settings)
+    await session.refresh(doc)
+    return doc
 
 
 @router.post(

@@ -4,13 +4,14 @@ import { useState } from "react";
 
 import { useAside, type AsideBlock } from "@/lib/aside";
 import { KIND_LABEL, origin, relativeTime } from "@/lib/doc-view";
-import type { SourceBox } from "@/lib/documents";
+import { canReprocess, useReprocess, type SourceBox } from "@/lib/documents";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import { useArtifact } from "@/lib/reader-ai";
 import type { DocumentDetail } from "@/lib/types";
 
 import { CitationDialog } from "./citation-dialog";
 import { Icon } from "./icons";
+import { ConfirmDialog } from "./ui";
 import { AdditionalInfoSection, DocumentInfoSection, HiddenBlocksDialog, ReportDialog, type ReportPreset } from "./reader-aside";
 
 /** The reader panel's first tab: what the open document is, a short summary of it, and the facts about it. */
@@ -37,6 +38,15 @@ export function ReaderInfo({
   const { data: aside } = useAside(doc.id, extracted);
   const [hiddenOpen, setHiddenOpen] = useState(false);
   const [reporting, setReporting] = useState<{ preset: ReportPreset } | null>(null);
+  // UC-04: read the file again with the current extraction.
+  const reprocess = useReprocess(doc.id);
+  const [confirmReprocess, setConfirmReprocess] = useState(false);
+  const reprocessable = canReprocess(doc);
+  const running = doc.reprocess_state === "running" || reprocess.isPending;
+  const askReprocess = () => {
+    setHiddenOpen(false);
+    setConfirmReprocess(true);
+  };
   const reportBlock = (block: AsideBlock) => {
     setHiddenOpen(false);
     setReporting({ preset: { block } });
@@ -120,20 +130,36 @@ export function ReaderInfo({
         </dl>
       </section>
 
-      {extracted && (
+      {(extracted || reprocessable) && (
         <div className="flex flex-col gap-1" data-clean-actions>
-          <button type="button" onClick={() => setHiddenOpen(true)} className="-mx-2 flex h-10 items-center gap-2 rounded-lg px-2 text-sm text-ink hover:bg-soft">
-            <Icon name="toc" size={16} className="text-muted" />
-            {aside?.classifier ? t("aside.hiddenCount", { n: aside.blocks.length }) : t("aside.hidden")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setReporting({ preset: null })}
-            className="-mx-2 flex h-10 items-center gap-2 rounded-lg px-2 text-sm text-ink hover:bg-soft"
-          >
-            <Icon name="shield" size={16} className="text-muted" />
-            {t("aside.reportError")}
-          </button>
+          {extracted && (
+            <>
+              <button type="button" onClick={() => setHiddenOpen(true)} className="-mx-2 flex h-10 items-center gap-2 rounded-lg px-2 text-sm text-ink hover:bg-soft">
+                <Icon name="toc" size={16} className="text-muted" />
+                {aside?.classifier ? t("aside.hiddenCount", { n: aside.blocks.length }) : t("aside.hidden")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setReporting({ preset: null })}
+                className="-mx-2 flex h-10 items-center gap-2 rounded-lg px-2 text-sm text-ink hover:bg-soft"
+              >
+                <Icon name="shield" size={16} className="text-muted" />
+                {t("aside.reportError")}
+              </button>
+            </>
+          )}
+          {reprocessable && (
+            <button
+              type="button"
+              onClick={askReprocess}
+              disabled={running}
+              data-reprocess
+              className="-mx-2 flex h-10 items-center gap-2 rounded-lg px-2 text-sm text-ink hover:bg-soft disabled:cursor-default disabled:text-muted disabled:hover:bg-transparent"
+            >
+              <Icon name="history" size={16} className={running ? "animate-spin text-muted" : "text-muted"} />
+              {running ? t("reprocess.running") : t("reprocess.action")}
+            </button>
+          )}
         </div>
       )}
 
@@ -148,6 +174,18 @@ export function ReaderInfo({
       </button>
 
       <CitationDialog doc={editing ? doc : null} onClose={() => setEditing(false)} />
+      <ConfirmDialog
+        open={confirmReprocess}
+        title={t("reprocess.title")}
+        tone="primary"
+        confirmLabel={t("reprocess.confirm")}
+        cancelLabel={t("common.cancel")}
+        busy={reprocess.isPending}
+        onCancel={() => setConfirmReprocess(false)}
+        onConfirm={() => reprocess.mutate(undefined, { onSettled: () => setConfirmReprocess(false) })}
+      >
+        {t("reprocess.body")}
+      </ConfirmDialog>
       {extracted && (
         <>
           <HiddenBlocksDialog
@@ -156,6 +194,7 @@ export function ReaderInfo({
             onClose={() => setHiddenOpen(false)}
             onSource={onSource}
             onReport={reportBlock}
+            onReprocess={reprocessable && !running ? askReprocess : undefined}
           />
           <ReportDialog
             docId={doc.id}

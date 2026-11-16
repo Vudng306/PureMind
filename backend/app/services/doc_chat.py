@@ -72,6 +72,78 @@ def coverage_note(issues: list[dict] | None) -> str | None:
     )
 
 
+# --- the document's own lines, kept out of the body (Clean Reader, TSD §10) ------------------------------
+# The passages are the body only: the authors, the journal, the thanks and the references were set aside at
+# extraction (documents.content_aside). A question about those gets them, as passages of their own.
+ABOUT_DOCUMENT = [
+    (
+        "Document information: its first pages, not its body",
+        {"AUTHORS", "AFFILIATIONS", "PUBLISHER_INFO", "KEYWORDS", "FRONT_MATTER"},
+        re.compile(
+            r"\b(authors?|wrote|written|writers?|affiliations?|universit\w*|institutions?|journal|published"
+            r"|publisher|publication|doi|keywords?|corresponding)\b"
+            r"|tác giả|ai viết|viết bởi|đơn vị|trường đại học|tạp chí|xuất bản|từ khóa|từ khoá|liên hệ",
+            re.I,
+        ),
+        1500,
+    ),
+    (
+        "The document's statements: funding, thanks, conflicts, contributions, data, ethics",
+        {
+            "FUNDING", "ACKNOWLEDGEMENTS", "CONFLICT_OF_INTEREST", "AUTHOR_CONTRIBUTIONS",
+            "DATA_AVAILABILITY", "DECLARATION",
+        },
+        re.compile(
+            r"\b(fund\w*|grants?|sponsor\w*|acknowledg\w*|thank\w*|conflicts?|competing|contribut\w*"
+            r"|data availab\w*|ethic\w*|consent)\b"
+            r"|tài trợ|kinh phí|cảm ơn|xung đột|đóng góp|dữ liệu.{0,12}(sẵn|công khai|ở đâu)|đạo đức|cam đoan",
+            re.I,
+        ),
+        1500,
+    ),
+    (
+        "The document's reference list",
+        {"REFERENCES"},
+        re.compile(
+            r"\b(references?|cit(e|es|ed|ing|ations?)|bibliograph\w*|sources? (it|they|the authors) (use|cite))\b"
+            r"|tài liệu tham khảo|trích dẫn|dẫn nguồn|nguồn tham khảo",
+            re.I,
+        ),
+        4000,
+    ),
+]  # fmt: skip
+
+
+def _aside_text(text: str) -> str:
+    """A side-store block as plain lines: no picture (a journal's logo), no Markdown marks."""
+    text = re.sub(r"^#{1,6}\s+", "", strip_images(text), flags=re.M)
+    return re.sub(r"\s*<br>\s*", " ", re.sub(r"\*\*|__", "", text)).strip()
+
+
+def wants_aside(question: str) -> bool:
+    """Whether the question is about the document's own lines rather than what it says."""
+    return any(pattern.search(question) for _, _, pattern, _ in ABOUT_DOCUMENT)
+
+
+def aside_passages(aside: dict | None, question: str) -> list[Chunk]:
+    """The parts of the side store the question asks about, each one passage, cut to a length."""
+    blocks = (aside or {}).get("blocks") or []
+    out: list[Chunk] = []
+    for label, types, pattern, limit in ABOUT_DOCUMENT:
+        if not pattern.search(question):
+            continue
+        mine = [b for b in blocks if b.get("type") in types]
+        lines = [_aside_text(b.get("text", "")) for b in mine]
+        text = "\n".join(line for line in lines if line)
+        if not text:
+            continue
+        if len(text) > limit:
+            text = text[:limit].rsplit("\n", 1)[0] + "\n…"
+        page = min((b.get("page") for b in mine if b.get("page")), default=None)
+        out.append(Chunk(-1 - len(out), page, label, text, estimate_tokens(text)))
+    return out
+
+
 def abstained(answer: str) -> bool:
     """The answer opens with the refusal: the document does not hold what was asked (AI-104)."""
     opening = re.sub(r"^[\s>*_\"“]+", "", answer).casefold()

@@ -182,12 +182,15 @@ export function HiddenBlocksDialog({
   onClose,
   onSource,
   onReport,
+  onReprocess,
 }: {
   open: boolean;
   aside: Aside | undefined;
   onClose: () => void;
   onSource: OnSource;
   onReport: (block: AsideBlock) => void;
+  /** Read the file again, for a document extracted before blocks were kept on the side. */
+  onReprocess?: () => void;
 }) {
   const t = useT();
   const ref = useModal(open);
@@ -222,7 +225,18 @@ export function HiddenBlocksDialog({
           </button>
         </div>
         {aside?.classifier == null ? (
-          <p className="p-5 text-sm leading-relaxed text-body">{t("aside.oldExtraction")}</p>
+          <div className="flex flex-col gap-3 p-5">
+            <p className="text-sm leading-relaxed text-body">{t("aside.oldExtraction")}</p>
+            {onReprocess && (
+              <>
+                <p className="text-sm leading-relaxed text-muted">{t("reprocess.oldHint")}</p>
+                <button type="button" onClick={onReprocess} className="btn-outline h-10 self-start text-sm">
+                  <Icon name="history" size={16} />
+                  {t("reprocess.action")}
+                </button>
+              </>
+            )}
+          </div>
         ) : !blocks.length ? (
           <p className="p-5 text-sm leading-relaxed text-body">{t("aside.nothingHidden")}</p>
         ) : (

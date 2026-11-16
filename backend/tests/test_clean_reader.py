@@ -2,9 +2,10 @@
 
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from tests.pdfs import paper_pdf, text_pdf
+from tests.test_chat import ask, chat_ai, start  # noqa: F401  (chat_ai is a fixture)
 from tests.test_documents import upload
 
 
@@ -86,3 +87,46 @@ async def test_old_extraction_has_no_classifier(client, auth):
         await session.commit()
     aside = (await client.get(f"/api/documents/{doc['id']}/aside", headers=h)).json()
     assert aside == {"classifier": None, "blocks": []}
+
+
+async def test_ai_answers_who_wrote_it_from_the_side_store(client, auth, chat_ai):  # noqa: F811
+    """TSD §10: the passages are the body; the authors and the references come in only when asked about."""
+    from app.db.session import SessionLocal
+    from app.models import Document
+
+    h = auth()
+    _, answer = chat_ai("Bài do Ada Lovelace viết [4].")
+    doc, conv = await start(client, h)
+    aside = {
+        "classifier": "rules-1",
+        "blocks": [
+            {"type": "AUTHORS", "text": "**Ada Lovelace**, Charles Babbage", "page": 1, "box": [0, 0, 1, 1],
+             "confidence": 0.9, "reason": "names under the title"},
+            {"type": "REFERENCES", "text": "## References", "page": 3, "box": [0, 0, 1, 1],
+             "confidence": 0.95, "reason": "heading"},
+            {"type": "REFERENCES", "text": "Menabrea, L. F. (1842). Sketch of the Analytical Engine.",
+             "page": 3, "box": [0, 0, 1, 1], "confidence": 0.95, "reason": "in the part it is under"},
+            {"type": "RUNNING_HEADER", "text": "Journal of Engines", "page": 2, "box": [0, 0, 1, 1],
+             "confidence": 0.9, "reason": "repeats"},
+        ],
+    }  # fmt: skip
+    async with SessionLocal() as s:
+        await s.execute(update(Document).where(Document.id == uuid.UUID(doc)).values(content_aside=aside))
+        await s.commit()
+
+    r = await ask(client, h, doc, conv, "Ai là tác giả của bài này?")
+    assert r.status_code == 200, r.text
+    prompt = answer.calls[-1][-1]["content"]
+    # After the body's three passages, numbered on, with its page.
+    assert "[4] (page 1, Document information" in prompt and "Ada Lovelace, Charles Babbage" in prompt
+    assert "Menabrea" not in prompt and "Journal of Engines" not in prompt  # not asked; never furniture
+    cited = r.json()["answer"]["citations"]
+    assert cited and cited[0]["heading"].startswith("Document information") and cited[0]["page_number"] == 1
+
+    await ask(client, h, doc, conv, "Bài trích dẫn những tài liệu tham khảo nào?")
+    prompt = answer.calls[-1][-1]["content"]
+    assert "Menabrea, L. F. (1842)" in prompt and "Ada Lovelace" not in prompt
+
+    await ask(client, h, doc, conv, "Tài liệu này nói về gì?")
+    prompt = answer.calls[-1][-1]["content"]
+    assert "Document information" not in prompt and "reference list" not in prompt  # the body only

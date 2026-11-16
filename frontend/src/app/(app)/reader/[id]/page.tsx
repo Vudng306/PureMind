@@ -28,7 +28,16 @@ import {
 import { useAside } from "@/lib/aside";
 import type { ChatImage } from "@/lib/chat";
 import { KIND_LABEL, origin } from "@/lib/doc-view";
-import { documentsKey, updateDocument, useCharts, useDocument, useDocuments, useSourceMap, type SourceBox } from "@/lib/documents";
+import {
+  documentsKey,
+  updateDocument,
+  useCharts,
+  useDocument,
+  useDocuments,
+  useReprocessOutcome,
+  useSourceMap,
+  type SourceBox,
+} from "@/lib/documents";
 import { currentLang, translate, useLang, useT, type Key } from "@/lib/i18n";
 import { SELECTION_EXPLAIN, SELECTION_TRANSLATE } from "@/lib/features";
 import { parseMarkdown, type Inline } from "@/lib/markdown";
@@ -141,6 +150,19 @@ function Reader({ id }: { id: string }) {
   } = usePreferences();
   const showToast = useUi((s) => s.showToast);
   const setPageTheme = useUi((s) => s.setPageTheme);
+  // UC-04: once a reading-again of the file ends, how the highlights fared, or that the text is kept.
+  useReprocessOutcome(
+    doc,
+    useCallback(
+      (outcome: "done" | "failed", report: DocumentDetail["reprocess_report"]) => {
+        if (outcome === "failed") return showToast(t("reprocess.failed"));
+        const a = report?.anchors;
+        const review = a ? a.ambiguous + a.unresolved : 0;
+        showToast(a && a.mapped + review ? t("reprocess.doneAnchors", { mapped: a.mapped, review }) : t("reprocess.done"));
+      },
+      [showToast, t],
+    ),
+  );
   const qc = useQueryClient();
   const { data: highlights, isPending: highlightsPending } = useHighlights(id);
   const { addHighlight, updateHighlight } = useHighlightActions();

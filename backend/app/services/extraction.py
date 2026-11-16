@@ -1240,9 +1240,9 @@ READER_STOP = re.compile(r"^(#{1,6}\s|```|>|\||---\s*$)")
 READER_MATH = re.compile(r"^\s*\$\$(.*\S.*)\$\$\s*$")
 
 
-def reader_keys(text: str) -> list[str]:
-    """The keys of the blocks the reader parses `text` into: the block rules of lib/markdown.ts
-    `parseMarkdown`, which the keys of the source map must match."""
+def reader_blocks(text: str) -> list[str]:
+    """The source of each block the reader parses `text` into, in reading order: the block rules of
+    lib/markdown.ts `parseMarkdown`, which the keys of the source map must match (reader_keys)."""
     lines, keys, i = text.split("\n"), [], 0
     while i < len(lines):
         line = lines[i]
@@ -1250,10 +1250,10 @@ def reader_keys(text: str) -> list[str]:
             i += 1  # page breaks are not blocks of the text
         elif line.startswith("```"):
             j = next((k for k in range(i + 1, len(lines)) if lines[k].startswith("```")), len(lines))
-            keys.append(block_key("```" + "\n".join(lines[i + 1 : j])))
+            keys.append("```" + "\n".join(lines[i + 1 : j]))
             i = j + 1
         elif READER_IMAGE.match(line.strip()) or READER_MATH.match(line) or re.match(r"^#{1,6}\s+", line):
-            keys.append(block_key(line))
+            keys.append(line)
             i += 1
         else:
             if line.lstrip().startswith("|"):
@@ -1270,14 +1270,19 @@ def reader_keys(text: str) -> list[str]:
                         break
                     para.append(lines[i].strip())
                     i += 1
-                keys.append(block_key(" ".join(para)))
+                keys.append(" ".join(para))
                 continue
             run = []
             while i < len(lines) and test(lines[i]):
                 run.append(re.sub(r"^>\s?", "", lines[i]) if strip else lines[i])
                 i += 1
-            keys.append(block_key(prefix + "\n".join(run)))
+            keys.append(prefix + "\n".join(run))
     return keys
+
+
+def reader_keys(text: str) -> list[str]:
+    """The keys of the blocks the reader parses `text` into (lib/markdown.ts `hash` of each block)."""
+    return [block_key(raw) for raw in reader_blocks(text)]
 
 
 def _source_box(item: _Item, page: "pymupdf.Page") -> list[float]:
