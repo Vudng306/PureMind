@@ -11,7 +11,7 @@ import {
   type Highlight,
 } from "@/lib/annotations";
 import type { ChatImage } from "@/lib/chat";
-import { useDocument } from "@/lib/documents";
+import { useDocument, type SourceBox } from "@/lib/documents";
 import { SYNTHESIS } from "@/lib/features";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import { MIND_MAP } from "@/lib/features";
@@ -300,6 +300,7 @@ export function ReaderPanel({
   canHighlight,
   issues,
   progress,
+  onSource,
 }: {
   docId: string;
   highlights: Highlight[];
@@ -323,6 +324,8 @@ export function ReaderPanel({
   issues: Record<string, AnchorIssue>;
   /** How far the reader is right now, for the Info tab. */
   progress: string;
+  /** Show a passage on the original PDF; left out for a document with no PDF. */
+  onSource?: (boxes: SourceBox[]) => void;
 }) {
   const t = useT();
   const lang = useLang();
@@ -405,7 +408,7 @@ export function ReaderPanel({
           </div>
         )}
 
-        {tab === "info" && doc && <ReaderInfo doc={doc} progress={progress} onSummary={() => onTab("ai")} />}
+        {tab === "info" && doc && <ReaderInfo doc={doc} progress={progress} onSummary={() => onTab("ai")} onSource={onSource} />}
 
         {tab === "highlights" && (
           <>

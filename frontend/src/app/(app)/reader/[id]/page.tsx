@@ -9,6 +9,7 @@ import { CleanReader, type CleanReaderHandle, type ScrollState, type TextSelecti
 import { FindBar } from "@/components/find-bar";
 import { Icon } from "@/components/icons";
 import type { PdfSelection, PdfViewerHandle } from "@/components/pdf-viewer";
+import { ArticleEnd, AsideAuthors } from "@/components/reader-aside";
 import { IntegrityNotice, ResumeChip } from "@/components/reader-notices";
 import { ReaderPanel, panelGroup, type PanelTab } from "@/components/reader-panel";
 import { SelectionMenu } from "@/components/selection-menu";
@@ -24,6 +25,7 @@ import {
   type AnchorIssue,
   type Highlight,
 } from "@/lib/annotations";
+import { useAside } from "@/lib/aside";
 import type { ChatImage } from "@/lib/chat";
 import { KIND_LABEL, origin } from "@/lib/doc-view";
 import { documentsKey, updateDocument, useCharts, useDocument, useDocuments, useSourceMap, type SourceBox } from "@/lib/documents";
@@ -216,6 +218,8 @@ function Reader({ id }: { id: string }) {
   // Where each block of the clean text is on the PDF, for "view in the original".
   const { data: sourceMap } = useSourceMap(id, Boolean(isPdf && hasClean));
   const { data: charts } = useCharts(id, Boolean(isPdf && hasClean));
+  // Clean Reader: the blocks set aside from the text (authors, references, headers…), kept for the reader.
+  const { data: aside } = useAside(id, Boolean(isPdf && hasClean));
   const hasSource = useCallback((blockId: string) => sourceMap?.has(blockId) ?? false, [sourceMap]);
   const [sourceRequest, setSourceRequest] = useState<SourceBox[] | null>(null);
 
@@ -659,6 +663,16 @@ function Reader({ id }: { id: string }) {
     [sourceMap, showToast, t],
   );
 
+  // A block set aside from the clean text (Info tab, hidden list, folded references): shown on the PDF.
+  const showOnPdf = useCallback(
+    (boxes: SourceBox[]) => {
+      setSourceRequest(boxes);
+      chooseMode("original");
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   // The PDF may still be loading after the switch: show the passage as soon as it can be placed.
   useEffect(() => {
     if (effectiveMode !== "original" || !sourceRequest) return;
@@ -946,6 +960,13 @@ function Reader({ id }: { id: string }) {
         )}
       </div>
       <h1 className="mb-7 mt-2.5 text-[1.9em] font-medium leading-[1.1] text-ink">{doc.title}</h1>
+      <AsideAuthors
+        aside={aside}
+        onInfo={() => {
+          setPanelTab("info");
+          showPanel(true);
+        }}
+      />
     </>
   );
 
@@ -1192,6 +1213,7 @@ function Reader({ id }: { id: string }) {
                     handleRef={readerRef}
                     documentId={doc.id}
                     header={header}
+                    footer={<ArticleEnd aside={aside} onSource={isPdf ? showOnPdf : undefined} />}
                     blocks={blocks}
                     fontSize={fontSize}
                     lineHeight={lineHeight}
@@ -1415,6 +1437,7 @@ function Reader({ id }: { id: string }) {
           canHighlight={clean || isPdf}
           issues={clean ? hlIssues : NO_ISSUES}
           progress={progressText}
+          onSource={isPdf ? showOnPdf : undefined}
         />
       )}
 

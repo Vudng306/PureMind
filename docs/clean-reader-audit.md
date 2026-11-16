@@ -290,3 +290,60 @@ Còn sót:
 - API và Reader chưa đọc `content_aside`. Hiển thị (Thông tin tài liệu, Thông tin bổ sung, References thu gọn, danh sách khối ẩn) thuộc GĐ3.
 - D10 đã đỡ phần lớn: chunk cho AI lấy từ `content_clean`, nay chỉ còn thân bài. Nhưng vì thế AI không còn thấy tác giả và References: câu hỏi "ai viết bài này?" cần đọc thêm kho phụ (GĐ4).
 - D8 (scan khi chưa đồng ý AI) và D9 chưa làm.
+
+## 9. Giai đoạn 3: Reader (16/11/2026)
+
+### 9.1. Đã làm
+
+- **API** (chỉ chủ tài liệu, người khác nhận 404):
+  - `GET /api/documents/{id}/aside`: kho phụ, mỗi khối có `id`, kiểu, chữ, trang, ô trên trang, độ chắc chắn và lý do. `classifier` là null khi tài liệu được xử lý trước GĐ2.
+  - `POST /api/documents/{id}/extraction-reports`: báo lỗi trích xuất với loại lỗi (thiếu đoạn, sai thứ tự, metadata lẫn vào bài, mất hình/bảng/công thức, lỗi OCR, khối bị ẩn nhầm, khác), trang, khối và mô tả tuỳ chọn. Báo cáo gửi lặp lại chỉ được lưu một lần. Log chỉ ghi loại lỗi, không ghi chữ.
+  - Bảng `extraction_reports` (migration `0036`) lưu kèm phiên bản bộ phân loại và kiểu khối lúc báo.
+- **Reader**, tab Thông tin:
+  - **Thông tin tài liệu**: tác giả, đơn vị, tạp chí/NXB, từ khoá, trang bìa, đúng như PDF in.
+  - **Thông tin bổ sung**: lời cảm ơn, tài trợ, xung đột lợi ích, đóng góp, dữ liệu, lời cam đoan, mục lục, phụ lục, tài liệu tham khảo, mỗi phần thu gọn.
+  - Mỗi khối có "tr. N": bấm để chuyển sang PDF gốc và tô vị trí của khối.
+  - **Nội dung bị ẩn (N)**: danh sách mọi khối đã tách, lọc theo nhóm, kèm loại, trang, độ chắc chắn (lý do khi rê chuột), "Xem trong PDF gốc" và "Báo ẩn nhầm" (TC-19, UC-02).
+  - **Báo lỗi trích xuất** (CR-FR-15).
+- **Bài đọc**:
+  - Dưới tiêu đề: tên tác giả lấy từ kho phụ, kèm liên kết mở Thông tin tài liệu (TC-03).
+  - Cuối bài: tài liệu tham khảo, phụ lục, tài trợ… thu gọn, mở được (TC-07). Phần này không thuộc luồng đọc nên không highlight, không tìm kiếm và không vào AI.
+- **Test**: `tests/test_clean_reader.py` (quyền truy cập, báo lỗi, chống trùng, dữ liệu sai, tài liệu cũ) và `frontend/src/lib/aside.test.ts`.
+
+### 9.2. Chưa làm
+
+- **"Hiện trong bài đọc"** (CR-FR-19, P1): đưa một khối bị ẩn trở lại luồng đọc theo từng người dùng. Việc này đụng tới `source_map`, anchor của highlight và chunk AI, nên để sau GĐ4. Hiện chỉ có "Báo ẩn nhầm".
+- **Trạng thái `REVIEW_REQUIRED` / `READY_WITH_WARNINGS`** theo quality gate (TSD §6): Reader vẫn dùng các cảnh báo có sẵn (trang scan, OCR, bảng/công thức giữ dạng ảnh). Chưa có tín hiệu "ẩn quá nhiều" hay "thứ tự đáng ngờ".
+- **Trang quản trị cho báo lỗi**: báo lỗi mới chỉ nằm trong DB.
+- **Xử lý lại an toàn** (D9) và AI đọc kho phụ khi được hỏi về tác giả/tài liệu tham khảo: GĐ4.
+
+### 9.3. Thử trên PDF ngoài benchmark (16/11/2026)
+
+Hai PDF do người dùng đưa, chưa có trong `labels.json` (chưa có nhãn nên chưa tính vào số đo):
+- `fpsyg-14-1113842.pdf`: Frontiers, 18 trang, 2 cột.
+- `125976903.pdf`: Springer/Atlantis, 13 trang.
+
+Lỗi tìm thấy trên bài Frontiers và cách sửa trong `block_roles.py`:
+- **Tài liệu tham khảo bị cắt sau 6 khối.** Cột phải trang 15 (đóng góp tác giả, xung đột lợi ích, ghi chú của NXB) nằm giữa hai nửa danh sách, nên phần còn lại (trang 15–18) rơi vào bài đọc.
+  - Sửa: khi một phần bổ sung khác đang mở mà gặp khối có dạng mục tham khảo ("Ater, T. (2017).", "[12] …", đoạn URL bị ngắt dòng), thì quay lại phần tài liệu tham khảo.
+  - Sau khi sửa: 119 khối, trang 15–18, không còn mục nào trong bài.
+- **"Conﬂict of interest" không được nhận ra** vì chữ ghép "ﬂ". Sửa: `_name` chuẩn hoá NFKC và dấu nháy cong.
+- **"Ethics statement", "Publisher's note" chưa có kiểu.** Sửa: thêm vào DECLARATION, cùng với informed consent, IRB, generative-AI statement. Nhãn hiển thị đổi thành "Tuyên bố, cam đoan".
+- **Cột thông tin bên trái trang 1 bị nhận là tác giả** (OPEN ACCESS, EDITED BY, REVIEWED BY, *CORRESPONDENCE, CITATION, COPYRIGHT).
+  - Sửa: các nhãn này thành PUBLISHER_INFO.
+  - Tên người biên tập/phản biện ngay dưới nhãn, **cùng cột**, cũng thành PUBLISHER_INFO. Thứ tự đọc có thể chen tên tác giả thật vào giữa, nên phải xét cột.
+  - Đoạn ngay dưới CITATION/COPYRIGHT/KEYWORDS thành PUBLISHER_INFO/KEYWORDS.
+- **"†These authors have contributed equally…" nằm trong bài.** Sửa: thành AUTHORS.
+
+Reader:
+- Dòng tác giả dưới tiêu đề bỏ email, ghi chú và tên lặp, cùng dấu "⁽B⁾" của Springer.
+- Các phần bổ sung hiện **khoảng trang** ("tr. 15–18") thay cho số khối, vì một khối có thể chứa cả danh sách hoặc nửa danh sách.
+
+Test và số đo:
+- `tests/test_block_roles.py`: 3 test trên khối dựng tay.
+- Benchmark không đổi: nội dung chính giữ 100 %, không có gì bị ẩn thêm.
+
+Còn lại, đã có từ trước:
+- Tiêu đề lặp lại ở đầu bài đọc dưới dạng heading.
+- Tóm tắt của bài Springer mất khoảng trắng ("Gestaltpsychologyisans…"). Đây là lỗi lớp chữ của PDF, nên đưa vào nhãn benchmark.
+- Nên gán nhãn hai PDF này vào `evals/clean_reader/labels.json` để các quy tắc mới được đo, không chỉ được thử.

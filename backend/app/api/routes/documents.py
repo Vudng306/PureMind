@@ -7,7 +7,7 @@ from typing import Literal
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,10 +20,12 @@ from app.core.messages import MSG
 from app.core.ratelimit import upload_limiter
 from app.db.session import SessionLocal
 from app.models import (
+    EXTRACTION_ERRORS,
     AiArtifact,
     ArticleTopic,
     Collection,
     Document,
+    ExtractionReport,
     ExtractionStatus,
     Highlight,
     Note,
@@ -470,6 +472,83 @@ async def get_source_map(document_id: uuid.UUID, user: CurrentUser, session: Ses
     await _owned_document(session, user, document_id)
     source_map = await session.scalar(select(Document.source_map).where(Document.id == document_id))
     return JSONResponse(source_map or [], headers={"Cache-Control": "private, no-cache"})
+
+
+@router.get("/{document_id}/aside")
+async def get_aside(document_id: uuid.UUID, user: CurrentUser, session: SessionDep):
+    """Clean Reader (CR-FR-13): the blocks taken out of the reading flow, kept on the side — authors,
+    affiliations, the journal's lines, references, funding, running headers, page numbers… —
+    `{"classifier", "blocks": [{id, type, text, page, box, confidence, reason}, …]}` in document order, `box`
+    as fractions of its page. `classifier` is null for a document extracted before there was one."""
+    await _owned_document(session, user, document_id)
+    aside = await session.scalar(select(Document.content_aside).where(Document.id == document_id))
+    aside = aside or {}
+    blocks = [{"id": n, **block} for n, block in enumerate(aside.get("blocks") or [])]
+    return JSONResponse(
+        {"classifier": aside.get("classifier"), "blocks": blocks},
+        headers={"Cache-Control": "private, no-cache"},
+    )
+
+
+class ExtractionReportIn(BaseModel):
+    error_type: Literal[EXTRACTION_ERRORS]  # type: ignore[valid-type]
+    page: int | None = Field(default=None, ge=1)
+    block: int | None = Field(default=None, ge=0)
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class ExtractionReportOut(BaseModel):
+    id: uuid.UUID
+    error_type: str
+    page: int | None
+    block: int | None
+
+
+@router.post("/{document_id}/extraction-reports", status_code=status.HTTP_201_CREATED)
+async def report_extraction(
+    document_id: uuid.UUID, body: ExtractionReportIn, user: CurrentUser, session: SessionDep
+) -> ExtractionReportOut:
+    """CR-FR-15: the owner says the clean text is wrong. The same report sent twice is kept once."""
+    doc = await _owned_document(session, user, document_id)
+    if body.page is not None and doc.page_count and body.page > doc.page_count:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Trang không có trong tài liệu.")
+    aside = await session.scalar(select(Document.content_aside).where(Document.id == document_id)) or {}
+    blocks = aside.get("blocks") or []
+    block_type = None
+    if body.block is not None:
+        if body.block >= len(blocks):
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Không tìm thấy khối này.")
+        block_type = blocks[body.block].get("type")
+    note = (body.note or "").strip() or None
+    same = await session.scalar(
+        select(ExtractionReport).where(
+            ExtractionReport.document_id == doc.id,
+            ExtractionReport.user_id == user.id,
+            ExtractionReport.error_type == body.error_type,
+            ExtractionReport.page.is_(None) if body.page is None else ExtractionReport.page == body.page,
+            ExtractionReport.block.is_(None) if body.block is None else ExtractionReport.block == body.block,
+            ExtractionReport.note.is_(None) if note is None else ExtractionReport.note == note,
+            ExtractionReport.classifier.is_(None)
+            if aside.get("classifier") is None
+            else ExtractionReport.classifier == aside.get("classifier"),
+        )
+    )
+    if same is None:
+        same = ExtractionReport(
+            document_id=doc.id,
+            user_id=user.id,
+            error_type=body.error_type,
+            page=body.page,
+            block=body.block,
+            block_type=block_type,
+            classifier=aside.get("classifier"),
+            note=note,
+        )
+        session.add(same)
+        await session.commit()
+    # Only the type is logged: what the reader wrote stays in the database (no document text in logs).
+    log.info("extraction report document=%s type=%s", doc.id, body.error_type)
+    return ExtractionReportOut(id=same.id, error_type=same.error_type, page=same.page, block=same.block)
 
 
 @router.get("/{document_id}/charts")

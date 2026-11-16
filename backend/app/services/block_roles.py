@@ -10,6 +10,7 @@ its confidence reaches AUTO_HIDE, and never deletes one. A block no rule is sure
 """
 
 import re
+import unicodedata
 from typing import Protocol
 
 CLASSIFIER = "rules-1"
@@ -68,7 +69,8 @@ def heading(item: Block) -> tuple[int, str] | None:
 
 
 def _name(words: str) -> str:
-    """A heading's words for matching: no section number, no closing colon, lower case."""
+    """A heading's words for matching: no section number, no closing colon, lower case, no ligature ("ﬂ")."""
+    words = unicodedata.normalize("NFKC", words).replace("’", "'")
     return NUMBER.sub("", words).strip().rstrip(".:").strip().lower()
 
 
@@ -82,6 +84,10 @@ SUPPLEMENTARY = [
      r"(declaration of )?(competing|conflicts?( of)?) interests?( statement)?|conflicts? of interest( statement)?"),
     ("AUTHOR_CONTRIBUTIONS", r"credit authorship contribution statement|authors?'? contributions?"),
     ("DATA_AVAILABILITY", r"(data|code|data and code) availability( statement)?|availability of data.*"),
+    ("DECLARATION",
+     r"ethics (approval|statement)|ethical (approval|statement|considerations)|ethics approval and consent.*"
+     r"|informed consent( statement)?|institutional review board statement|publisher's note"
+     r"|(generative ai|ai use) (statement|disclosure)|declaration of generative ai.*"),
     ("APPENDIX", r"(appendix|appendices|phụ lục)\b.*|supplementary (data|materials?|information)"),
 ]  # fmt: skip
 SUPPLEMENTARY_RE = [(t, re.compile(p)) for t, p in SUPPLEMENTARY]
@@ -101,6 +107,14 @@ THANKS = re.compile(
     r"|we (would like to )?(thank|acknowledge|are grateful|gratefully)"
     r"|this (work|research|study|project) (was|is|has been) (partly |partially )?(supported|funded|financed))",
     re.I,
+)
+
+
+# An entry of a reference list: "Ater, T. (2017).", "[12] …", or the end of one carried over ("gov.au/…").
+REFERENCE_ENTRY = re.compile(
+    r"^(\[\d{1,3}\]\s|\d{1,3}\.\s+[A-ZÀ-Ỹ][^\s,]+,\s"
+    r"|[A-ZÀ-Ỹ][^()]{1,150}\((19|20)\d\d[a-z]?(, [^)]{1,30})?\)"
+    r"|(https?://|www\.|doi:)|[a-z][\w-]*(\.[a-z]{2,})+/\S)"
 )
 
 
@@ -128,8 +142,19 @@ AFFILIATION = re.compile(
     re.I,
 )
 CONTACT = re.compile(
-    r"corresponding author|correspondence to|e-?mail\s*(address(es)?)?\s*:|\S+@\S+\.\w{2,}", re.I
+    r"corresponding author|correspondence to|e-?mail\s*(address(es)?)?\s*:|\S+@\S+\.\w{2,}"
+    r"|contributed equally|equal contribution|share (first|senior|last) authorship",
+    re.I,
 )
+# The labels of a journal's sidebar on the first page (Frontiers): "EDITED BY", "*CORRESPONDENCE", "CITATION"…
+SIDEBAR = re.compile(
+    r"^\*?(open access|edited by|reviewed by|correspondence|citation|copyright|received|accepted|published"
+    r"|specialty section|academic editor)$",
+    re.I,
+)
+EDITORS = re.compile(r"^(edited|reviewed) by$|^academic editor$", re.I)
+# Labels over one paragraph of their own in the sidebar: how to cite the paper, its licence, its keywords.
+CITED = re.compile(r"^(citation|copyright|keywords?|key words)$", re.I)
 # "1Columbia University", "a Institute of…", "¹ The University of Tokyo": a note mark, then the place.
 MARKED = re.compile(r"^[\d¹²³⁴⁵⁶⁷⁸⁹⁰a-f*†‡§]{1,2}\s?[A-ZÀ-Ỹ]")
 REPOSITORY = re.compile(
@@ -153,6 +178,8 @@ def _metadata_type(text: str) -> tuple[str, float] | None:
     t = plain(text)
     if KEYWORDS.match(t):
         return "KEYWORDS", 0.95
+    if SIDEBAR.match(t):
+        return "PUBLISHER_INFO", 0.95
     if len(t) <= 400 and PUBLISHER.search(t):
         return "PUBLISHER_INFO", 0.9
     if len(t) <= 600 and MARKED.match(t) and AFFILIATION.search(t):  # "1Columbia University…", maybe an email
@@ -225,6 +252,24 @@ def _paper_front(pages: list[list[Block]], heights: list[float], body_size: floa
     title = " ".join(plain(items[n].text) for n in run) or None
 
     if head is not None:
+        # The names under "EDITED BY", "REVIEWED BY": the journal's, not the paper's. Only those in the
+        # sidebar's column — the reading order may put the paper's own authors between them.
+        label: Block | None = None
+        for item in items[:end]:
+            t = plain(item.text)
+            if item.kind != "text":
+                continue
+            if SIDEBAR.match(t) or CITED.match(t):
+                label = item if EDITORS.match(t) or CITED.match(t) else None
+            elif label is not None and abs(item.bbox[0] - label.bbox[0]) < 12 and heading(item) is None:
+                if CITED.match(name := plain(label.text)) and len(t) <= 800:
+                    kind = "KEYWORDS" if name.lower().startswith("key") else "PUBLISHER_INFO"
+                    mark(item, kind, 0.9, f"under “{name}” in the journal's sidebar")
+                    label = None  # one paragraph
+                elif len(t) <= 300 and (AFFILIATION.search(t) or _author_like(t)):
+                    mark(item, "PUBLISHER_INFO", 0.9, "an editor or reviewer of the journal")
+                else:
+                    label = None
         for n, item in enumerate(items[:head]):
             if n in run:
                 continue  # the title, maybe over several blocks
@@ -345,6 +390,7 @@ def classify(pages: list[list[Block]], heights: list[float], body_size: float) -
 
     flat = [item for items in pages for item in items]
     part: tuple[str, int] | None = None  # (type, heading level)
+    references: int | None = None  # the heading level of the reference list, once it has started
     for n, item in enumerate(flat):
         if item.role is not None:
             continue  # typed already (front matter, the first page's metadata)
@@ -355,6 +401,8 @@ def classify(pages: list[list[Block]], heights: list[float], body_size: float) -
                 kind = None  # a "References" heading early on is not the list at the end
             if kind:
                 part = (kind, level)
+                if kind == "REFERENCES":
+                    references = level
                 mark(item, kind, 0.9, f"heading “{words}”")
                 if kind == "REFERENCES":  # thanks given without a heading, just before the references
                     k = n - 1
@@ -375,6 +423,16 @@ def classify(pages: list[list[Block]], heights: list[float], body_size: float) -
                 continue
             if part and level <= part[1]:
                 part = None  # the next section of the same rank: the part is over
+        if (
+            part
+            and part[0] != "REFERENCES"
+            and references is not None
+            and item.kind == "text"
+            and REFERENCE_ENTRY.match(plain(item.text))
+        ):
+            # Two columns: the list goes on after the parts set beside it (Frontiers puts the authors'
+            # contributions and the notes in the right column, between two halves of the references).
+            part = ("REFERENCES", references)
         if part:
             mark(item, part[0], 0.95 if part[0] == "REFERENCES" else 0.9, "in the part it is under")
         elif item.kind == "text" and (m := INLINE_PART.match(plain(item.text))):

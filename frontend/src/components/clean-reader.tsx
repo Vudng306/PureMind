@@ -404,6 +404,7 @@ export function CleanReader({
   handleRef,
   documentId,
   header,
+  footer,
   blocks,
   fontSize,
   lineHeight,
@@ -426,6 +427,8 @@ export function CleanReader({
   handleRef: React.Ref<CleanReaderHandle>;
   documentId: string;
   header: React.ReactNode;
+  /** After the text, before the tip: the parts that close the article, folded (Clean Reader). */
+  footer?: React.ReactNode;
   blocks: Block[];
   fontSize: number;
   lineHeight: number;
@@ -711,6 +714,7 @@ export function CleanReader({
             <BlockView key={b.id} block={b} />
           ))}
         </ImagesContext.Provider>
+        {footer}
         <p className="mt-11 select-none font-sans text-[13px] text-muted">{t("reader.tip")}</p>
       </article>
     </div>

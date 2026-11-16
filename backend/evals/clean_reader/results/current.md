@@ -1,6 +1,6 @@
 # Clean Reader benchmark — current
 
-Run 2026-11-16 09:03 UTC with `python -m evals.run_clean_reader --adapter current`. Labels: `evals/clean_reader/labels.json` (drafted by Claude from the PDFs' text layer; a person has not checked them yet). What the scores mean: the docstring of `evals/run_clean_reader.py`.
+Run 2026-11-16 14:42 UTC with `python -m evals.run_clean_reader --adapter current`. Labels: `evals/clean_reader/labels.json` (drafted by Claude from the PDFs' text layer; a person has not checked them yet). What the scores mean: the docstring of `evals/run_clean_reader.py`.
 
 | Measure | Baseline | Result | Target |
 |---|---|---|---|
@@ -21,13 +21,13 @@ Order pairs with an end not found in the flow: 0.
 
 | Document | Group | Lang | Seconds | Flow blocks | Main kept | Noise out | Order | Error |
 |---|---|---|---|---|---|---|---|---|
-| paper-volume-change | two_column | en | 1.94 | 57 | 100.0 % (15/15) | 100.0 % (9/9) | 100.0 % (6/6) |  |
-| paper-soil-water | two_column | en | 4.51 | 71 | 100.0 % (13/13) | 100.0 % (11/11) | 100.0 % (5/5) |  |
-| paper-elsevier-separation | media_heavy | en | 4.0 | 171 | 100.0 % (14/14) | 100.0 % (17/17) | 100.0 % (6/6) |  |
-| paper-arxiv-ai | two_column | en | 1.78 | 103 | 100.0 % (16/16) | 100.0 % (10/10) | 100.0 % (7/7) |  |
-| book-sommerville | unusual_layout | en | 0.44 | 177 | 100.0 % (8/8) | 42.9 % (3/7) | 100.0 % (3/3) |  |
-| report-vi-quy-dinh | one_column_report | vi | 5.97 | 492 | 100.0 % (10/10) | 100.0 % (16/16) | 100.0 % (4/4) |  |
-| synthetic-reader-test | unusual_layout | en | 0.05 | 35 | 100.0 % (5/5) | — | 100.0 % (3/3) |  |
+| paper-volume-change | two_column | en | 1.66 | 57 | 100.0 % (15/15) | 100.0 % (9/9) | 100.0 % (6/6) |  |
+| paper-soil-water | two_column | en | 3.77 | 71 | 100.0 % (13/13) | 100.0 % (11/11) | 100.0 % (5/5) |  |
+| paper-elsevier-separation | media_heavy | en | 3.37 | 171 | 100.0 % (14/14) | 100.0 % (17/17) | 100.0 % (6/6) |  |
+| paper-arxiv-ai | two_column | en | 1.43 | 103 | 100.0 % (16/16) | 100.0 % (10/10) | 100.0 % (7/7) |  |
+| book-sommerville | unusual_layout | en | 0.37 | 177 | 100.0 % (8/8) | 42.9 % (3/7) | 100.0 % (3/3) |  |
+| report-vi-quy-dinh | one_column_report | vi | 5.18 | 492 | 100.0 % (10/10) | 100.0 % (16/16) | 100.0 % (4/4) |  |
+| synthetic-reader-test | unusual_layout | en | 0.04 | 35 | 100.0 % (5/5) | — | 100.0 % (3/3) |  |
 | scan-paper-volume-change | scan | en | 0.01 | 0 | — | — | — | MSG-15 |
 
 ## Misses

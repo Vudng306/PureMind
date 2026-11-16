@@ -218,6 +218,42 @@ HIGHLIGHT_COLORS = ("yellow", "green", "blue", "pink", "purple")
 HIGHLIGHT_CATEGORIES = ("important", "concept", "question", "example", "review")
 
 
+EXTRACTION_ERRORS = (
+    "missing_text", "wrong_order", "metadata_in_body", "missing_media", "ocr_error", "wrongly_hidden", "other",
+)  # fmt: skip
+
+
+class ExtractionReport(Base):
+    """Clean Reader (CR-FR-15): the owner saying the clean text of a document is wrong — a paragraph missing,
+    the order wrong, metadata left in the body, a block hidden that should not be… With the page and the
+    side-store block it is about when known, and the classifier that made the text, so a report can be
+    checked against the version it was made on. The text of the document is never copied here."""
+
+    __tablename__ = "extraction_reports"
+    __table_args__ = (
+        CheckConstraint(
+            "error_type IN (" + ", ".join(f"'{e}'" for e in EXTRACTION_ERRORS) + ")",
+            name="ck_extraction_reports_error_type",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    error_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    page: Mapped[int | None] = mapped_column(Integer)
+    # The index of the block in documents.content_aside["blocks"], and its type then.
+    block: Mapped[int | None] = mapped_column(Integer)
+    block_type: Mapped[str | None] = mapped_column(String(32))
+    classifier: Mapped[str | None] = mapped_column(String(32))
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
 class Highlight(TimestampMixin, Base):
     """A highlighted passage.
 

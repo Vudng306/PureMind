@@ -2,30 +2,45 @@
 
 import { useState } from "react";
 
+import { useAside, type AsideBlock } from "@/lib/aside";
 import { KIND_LABEL, origin, relativeTime } from "@/lib/doc-view";
+import type { SourceBox } from "@/lib/documents";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import { useArtifact } from "@/lib/reader-ai";
 import type { DocumentDetail } from "@/lib/types";
 
 import { CitationDialog } from "./citation-dialog";
 import { Icon } from "./icons";
+import { AdditionalInfoSection, DocumentInfoSection, HiddenBlocksDialog, ReportDialog, type ReportPreset } from "./reader-aside";
 
 /** The reader panel's first tab: what the open document is, a short summary of it, and the facts about it. */
 export function ReaderInfo({
   doc,
   progress,
   onSummary,
+  onSource,
 }: {
   doc: DocumentDetail;
   /** How far the reader is right now, as the toolbar words it. */
   progress: string;
   /** Open the AI tab, where the summary is made and shown whole. */
   onSummary: () => void;
+  /** Show a passage on the original PDF (switching to it); left out for a document with no PDF. */
+  onSource?: (boxes: SourceBox[]) => void;
 }) {
   const t = useT();
   const lang = useLang();
   const { data: summary } = useArtifact(doc.id, "quick");
   const [editing, setEditing] = useState(false);
+  // Clean Reader: what the extraction set aside, for a PDF read into clean text.
+  const extracted = doc.file_type === "pdf" && doc.extraction_status === "done";
+  const { data: aside } = useAside(doc.id, extracted);
+  const [hiddenOpen, setHiddenOpen] = useState(false);
+  const [reporting, setReporting] = useState<{ preset: ReportPreset } | null>(null);
+  const reportBlock = (block: AsideBlock) => {
+    setHiddenOpen(false);
+    setReporting({ preset: { block } });
+  };
 
   const authors = (doc.citation?.authors ?? []).map((a) => (a.given ? `${a.given} ${a.family}` : a.family)).filter(Boolean);
   const from = origin(doc, lang);
@@ -88,6 +103,9 @@ export function ReaderInfo({
         )}
       </section>
 
+      {aside && <DocumentInfoSection aside={aside} onSource={onSource} />}
+      {aside && <AdditionalInfoSection aside={aside} onSource={onSource} />}
+
       <section className="flex flex-col gap-2.5">
         <h3 className="eyebrow">{t("reader.infoDetails").toLocaleUpperCase(lang)}</h3>
         <dl className="grid grid-cols-[92px_minmax(0,1fr)] gap-x-3 gap-y-2.5 text-sm">
@@ -102,6 +120,23 @@ export function ReaderInfo({
         </dl>
       </section>
 
+      {extracted && (
+        <div className="flex flex-col gap-1" data-clean-actions>
+          <button type="button" onClick={() => setHiddenOpen(true)} className="-mx-2 flex h-10 items-center gap-2 rounded-lg px-2 text-sm text-ink hover:bg-soft">
+            <Icon name="toc" size={16} className="text-muted" />
+            {aside?.classifier ? t("aside.hiddenCount", { n: aside.blocks.length }) : t("aside.hidden")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setReporting({ preset: null })}
+            className="-mx-2 flex h-10 items-center gap-2 rounded-lg px-2 text-sm text-ink hover:bg-soft"
+          >
+            <Icon name="shield" size={16} className="text-muted" />
+            {t("aside.reportError")}
+          </button>
+        </div>
+      )}
+
       <span className="flex-1" />
       <button
         type="button"
@@ -113,6 +148,24 @@ export function ReaderInfo({
       </button>
 
       <CitationDialog doc={editing ? doc : null} onClose={() => setEditing(false)} />
+      {extracted && (
+        <>
+          <HiddenBlocksDialog
+            open={hiddenOpen}
+            aside={aside}
+            onClose={() => setHiddenOpen(false)}
+            onSource={onSource}
+            onReport={reportBlock}
+          />
+          <ReportDialog
+            docId={doc.id}
+            open={reporting !== null}
+            preset={reporting?.preset ?? null}
+            pageCount={doc.page_count}
+            onClose={() => setReporting(null)}
+          />
+        </>
+      )}
     </div>
   );
 }
