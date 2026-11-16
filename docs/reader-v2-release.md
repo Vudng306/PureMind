@@ -1,7 +1,7 @@
 # Reader v2 (Reading First): tình trạng phát hành
 
-Cập nhật 15/11/2026, sau Giai đoạn 5. Đối chiếu với `PureMind_Reader_Upgrade_Requirements_SRS_v2.md` (mục 11–14) và
-`PureMind_Reader_Upgrade_TSD_v2.md` (mục 9–14). Chưa deploy; mọi bằng chứng dưới đây là trên máy phát triển.
+Cập nhật 16/11/2026, sau Giai đoạn 5 và các thay đổi ở mục 8. Đối chiếu với `PureMind_Reader_Upgrade_Requirements_SRS_v2.md` (mục 11–14) và
+`PureMind_Reader_Upgrade_TSD_v2.md` (mục 9–14). Bằng chứng dưới đây gồm kiểm thử tự động trên SQLite và PostgreSQL cùng kiểm tra giao diện trên máy phát triển.
 
 - **done**: có bằng chứng tự động và/hoặc đã xem trên màn hình đúng như tiêu chí.
 - **partial**: chỉ một phần tiêu chí có bằng chứng, hoặc bằng chứng yếu hơn tiêu chí đòi hỏi.
@@ -108,3 +108,13 @@ Thứ tự rollback: (1) tắt cờ và deploy lại frontend; (2) nếu cần, 
 5. Nhận diện tiếng Việt theo tỉ lệ chữ có dấu: câu tiếng Anh ngắn có tên riêng tiếng Việt có thể bị dịch sang tiếng Anh.
 6. A11y: chưa thử trình đọc màn hình, zoom 400%, giao diện tối. Mobile chỉ kiểm tra cơ bản.
 7. Theo phạm vi đồ án, đã thống nhất bỏ: bảng `document_versions`, Trash/GDPR purge, telemetry, signed URL, TTS, bottom sheet mobile.
+
+## 8. Thay đổi sau GĐ5
+
+| Commit | Thay đổi | Ghi chú |
+|---|---|---|
+| `136dfad` | Bỏ chức năng thêm tài liệu bằng DOI: tab "Nhập DOI" trong hộp thêm tài liệu, route `POST /documents/import-doi` | Theo yêu cầu thay đổi "Loại bỏ DOI Search". Link `https://doi.org/…` vẫn lưu được qua "Lưu link" như mọi trang khác. Không có migration; DOI trong `documents.citation` được giữ |
+| `285232c` | Bỏ ô DOI và nút "Điền từ DOI" trong hộp Thông tin trích dẫn, route `GET /documents/doi-lookup` | DOI đã lưu vẫn còn sau khi sửa trích dẫn (`test_a_citation_keeps_the_doi_it_was_saved_with`). BibTeX không còn trường `doi`; link của tài liệu (kể cả link doi.org) nằm ở trường `url` |
+| `6833ec2` | Bảng AI theo mockup; "Hỏi AI" đổi thành **Trợ lý đọc** | Thanh ba phần Tóm tắt / Mind Map / Trợ lý đọc; thẻ trống có tiêu đề, mô tả, công tắc Tiếng Việt / English, nút tạo rộng hết thẻ; số lượt AI còn lại dưới thẻ. Bỏ lựa chọn ngôn ngữ "Theo tài liệu": mặc định là ngôn ngữ giao diện. Tên mới cũng dùng cho nhãn nguồn của ghi chú và bản xuất Notebook |
+
+Kiểm thử sau các thay đổi này: backend 437 đạt, 3 bỏ qua trên cả SQLite và PostgreSQL (ít hơn mục 4 vì các test nhập/tra cứu DOI đã bỏ); frontend 195 đạt, 1 bỏ qua; `tsc` và `eslint` sạch. Bảng AI đã xem trên màn hình với PDF test: cả ba phần, chuyển English, tiêu đề trống của Trợ lý đọc.

@@ -17,12 +17,14 @@ Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh
 ## Tính năng
 
 - **Tài khoản:** đăng ký, đăng nhập, đăng xuất (Supabase Auth); hồ sơ, ảnh đại diện, xóa tài khoản; tùy chọn đọc đồng bộ theo tài khoản.
-- **Thư viện:** tải PDF/EPUB ≤ 50 MB; lưu bài báo hoặc PDF bằng link (chặn SSRF, lọc quảng cáo và menu); lọc, sắp xếp, theo dõi tiến độ đọc.
+- **Thư viện:** tải PDF/EPUB ≤ 50 MB; lưu bài báo hoặc PDF bằng link (chặn SSRF, lọc quảng cáo và menu); lọc, sắp xếp, theo dõi tiến độ đọc. Không còn thêm tài liệu bằng DOI: một link `https://doi.org/…` được lưu như mọi link khác.
+- **Trích dẫn:** sửa thông tin trích dẫn (tác giả, năm, nơi xuất bản…) và xuất BibTeX. Không còn ô DOI và nút tra cứu theo DOI; DOI đã lưu trước đó vẫn được giữ.
 - **Trình đọc:** xem PDF gốc (PDF.js) hoặc văn bản sạch; nền sáng, tối, sepia; cỡ chữ; tìm trong tài liệu (Ctrl+F, không phân biệt dấu).
 - **Highlight và ghi chú:** 5 màu, danh mục (Quan trọng, Khái niệm, Câu hỏi…), ghi chú, highlight trên PDF gốc; xuất ra Markdown.
 - **Tìm kiếm:** toàn văn trên tài liệu, highlight, ghi chú và notebook; không phân biệt dấu tiếng Việt.
-- **Tóm tắt AI:** Ý chính, Khái niệm, Kết luận, Từ khóa; chọn ngôn ngữ; tóm tắt được tài liệu dài.
-- **Trò chuyện với tài liệu:** hỏi đáp ngay trong trình đọc. Nội dung tài liệu được cắt thành đoạn và nhúng (embedding) một lần; mỗi câu hỏi chỉ được trả lời bằng những đoạn liên quan nhất, câu trả lời luôn kèm số đoạn [n] — bấm vào để mở đúng đoạn trong bài. Bôi đen một câu rồi chọn “Hỏi AI” để hỏi về chính đoạn đó. Mỗi tài liệu giữ được nhiều cuộc trò chuyện.
+- **Bảng AI trong trình đọc:** thanh ba phần Tóm tắt / Mind Map / Trợ lý đọc. Tóm tắt có ba mức Nhanh / Sâu / Nghiên cứu; khi chưa có kết quả, thẻ của mỗi mức có tiêu đề, mô tả, công tắc Tiếng Việt | English (mặc định theo ngôn ngữ giao diện) và nút tạo; số lượt AI còn lại trong ngày hiện dưới thẻ.
+- **Tóm tắt AI:** Ý chính, Khái niệm, Kết luận, Từ khóa; chọn tiếng Việt hoặc tiếng Anh; tóm tắt được tài liệu dài.
+- **Trợ lý đọc (trò chuyện với tài liệu):** hỏi đáp ngay trong trình đọc. Nội dung tài liệu được cắt thành đoạn và nhúng (embedding) một lần; mỗi câu hỏi chỉ được trả lời bằng những đoạn liên quan nhất, câu trả lời luôn kèm số đoạn [n] — bấm vào để mở đúng đoạn trong bài. Bôi đen một câu rồi chọn “Giải thích” để hỏi Trợ lý đọc về chính đoạn đó. Mỗi tài liệu giữ được nhiều cuộc trò chuyện.
 - **Notebook AI:** chọn tối đa 100 highlight để AI viết notebook Markdown có trích dẫn nguồn [n]; nội dung hiện dần trong lúc AI viết; chỉnh sửa, tự lưu, lịch sử phiên bản.
 - **Giới hạn AI:** 20 lượt tóm tắt/notebook và 50 câu hỏi trò chuyện mỗi người dùng mỗi ngày (đặt lại lúc 00:00 giờ Việt Nam). Người dùng phải đồng ý trước khi nội dung được gửi tới OpenAI.
 - **Trang quản trị** (`/admin`): danh sách người dùng kèm số tài liệu, dung lượng, lượt AI đã dùng; khóa/mở khóa (khóa cả đăng nhập trên Supabase), đặt lại lượt AI, xóa tài khoản; nhật ký mọi thao tác quản trị. Admin chỉ thấy số liệu, không thấy nội dung tài liệu, highlight, ghi chú hay cuộc trò chuyện.
