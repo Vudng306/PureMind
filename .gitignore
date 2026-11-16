@@ -3,6 +3,8 @@
 .idea/
 .vscode/
 backups/
+~$*.docx
+~WRD*.tmp
 
 # backend
 .venv/

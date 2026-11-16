@@ -1,8 +1,19 @@
 # PureMind
 
-Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh viên: đọc PDF, EPUB và bài báo, highlight, ghi chú, tìm kiếm, tóm tắt bằng AI, trò chuyện với tài liệu và tạo notebook AI từ highlight.
+Không gian đọc tài liệu và xây dựng kiến thức cá nhân cho sinh viên: đọc PDF, EPUB và bài viết web ở chế độ văn bản sạch hoặc bản gốc, highlight, ghi chú, tìm kiếm, và hỏi AI về tài liệu với câu trả lời luôn dẫn về đoạn nguồn.
 
-Đặc tả: [`docs/PureMind_PRD_v1.1.docx`](docs/PureMind_PRD_v1.1.docx), [`docs/PureMind_SRS_v1.1.docx`](docs/PureMind_SRS_v1.1.docx), ERD trong [`docs/`](docs/).
+Tài liệu dự án (trong [`docs/`](docs/)):
+
+| Tài liệu | Tệp |
+|---|---|
+| Yêu cầu sản phẩm (PRD) | [`PureMind_PRD_v1.5.docx`](docs/PureMind_PRD_v1.5.docx) |
+| Đặc tả yêu cầu phần mềm (SRS) | [`PureMind_SRS_v1.5.docx`](docs/PureMind_SRS_v1.5.docx) |
+| Sơ đồ thực thể liên kết | [`ERD_PureMind.docx`](docs/ERD_PureMind.docx), [`ERD_PureMind.drawio`](docs/ERD_PureMind.drawio), [`ERD_PureMind.png`](docs/ERD_PureMind.png) |
+| Báo cáo đồ án | [`Bao_cao_do_an_PureMind_v6.docx`](docs/Bao_cao_do_an_PureMind_v6.docx) |
+| Tình trạng Reader v2 | [`reader-v2-release.md`](docs/reader-v2-release.md) |
+| Tình trạng Clean Reader | [`clean-reader-release.md`](docs/clean-reader-release.md), nhật ký làm việc [`clean-reader-audit.md`](docs/clean-reader-audit.md) |
+
+Các bản v1.1–v1.4 vẫn được giữ trong `docs/` để đối chiếu.
 
 | Thành phần | Công nghệ |
 |---|---|
@@ -10,24 +21,28 @@ Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh
 | Backend | Python 3.11+, FastAPI, SQLAlchemy 2 (async), Alembic |
 | Cơ sở dữ liệu | PostgreSQL 16 (image `pgvector/pgvector:pg16`, dùng `unaccent` cho tìm kiếm tiếng Việt) |
 | Xác thực | Supabase Auth |
-| Xử lý tài liệu | PyMuPDF (PDF), BeautifulSoup (EPUB, bài báo web) |
-| AI | OpenAI API (mặc định `gpt-4.1-mini`; embedding `text-embedding-3-small` cho trò chuyện) |
+| Xử lý tài liệu | PyMuPDF (PDF, bộ phân loại khối theo quy tắc), BeautifulSoup (EPUB, bài viết web) |
+| AI | OpenAI API (mặc định `gpt-4.1-mini`; embedding `text-embedding-3-small` cho hỏi đáp) |
 | Hosting | Vercel (frontend), Render (backend, Docker) |
 
 ## Tính năng
 
-- **Tài khoản:** đăng ký, đăng nhập, đăng xuất (Supabase Auth); hồ sơ, ảnh đại diện, xóa tài khoản; tùy chọn đọc đồng bộ theo tài khoản.
-- **Thư viện:** tải PDF/EPUB ≤ 50 MB; lưu bài báo hoặc PDF bằng link (chặn SSRF, lọc quảng cáo và menu); lọc, sắp xếp, theo dõi tiến độ đọc. Không còn thêm tài liệu bằng DOI: một link `https://doi.org/…` được lưu như mọi link khác.
-- **Trích dẫn:** sửa thông tin trích dẫn (tác giả, năm, nơi xuất bản…) và xuất BibTeX. Không còn ô DOI và nút tra cứu theo DOI; DOI đã lưu trước đó vẫn được giữ.
-- **Trình đọc:** xem PDF gốc (PDF.js) hoặc văn bản sạch; nền sáng, tối, sepia; cỡ chữ; tìm trong tài liệu (Ctrl+F, không phân biệt dấu).
-- **Highlight và ghi chú:** 5 màu, danh mục (Quan trọng, Khái niệm, Câu hỏi…), ghi chú, highlight trên PDF gốc; xuất ra Markdown.
-- **Tìm kiếm:** toàn văn trên tài liệu, highlight, ghi chú và notebook; không phân biệt dấu tiếng Việt.
-- **Bảng AI trong trình đọc:** thanh ba phần Tóm tắt / Mind Map / Trợ lý đọc. Tóm tắt có ba mức Nhanh / Sâu / Nghiên cứu; khi chưa có kết quả, thẻ của mỗi mức có tiêu đề, mô tả, công tắc Tiếng Việt | English (mặc định theo ngôn ngữ giao diện) và nút tạo; số lượt AI còn lại trong ngày hiện dưới thẻ.
-- **Tóm tắt AI:** Ý chính, Khái niệm, Kết luận, Từ khóa; chọn tiếng Việt hoặc tiếng Anh; tóm tắt được tài liệu dài.
-- **Trợ lý đọc (trò chuyện với tài liệu):** hỏi đáp ngay trong trình đọc. Nội dung tài liệu được cắt thành đoạn và nhúng (embedding) một lần; mỗi câu hỏi chỉ được trả lời bằng những đoạn liên quan nhất, câu trả lời luôn kèm số đoạn [n] — bấm vào để mở đúng đoạn trong bài. Bôi đen một câu rồi chọn “Giải thích” để hỏi Trợ lý đọc về chính đoạn đó. Mỗi tài liệu giữ được nhiều cuộc trò chuyện.
-- **Notebook AI:** chọn tối đa 100 highlight để AI viết notebook Markdown có trích dẫn nguồn [n]; nội dung hiện dần trong lúc AI viết; chỉnh sửa, tự lưu, lịch sử phiên bản.
-- **Giới hạn AI:** 20 lượt tóm tắt/notebook và 50 câu hỏi trò chuyện mỗi người dùng mỗi ngày (đặt lại lúc 00:00 giờ Việt Nam). Người dùng phải đồng ý trước khi nội dung được gửi tới OpenAI.
-- **Trang quản trị** (`/admin`): danh sách người dùng kèm số tài liệu, dung lượng, lượt AI đã dùng; khóa/mở khóa (khóa cả đăng nhập trên Supabase), đặt lại lượt AI, xóa tài khoản; nhật ký mọi thao tác quản trị. Admin chỉ thấy số liệu, không thấy nội dung tài liệu, highlight, ghi chú hay cuộc trò chuyện.
+- **Tài khoản:** đăng ký, đăng nhập, đăng xuất (Supabase Auth); hồ sơ, ảnh đại diện, xóa tài khoản; tùy chọn đọc đồng bộ theo tài khoản; điều khoản sử dụng và lựa chọn đồng ý gửi nội dung tới OpenAI.
+- **Khám phá** (`/explore`): người dùng mô tả chủ đề muốn đọc, AI tìm 3–5 tài liệu đáng đọc đầy đủ trên web và kiểm tra từng tài liệu có nhập được vào thư viện không. Bấm thêm là tài liệu được tải về bằng chức năng lưu link của thư viện rồi mở trong trình đọc. Khám phá không lưu gì; trang không cho tải nội dung thì được mở ở trang gốc.
+- **Thư viện:** tải PDF/EPUB ≤ 50 MB; lưu bài viết hoặc PDF bằng link (chặn SSRF, lọc quảng cáo và menu); bộ sưu tập; lọc, sắp xếp, đọc tiếp; xóa tài liệu có nêu rõ những gì bị xóa theo. Một link `https://doi.org/…` được lưu như mọi link khác (không còn nhập bằng DOI).
+- **Trích dẫn:** sửa thông tin trích dẫn (tác giả, năm, nơi xuất bản…) và xuất BibTeX.
+- **Trình đọc (Reader v2, “đọc trước”):** mở bài là đọc ngay, bảng AI chỉ mở khi người dùng bấm. Văn bản sạch hoặc PDF gốc (PDF.js), chuyển qua lại vẫn giữ đúng đoạn; nhớ vị trí đọc theo khối nên đổi cỡ chữ hay độ rộng cột không làm lệch; chế độ tập trung; nền sáng, tối, sepia; tìm trong tài liệu (Ctrl+F, không phân biệt dấu). Khi trích xuất bỏ sót bảng, công thức hoặc trang scan, trình đọc báo và cho mở bản gốc.
+- **Clean Reader:** khi trích xuất PDF, bộ phân loại tách khỏi luồng đọc những khối không phải nội dung chính (tác giả, đơn vị, header/footer, số trang, tài liệu tham khảo, tài trợ, lời cảm ơn…) và giữ chúng trong kho phụ, không xóa. Người đọc xem lại các khối đã tách theo nhóm, trang và lý do, mở đúng chỗ trên PDF gốc, gửi báo lỗi trích xuất. Chủ tài liệu có thể **xử lý lại** tệp: văn bản đang dùng được giữ tới khi bản mới xong; mọi highlight được giữ và đánh dấu `mapped` / `ambiguous` / `unresolved`.
+- **Highlight và ghi chú:** 5 màu, danh mục (Quan trọng, Khái niệm, Câu hỏi…), ghi chú ngay tại đoạn, highlight trên PDF gốc; mỗi highlight giữ vài từ trước và sau để tìm lại chỗ sau khi văn bản đổi. Ghi chú cho cả tài liệu. Xuất ra Markdown.
+- **Notebook:** mỗi tài liệu một nhóm gồm highlight và ghi chú của người đọc, bấm để nhảy về đúng đoạn. Kết quả AI chỉ vào Notebook khi người dùng bấm “Lưu vào ghi chú”. Notebook viết tay có chủ đề, liên kết tài liệu, lịch sử phiên bản. Các notebook AI tổng hợp từ highlight trước đây vẫn đọc được ở `/notebooks/archive`; tạo mới đang tắt (cờ `SYNTHESIS`).
+- **Tìm kiếm:** toàn văn trên tài liệu, highlight, ghi chú, kết quả AI và notebook; không phân biệt dấu tiếng Việt.
+- **Bảng AI trong trình đọc** (Tóm tắt / Mind Map / Trợ lý đọc):
+  - Tóm tắt ba mức Nhanh / Sâu / Nghiên cứu, tiếng Việt hoặc tiếng Anh. Mỗi ý dẫn về đoạn nguồn; khi tài liệu đã đổi kể từ lúc tạo, panel báo “phiên bản cũ hơn”.
+  - Mind map, mỗi nút có nguồn.
+  - Trợ lý đọc (hỏi đáp với tài liệu): tài liệu được cắt đoạn và nhúng một lần; câu trả lời chỉ dùng các đoạn liên quan nhất và luôn kèm số đoạn [n], bấm để mở đúng chỗ. Câu hỏi không có căn cứ trong tài liệu thì bị từ chối, không trích dẫn. AI chỉ đọc thân bài; hỏi về tác giả, tài trợ hay tài liệu tham khảo thì AI đọc thêm kho phụ của Clean Reader và trích trang.
+  - Bôi đen một đoạn để **Dịch** (Việt ↔ Anh, lưu thành ghi chú nếu muốn) hoặc **Giải thích**.
+- **Giới hạn AI:** 20 lượt tóm tắt/notebook và 50 câu hỏi mỗi người dùng mỗi ngày (đặt lại lúc 00:00 giờ Việt Nam). Người dùng phải đồng ý trước khi nội dung được gửi tới OpenAI.
+- **Trang quản trị** (`/admin`): danh sách người dùng kèm số tài liệu, dung lượng, lượt AI đã dùng; khóa/mở khóa (khóa cả đăng nhập trên Supabase), đặt lại lượt AI, xóa tài khoản; lưu lượng hệ thống; nhật ký mọi thao tác quản trị. Admin chỉ thấy số liệu, không thấy nội dung tài liệu, highlight, ghi chú hay cuộc trò chuyện.
 
   Cấp quyền admin bằng dòng lệnh (tài khoản phải đăng nhập PureMind ít nhất một lần trước), chạy trong `backend/`:
 
@@ -36,28 +51,8 @@ Nền tảng đọc tài liệu và xây dựng kiến thức cá nhân cho sinh
   ```
 
   Thêm `--revoke` để thu hồi quyền. Với bản production, chạy lệnh này trong tab **Shell** của service backend trên Render (chỉ gói trả phí mới có), hoặc chạy trên máy với `DATABASE_URL` trỏ vào database production.
-- **Bảng tin** (`/feed`): bài có giấy phép mở từ The Conversation (CC BY-ND), Our World in Data (CC BY), PLOS (CC BY), eLife Insights (CC BY, nhà khoa học giải thích một nghiên cứu mới cho người ngoài ngành), Frontiers for Young Minds (CC BY, khoa học viết cho người trẻ) và Europe PMC (CC BY), chia theo 16 chủ đề; lần đầu vào, người dùng chọn chủ đề muốn đọc. Bấm “Đọc” là bài được chép vào thư viện, kèm dòng ghi công tác giả và giấy phép ở đầu, rồi mở trong trình đọc: highlight, tóm tắt, hỏi AI như mọi tài liệu khác. Ảnh của The Conversation, eLife và Frontiers for Young Minds bị bỏ vì có thể có giấy phép riêng.
 
-  Bài được lấy về bằng lệnh đồng bộ, chạy trong `backend/` (nên chạy hằng ngày bằng cron hoặc scheduled job). Bài đã có thì được cập nhật; bài trùng tiêu đề từ nguồn khác không bị thêm lần hai:
-
-  ```bash
-  python -m app.scripts.sync_articles                    # mọi nguồn
-  python -m app.scripts.sync_articles conversation owid  # một vài nguồn
-  ```
-
-  Sau đó, AI (`OPENAI_GUIDE_MODEL`, mặc định gpt-4.1) viết **bài tiếng Việt** từ các bài CC BY và CC BY-SA: mở bằng một tình huống đời thường, vài câu hỏi kèm “Điểm cốt lõi”, phần “Thử ngay” hoặc “Điều đáng nhớ” và một câu hỏi để bàn luận. Bài AI dùng cùng giấy phép với bài gốc, ghi nguồn và có link về bài gốc. Bài CC BY-ND (The Conversation) không được chuyển thể nên không có bài AI. Mỗi bài là một lần gọi API; bài gốc đã có bài AI thì được bỏ qua:
-
-  ```bash
-  python -m app.scripts.write_guides                        # 2 bài mỗi chủ đề
-  python -m app.scripts.write_guides --per-topic 1 health   # một vài chủ đề
-  ```
-
-  Tab **Bài ngắn** (mặc định của Bảng tin) cho đọc lướt từng bài một, mỗi bài đọc trong một phút: tiêu đề, một câu mở đầu, ba ý chính và một điều đáng nhớ. Bài ngắn cũng do AI viết từ bài CC BY và CC BY-SA, ghi nguồn bài gốc. Nút “Đọc đầy đủ” mở bài tiếng Việt do AI biên soạn từ cùng bài gốc nếu đã có, nếu chưa thì mở chính bài gốc. Lệnh dưới đây viết bài ngắn cho các bài chưa có:
-
-  ```bash
-  python -m app.scripts.write_shorts                        # 3 bài mỗi chủ đề
-  python -m app.scripts.write_shorts --per-topic 1 mind     # một vài chủ đề
-  ```
+**Ngoài phạm vi từ v1.5:** Bảng tin, Cộng đồng/Đăng bài và kho bài thu thập (danh mục, trình thu thập, bài ngắn AI) đã được bỏ khỏi giao diện và khỏi phạm vi đồ án. Mã, API và dữ liệu vẫn còn; các cờ trong [`frontend/src/lib/features.ts`](frontend/src/lib/features.ts) (`FEED`, `COMMUNITY`, `CATALOG`) cùng các redirect trong `frontend/next.config.mjs` tắt chúng.
 
 ## Yêu cầu
 
@@ -313,6 +308,20 @@ cd backend && TEST_DATABASE_URL=postgresql+asyncpg://puremind:puremind@localhost
 `pytest tests/test_reader_timing.py -s`. Bộ đánh giá AI của trình đọc (gọi OpenAI thật):
 `python -m evals.run_reader_ai`. Tình trạng Reader v2: [docs/reader-v2-release.md](docs/reader-v2-release.md).
 
+Benchmark Clean Reader (không cần DB hay OpenAI) chạy bộ trích xuất trên 8 PDF đã gán nhãn và so với lần đo
+trước khi làm Clean Reader (`results/baseline.json`). PDF không nằm trong git: đặt chúng vào
+`backend/evals/clean_reader/pdfs/` theo tên trong `labels.json`; PDF thiếu sẽ bị bỏ qua và được báo lại.
+
+```bash
+cd backend && .venv/Scripts/python -X utf8 -m evals.run_clean_reader
+```
+
+Kết quả nằm ở `backend/evals/clean_reader/results/current.md`. Tình trạng Clean Reader:
+[docs/clean-reader-release.md](docs/clean-reader-release.md).
+
+Lần chạy ngày 16/11/2026: backend 454 test qua, 3 bỏ qua, độ phủ 87,5 %, trên cả SQLite và PostgreSQL 16;
+frontend 198 test qua (32 tệp).
+
 ```bash
 cd backend && ruff check app tests && ruff format --check app tests
 ```
@@ -358,15 +367,18 @@ Lệnh gọi OpenAI được ghi kèm model, số token và thời gian, không 
 
 ```
 backend/
-  app/api/routes/   REST API: account, documents, highlights, search, summaries, notebooks, chat
-  app/services/     trích xuất PDF/EPUB/web, OpenAI, embedding, tóm tắt, notebook, trò chuyện, lưu trữ tệp
+  app/api/routes/   REST API: account, documents (tải lên, lưu link, kho phụ, xử lý lại), highlights, notes,
+                    reader_ai (tóm tắt, mind map), chat, translate, search, notebooks, collections, explore, admin
+  app/services/     trích xuất PDF/EPUB/web, phân loại khối (block_roles), neo highlight (anchors), OpenAI,
+                    embedding, tóm tắt, trò chuyện, lưu trữ tệp
   app/core/         cấu hình, xác thực JWT, thông báo lỗi (SRS Phụ lục B)
-  alembic/          migration cơ sở dữ liệu
+  alembic/          migration cơ sở dữ liệu (0001–0037)
+  evals/            benchmark Clean Reader, bộ đánh giá AI của trình đọc
   tests/            pytest
 frontend/
-  src/app/          các trang: thư viện, trình đọc (đọc, highlight, hỏi đáp), notebook, tìm kiếm, cài đặt
+  src/app/          các trang: khám phá, thư viện, trình đọc, highlight, notebook, tìm kiếm, cài đặt, quản trị
   src/components/   thành phần giao diện
-  src/lib/          gọi API, hook dữ liệu, Markdown, highlight, xuất file
-docs/               PRD, SRS, ERD
+  src/lib/          gọi API, hook dữ liệu, cờ tính năng, Markdown, highlight, xuất file
+docs/               PRD, SRS, ERD, báo cáo đồ án, tình trạng phát hành
 docker-compose.yml  db + backend + frontend
 ```
