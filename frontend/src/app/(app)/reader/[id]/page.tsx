@@ -12,6 +12,7 @@ import type { PdfSelection, PdfViewerHandle } from "@/components/pdf-viewer";
 import { IntegrityNotice, ResumeChip } from "@/components/reader-notices";
 import { ReaderPanel, panelGroup, type PanelTab } from "@/components/reader-panel";
 import { SelectionMenu } from "@/components/selection-menu";
+import { NotePopover } from "@/components/note-popover";
 import { TranslatePopover } from "@/components/translate-popover";
 import { Alert, Spinner } from "@/components/ui";
 import {
@@ -171,6 +172,8 @@ function Reader({ id }: { id: string }) {
   const [aiImage, setAiImage] = useState<ChatImage | null>(null);
   const [translating, setTranslating] = useState<{ text: string; rect: DOMRect } | null>(null);
   const closeTranslation = useCallback(() => setTranslating(null), []);
+  const [noting, setNoting] = useState<{ sel: TextSelection | PdfSelection; initial: string } | null>(null);
+  const closeNote = useCallback(() => setNoting(null), []);
   // The button on a figure in clean text: the chat explains it.
   const explainImage = useCallback((src: string, alt: string) => {
     setAiImage({ src, alt, key: Date.now() });
@@ -730,19 +733,38 @@ function Reader({ id }: { id: string }) {
     setSelection(null);
   }, []);
 
-  function highlightSelection(color: HighlightColor, note = false): Highlight | null {
-    if (!selection) return null;
-    const sel = selection;
+  /** The highlight already on exactly this passage, if there is one. */
+  function highlightAt(sel: TextSelection | PdfSelection): Highlight | undefined {
     const onPdf = "rects" in sel;
-    const existing = highlights.find((h) =>
+    return highlights.find((h) =>
       onPdf
         ? h.rects !== null && h.page === sel.page && h.text === sel.text
         : h.blockId === sel.blockId && h.start === sel.start && h.end === sel.end,
     );
-    // AN-105: "highlighted" is said once the server has it, not before.
-    const onSaved = note ? undefined : () => showToast(t("reader.highlighted", { name: colorLabel(colorLabels, color, lang) }));
+  }
+
+  function highlightSelection(color: HighlightColor): Highlight | null {
+    if (!selection) return null;
+    const h = markPassage(selection, color);
+    clearSelection();
+    setActiveHl(h.id);
+    return h;
+  }
+
+  /** Highlights a passage in `color`, or keeps its note on it: a passage with a highlight keeps its color. */
+  function markPassage(sel: TextSelection | PdfSelection, color: HighlightColor, note?: string): Highlight {
+    const onPdf = "rects" in sel;
+    const existing = highlightAt(sel);
+    // AN-105: "highlighted" / "note saved" is said once the server has it, not before.
+    const onSaved =
+      note !== undefined
+        ? () => showToast(t("panel.savedNote"))
+        : () => showToast(t("reader.highlighted", { name: colorLabel(colorLabels, color, lang) }));
     let h: Highlight;
-    if (existing) {
+    if (existing && note !== undefined) {
+      updateHighlight(existing.id, { note }, { now: true, onSaved });
+      h = { ...existing, note };
+    } else if (existing) {
       const category = CATEGORY_FOR_COLOR[color];
       updateHighlight(existing.id, { color, category }, { onSaved });
       h = { ...existing, color, category };
@@ -758,6 +780,7 @@ function Reader({ id }: { id: string }) {
         color,
         category: CATEGORY_FOR_COLOR[color],
         page: sel.page,
+        note: note ?? "",
       }, { onSaved });
     } else {
       h = addHighlight({
@@ -772,16 +795,24 @@ function Reader({ id }: { id: string }) {
         page: hasPages ? (blockPage.get(sel.blockId) ?? null) : null,
         prefix: sel.prefix,
         suffix: sel.suffix,
+        note: note ?? "",
       }, { onSaved });
     }
-    clearSelection();
-    setActiveHl(h.id);
-    if (note) {
-      setPanelOpen(true);
-      setPanelTab("highlights");
-      setEditingHl(h.id);
-    }
     return h;
+  }
+
+  // The note is written in a small card under the passage; the passage is highlighted when it is saved.
+  function noteSelection() {
+    if (!selection) return;
+    setNoting({ sel: selection, initial: highlightAt(selection)?.note ?? "" });
+    clearSelection();
+  }
+
+  function saveNote(note: string) {
+    if (!noting) return;
+    const h = markPassage(noting.sel, "yellow", note);
+    setActiveHl(h.id);
+    setNoting(null);
   }
 
   async function copySelection() {
@@ -1391,7 +1422,7 @@ function Reader({ id }: { id: string }) {
         <SelectionMenu
           selection={selection}
           onColor={(c) => highlightSelection(c)}
-          onNote={() => highlightSelection("yellow", true)}
+          onNote={noteSelection}
           onCopy={copySelection}
           onExplain={SELECTION_EXPLAIN ? explainSelection : undefined}
           onTranslate={SELECTION_TRANSLATE ? translateSelection : undefined}
@@ -1413,6 +1444,16 @@ function Reader({ id }: { id: string }) {
           text={translating.text}
           rect={translating.rect}
           onClose={closeTranslation}
+        />
+      )}
+      {noting && (
+        <NotePopover
+          key={noting.sel.text}
+          text={noting.sel.text}
+          rect={noting.sel.rect}
+          initial={noting.initial}
+          onSave={saveNote}
+          onClose={closeNote}
         />
       )}
     </div>
