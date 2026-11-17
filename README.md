@@ -9,7 +9,7 @@ Tài liệu dự án (trong [`docs/`](docs/)):
 | Yêu cầu sản phẩm (PRD) | [`PureMind_PRD_v1.5.docx`](docs/PureMind_PRD_v1.5.docx) |
 | Đặc tả yêu cầu phần mềm (SRS) | [`PureMind_SRS_v1.5.docx`](docs/PureMind_SRS_v1.5.docx) |
 | Sơ đồ thực thể liên kết | [`ERD_PureMind.docx`](docs/ERD_PureMind.docx), [`ERD_PureMind.drawio`](docs/ERD_PureMind.drawio), [`ERD_PureMind.png`](docs/ERD_PureMind.png) |
-| Báo cáo đồ án | [`Bao_cao_do_an_PureMind_v6.docx`](docs/Bao_cao_do_an_PureMind_v6.docx) |
+| Báo cáo đồ án | [`Bao_cao_do_an_PureMind_v7.docx`](docs/Bao_cao_do_an_PureMind_v7.docx) · [`PDF`](docs/Bao_cao_do_an_PureMind_v7.pdf) |
 | Tình trạng Reader v2 | [`reader-v2-release.md`](docs/reader-v2-release.md) |
 | Tình trạng Clean Reader | [`clean-reader-release.md`](docs/clean-reader-release.md), nhật ký làm việc [`clean-reader-audit.md`](docs/clean-reader-audit.md) |
 
