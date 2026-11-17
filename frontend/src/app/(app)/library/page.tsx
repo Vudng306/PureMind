@@ -99,7 +99,7 @@ function CardMenu({ doc, actions, row = false }: { doc: DocumentListItem; action
   const item = "flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm hover:bg-soft focus:bg-soft focus:outline-none";
 
   return (
-    <div ref={root} className={row ? "relative" : "absolute right-1.5 top-1.5 z-10"} onKeyDown={onKeyDown}>
+    <div ref={root} className={row ? "relative" : "absolute right-1.5 top-1.5 z-10 has-[[role=menu]]:z-30"} onKeyDown={onKeyDown}>
       <button
         ref={button}
         type="button"

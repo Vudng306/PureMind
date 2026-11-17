@@ -151,7 +151,8 @@ export function DocumentRow({
           </span>
         </span>
       </div>
-      <div className="relative z-10 flex shrink-0 items-center gap-0.5">
+      {/* Each row's buttons sit in their own z-10 layer; an open menu lifts its row's layer above the rows below. */}
+      <div className="relative z-10 flex shrink-0 items-center gap-0.5 has-[[role=menu]]:z-30">
         <span className={`pr-2 text-xs tabular-nums text-muted ${selected ? "hidden" : "group-hover:hidden"}`}>
           {relativeTime(doc.updated_at)}
         </span>
