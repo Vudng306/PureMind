@@ -6,7 +6,6 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from app.models import (
-    MAX_CHAT_MESSAGES,
     MAX_CHAT_QUESTION,
     MAX_NOTEBOOK_TOPIC,
     ExtractionStatus,
@@ -223,7 +222,6 @@ class DocumentUsage(BaseModel):
     notes: int  # highlights with a note of their own, plus the document's own notes
     has_summary: bool
     notebooks: int
-    posts: int
 
 
 MAX_RECTS = 200
@@ -509,29 +507,6 @@ class ChatAsk(BaseModel):
     quote: str | None = Field(default=None, max_length=MAX_SELECTION)
     # A figure in the document, as written in its clean text: `pm-image:<name>` or the image's URL.
     image: str | None = Field(default=None, max_length=2048)
-
-    @field_validator("content")
-    @classmethod
-    def check_content(cls, v: str) -> str:
-        v = v.strip()
-        if not v:
-            raise ValueError("MSG-CHAT-EMPTY")
-        if len(v) > MAX_CHAT_QUESTION:
-            raise ValueError("MSG-CHAT-LONG")
-        return v
-
-
-class ExploreTurn(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str = Field(max_length=8000)
-
-
-class ExploreAsk(BaseModel):
-    """A message to the feed's chat, with the earlier turns of the conversation, which the page keeps."""
-
-    content: str
-    history: list[ExploreTurn] = Field(default_factory=list, max_length=MAX_CHAT_MESSAGES)
-    language: Literal["vi", "en"] = "vi"
 
     @field_validator("content")
     @classmethod

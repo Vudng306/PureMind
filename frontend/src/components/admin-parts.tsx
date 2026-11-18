@@ -5,7 +5,6 @@ import { useState } from "react";
 import type { AdminAuditEntry, AdminUserItem, Page } from "@/lib/admin";
 import { pageCount } from "@/lib/admin";
 import { niceMax } from "@/lib/admin-content";
-import { TOPICS, type Topic } from "@/lib/feed";
 import { useLang, useT, type Key, type T } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
 
@@ -169,51 +168,4 @@ export function describeAction(entry: AdminAuditEntry, t: T): string {
   if (entry.action === "crawl.settings") return `${label} · ${d.enabled ? `${String(d.hour).padStart(2, "0")}:00` : "—"}`;
   if (entry.action === "crawl.source") return `${label} · ${d.source} ${d.enabled ? "✓" : "✕"}`;
   return about ? `${label} · ${about}` : label;
-}
-
-/** Up to `max` of the feed's topics, picked as chips. */
-export function TopicPicker({
-  value,
-  onChange,
-  max = 4,
-  label,
-}: {
-  value: Topic[];
-  onChange: (topics: Topic[]) => void;
-  max?: number;
-  label: string;
-}) {
-  const t = useT();
-  return (
-    <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
-      {TOPICS.map((topic) => {
-        const on = value.includes(topic);
-        return (
-          <button
-            key={topic}
-            type="button"
-            className="chip h-8 px-3 text-[13px]"
-            aria-pressed={on}
-            disabled={!on && value.length >= max}
-            onClick={() => onChange(on ? value.filter((x) => x !== topic) : TOPICS.filter((x) => x === topic || value.includes(x)))}
-          >
-            {t(`feed.topic.${topic}` as Key)}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-export function TopicTags({ topics }: { topics: string[] }) {
-  const t = useT();
-  return (
-    <span className="flex flex-wrap gap-1">
-      {topics.map((topic) => (
-        <span key={topic} className="inline-flex h-6 items-center rounded-full bg-soft px-2 text-xs text-body">
-          {(TOPICS as readonly string[]).includes(topic) ? t(`feed.topic.${topic}` as Key) : topic}
-        </span>
-      ))}
-    </span>
-  );
 }

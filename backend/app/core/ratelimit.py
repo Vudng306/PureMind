@@ -33,17 +33,9 @@ class RateLimiter:
 
 
 upload_limiter = RateLimiter(limit=30, window_seconds=3600)
-# A search of arXiv is a request in PureMind's name too; repeated searches are answered from memory.
-papers_search_limiter = RateLimiter(limit=120, window_seconds=3600)
 # Translation costs no AI credits, so these only stop a script from running up the OpenAI bill.
 translate_minute_limiter = RateLimiter(limit=20, window_seconds=60)
 translate_day_limiter = RateLimiter(limit=300, window_seconds=24 * 3600)
-# A whole article is many passages. One already kept costs nothing and does not count.
-translate_article_day_limiter = RateLimiter(limit=50, window_seconds=24 * 3600)
-# What goes in front of everyone: enough for anyone writing by hand, not for a script.
-publish_limiter = RateLimiter(limit=20, window_seconds=3600)
-comment_limiter = RateLimiter(limit=30, window_seconds=3600)
-report_limiter = RateLimiter(limit=30, window_seconds=3600)
 # Explore: a search is two AI calls and a web search; a check is a visit to someone's site in PureMind's name.
 explore_search_limiter = RateLimiter(limit=20, window_seconds=3600)
 explore_check_limiter = RateLimiter(limit=200, window_seconds=3600)

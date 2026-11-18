@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useSheet } from "./mobile-surfaces";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,7 +13,6 @@ import {
 } from "@/lib/annotations";
 import type { ChatImage } from "@/lib/chat";
 import { useDocument, type SourceBox } from "@/lib/documents";
-import { SYNTHESIS } from "@/lib/features";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import { MIND_MAP } from "@/lib/features";
 import { MSG } from "@/lib/messages";
@@ -434,16 +432,6 @@ export function ReaderPanel({
 
         {tab === "highlights" && (
           <>
-            {SYNTHESIS && highlights.length > 0 && (
-              <Link
-                href={`/notebooks/new?document=${docId}`}
-                className="flex items-center gap-2 rounded-lg border border-line px-3 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-soft"
-              >
-                <Icon name="spark" size={16} className="text-accent-text" />
-                <span className="flex-1">{t("panel.makeNotebook")}</span>
-                <Icon name="next" size={16} className="text-muted" />
-              </Link>
-            )}
             {highlights.length > 0 && (
               <div aria-label={t("panel.filterAria")} className="flex flex-wrap gap-1.5">
                 <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")} className="chip h-[34px] px-2.5 text-[13px]">

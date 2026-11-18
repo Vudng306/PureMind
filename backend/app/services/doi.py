@@ -1,9 +1,8 @@
 """DOIs as PureMind keeps them: the bare, lower-cased form stored in a citation, and the doi.org address."""
 
 import re
-from urllib.parse import quote, unquote
+from urllib.parse import unquote
 
-RESOLVER = "https://doi.org/"
 # The prefix is "10." and a registrant number; the suffix is whatever the publisher made up.
 DOI = re.compile(r"10\.\d{4,9}/\S+", re.I)
 PREFIXES = re.compile(r"^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)", re.I)
@@ -21,7 +20,3 @@ def parse(raw: str) -> str:
     if not match or len(value) > MAX_DOI:
         raise InvalidDoi
     return value.rstrip(".,;").lower()  # DOIs are case-insensitive; punctuation comes along from a sentence
-
-
-def url_of(doi: str) -> str:
-    return RESOLVER + quote(doi, safe="/")

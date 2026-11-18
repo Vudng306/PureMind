@@ -654,34 +654,7 @@ class AdminAuditLog(Base):
 # What an article is (the five kinds of the library, and the AI's own guides); frontend lib/feed.ts names them.
 KINDS = ("explainer", "research", "report", "book", "essay", "guide")
 
-# The feed's topics (frontend lib/feed.ts names them); an article has one or more.
-TOPICS = (
-    "science",
-    "technology",
-    "health",
-    "mind",
-    "philosophy",
-    "environment",
-    "economy",
-    "law",
-    "society",
-    "education",
-    "family",
-    "history",
-    "culture",
-    "arts",
-    "travel",
-    "sports",
-)
-
-
-MIN_POST_CARDS = 3
-MAX_POST_CARDS = 9
 MAX_POST_TITLE = 160
-MAX_CARD_HEADING = 120
-MAX_CARD_BODY = 600
-MAX_POST_BODY = 20_000
-MAX_COMMENT_CHARS = 1000
 
 
 class Post(TimestampMixin, Base):

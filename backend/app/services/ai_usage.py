@@ -4,7 +4,7 @@ One row per call, retries included: the feature, the model, the token counts and
 call was made, so a later change of price leaves the past as it was. Never the text sent or received, nor which
 document it was about (NFR-PRV-01). Calls of one request share its id, so the page can add them up.
 
-Kept in memory and written with the traffic counts (crawler.tick), when the admin page asks and when a script
+Kept in memory and written with the traffic counts (main.write_counts), when the admin page asks and when a script
 ends, so an AI call waits for no database write and cannot fail because of one.
 """
 

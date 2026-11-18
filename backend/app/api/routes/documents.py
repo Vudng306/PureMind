@@ -33,8 +33,6 @@ from app.models import (
     Note,
     NotebookDocument,
     NotebookHighlight,
-    Post,
-    PostSource,
     SourceType,
     Summary,
     User,
@@ -765,11 +763,6 @@ async def document_usage(document_id: uuid.UUID, user: CurrentUser, session: Ses
     )
     linked = select(NotebookDocument.notebook_id).where(NotebookDocument.document_id == doc.id)
     notebooks = await session.scalar(select(func.count()).select_from(through.union(linked).subquery()))
-    posts = await session.scalar(
-        select(func.count(func.distinct(PostSource.post_id)))
-        .join(Post, Post.id == PostSource.post_id)
-        .where(PostSource.document_id == doc.id, Post.user_id == user.id)
-    )
     summary = await session.scalar(select(Summary.id).where(Summary.document_id == doc.id))
     if summary is None:  # the reader's AI sidebar keeps its summaries and mind map with the document too
         summary = await session.scalar(select(AiArtifact.id).where(AiArtifact.document_id == doc.id).limit(1))
@@ -778,7 +771,6 @@ async def document_usage(document_id: uuid.UUID, user: CurrentUser, session: Ses
         notes=notes or 0,
         has_summary=summary is not None,
         notebooks=notebooks or 0,
-        posts=posts or 0,
     )
 
 

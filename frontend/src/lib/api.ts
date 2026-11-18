@@ -44,13 +44,8 @@ export async function authHeader(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/** Sends the request with the session's token, refreshes it once on a 401, and turns an error reply into an ApiError.
- * `optional`: what a visitor may see too, so it goes without a token when there is none instead of to sign-in. */
-async function authorized(
-  base: HeadersInit | undefined,
-  transport: (headers: Headers) => Promise<Response>,
-  optional = false,
-): Promise<Response> {
+/** Sends the request with the session's token, refreshes it once on a 401, and turns an error reply into an ApiError. */
+async function authorized(base: HeadersInit | undefined, transport: (headers: Headers) => Promise<Response>): Promise<Response> {
   const send = async (token: string | null) => {
     const headers = new Headers(base);
     if (token) headers.set("Authorization", `Bearer ${token}`);
@@ -64,7 +59,7 @@ async function authorized(
   };
 
   let token = await currentToken();
-  if (!token && !optional) return sessionExpired();
+  if (!token) return sessionExpired();
 
   let res = await send(token);
   if (res.status === 401 && token) {
@@ -86,8 +81,8 @@ async function authorized(
   return res;
 }
 
-export function apiFetch(path: string, init: RequestInit = {}, optional = false): Promise<Response> {
-  return authorized(init.headers, (headers) => fetch(`${API_URL}/api${path}`, { ...init, headers }), optional);
+export function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return authorized(init.headers, (headers) => fetch(`${API_URL}/api${path}`, { ...init, headers }));
 }
 
 /** A POST of a form whose bytes sent can be followed (`fetch` cannot report an upload's progress). */
@@ -109,14 +104,9 @@ export async function apiUpload<T>(path: string, body: FormData, onProgress: (fr
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
-export async function api<T>(path: string, init: RequestInit = {}, optional = false): Promise<T> {
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
-  const res = await apiFetch(path, { ...init, headers }, optional);
+  const res = await apiFetch(path, { ...init, headers });
   return (res.status === 204 ? undefined : await res.json()) as T;
-}
-
-/** A read a visitor may make too: with the reader's token when signed in, without one otherwise. */
-export function publicApi<T>(path: string): Promise<T> {
-  return api<T>(path, {}, true);
 }

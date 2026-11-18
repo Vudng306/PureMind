@@ -6,7 +6,6 @@ import Link from "next/link";
 
 import { Icon } from "@/components/icons";
 import { KIND_LABEL, isProcessing, origin, progressLabel, progressOf, relativeTime, type ReadState } from "@/lib/doc-view";
-import { SYNTHESIS } from "@/lib/features";
 import { useT, type Key } from "@/lib/i18n";
 import { authorsShort } from "@/lib/library";
 import { messageFor } from "@/lib/messages";
@@ -15,9 +14,6 @@ import type { DocumentListItem } from "@/lib/types";
 
 /** What can be done to one document, from its row, its menu or the panel. */
 export interface DocActions {
-  onAddToNotebook: () => void;
-  onCreatePost: () => void;
-  onShareOriginal: () => void;
   onRename: () => void;
   onMove: () => void;
   onCite: () => void;
@@ -166,17 +162,6 @@ export function DocumentRow({
           >
             <Icon name={doc.is_read ? "minus" : "check"} size={17} />
           </button>
-          {SYNTHESIS && (
-            <button
-              type="button"
-              className="icon-btn h-9 w-9"
-              aria-label={t("library.addToNotebook")}
-              title={t("library.addToNotebook")}
-              onClick={actions.onAddToNotebook}
-            >
-              <Icon name="note" size={17} />
-            </button>
-          )}
         </span>
         {menu}
       </div>
@@ -274,12 +259,6 @@ export function InfoPanel({
       )}
 
       <div className="flex flex-col gap-0.5 border-t border-line pt-3">
-        {SYNTHESIS && (
-          <button type="button" className={act} onClick={actions.onAddToNotebook}>
-            <Icon name="note" size={16} />
-            {t("library.addToNotebook")}
-          </button>
-        )}
         <button type="button" className={act} onClick={actions.onMove}>
           <Icon name="file" size={16} />
           {t("library.moveToCollection")}

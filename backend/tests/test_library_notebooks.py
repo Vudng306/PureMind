@@ -3,10 +3,10 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 
 from app.db.session import SessionLocal
-from app.models import Article, Document, Notebook
+from app.models import Article, Document, Notebook, Post
 from app.services import rights
 from tests import test_highlights
 
@@ -70,28 +70,17 @@ async def test_usage_states_what_removing_a_document_affects(client, auth):
     nb = (
         await client.post("/api/notebooks", headers=h, json={"title": "Sổ", "document_id": doc["id"]})
     ).json()
-    await client.post("/api/posts", headers=h, json={"document_id": doc["id"]})
 
     usage = (await client.get(f"/api/documents/{doc['id']}/usage", headers=h)).json()
-    assert usage == {"highlights": 1, "notes": 1, "has_summary": False, "notebooks": 1, "posts": 1}
+    assert usage == {"highlights": 1, "notes": 1, "has_summary": False, "notebooks": 1}
     empty = (await client.get(f"/api/documents/{other['id']}/usage", headers=h)).json()
-    assert empty == {"highlights": 0, "notes": 0, "has_summary": False, "notebooks": 0, "posts": 0}
+    assert empty == {"highlights": 0, "notes": 0, "has_summary": False, "notebooks": 0}
     assert (await client.get(f"/api/documents/{doc['id']}/usage", headers=auth())).status_code == 404
 
-    # Removing it takes the highlights and the link. The notebook and the post's source stay.
+    # Removing it takes the highlights and the link. The notebook stays.
     assert (await client.delete(f"/api/documents/{doc['id']}", headers=h)).status_code == 204
     left = (await client.get(f"/api/notebooks/{nb['id']}", headers=h)).json()
     assert left["documents"] == []
-    posts = (await client.get("/api/posts", headers=h)).json()
-    assert posts[0]["sources"][0]["document_id"] is None
-    assert posts[0]["sources"][0]["title"]
-
-
-def test_no_derivatives_is_read_from_the_licence():
-    assert rights.no_derivatives("CC BY-ND 4.0")
-    assert not rights.no_derivatives("CC BY 4.0")
-    assert not rights.no_derivatives("CC0")
-    assert not rights.no_derivatives(None)
 
 
 async def test_licence_comes_from_the_article_or_the_host(client):
@@ -154,8 +143,10 @@ async def test_an_ai_draft_with_a_post_is_kept_and_without_one_is_not(client, au
     for title in ("Có bài", "Không bài"):
         nb = (await client.post("/api/notebooks", headers=h, json={"title": title})).json()
         ids.append(uuid.UUID(nb["id"]))
-    assert (await client.post("/api/posts", headers=h, json={"notebook_id": str(ids[0])})).status_code == 201
     async with SessionLocal() as s:
+        # Posts can no longer be written, but the ones in the database still protect their notebook.
+        owner = await s.scalar(select(Notebook.user_id).where(Notebook.id == ids[0]))
+        s.add(Post(user_id=owner, notebook_id=ids[0], kind="synthesis"))
         await s.execute(
             update(Notebook)
             .where(Notebook.id.in_(ids))

@@ -1,22 +1,15 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { Alert, PageHeader, Spinner, useModal } from "@/components/ui";
+import { Alert, PageHeader, Spinner } from "@/components/ui";
 import { relativeTime } from "@/lib/doc-view";
-import { SYNTHESIS } from "@/lib/features";
 import { useLang, useMsg, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import {
-  MAX_NOTEBOOK_TITLE,
-  MAX_NOTEBOOK_TOPIC,
   STATUS_LABEL,
-  createNotebook,
-  notebooksKey,
   useNotebooks,
   type NotebookStatus,
 } from "@/lib/notebooks";
@@ -28,94 +21,9 @@ const FILTERS = [
   ["saved", STATUS_LABEL.saved],
 ] as const;
 
-/** A blank notebook, for writing by hand. No AI runs and nothing is spent. */
-function NewNotebookDialog({ open, topics, onClose }: { open: boolean; topics: string[]; onClose: () => void }) {
-  const t = useT();
-  const router = useRouter();
-  const qc = useQueryClient();
-  const ref = useModal(open);
-  const [title, setTitle] = useState("");
-  const [topic, setTopic] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open) {
-      setTitle("");
-      setTopic("");
-      setError(null);
-    }
-  }, [open]);
-
-  async function create(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title.trim()) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const nb = await createNotebook({ title: title.trim(), topic: topic.trim() || undefined });
-      void qc.invalidateQueries({ queryKey: notebooksKey });
-      onClose();
-      router.push(`/notebooks/${nb.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : MSG["MSG-99"]);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const field = "h-11 rounded-lg border border-field bg-surface px-3 text-[15px] text-ink outline-none focus:border-focus";
-
-  return (
-    <dialog
-      ref={ref}
-      aria-label={t("notebooks.new")}
-      onCancel={(e) => {
-        e.preventDefault();
-        if (!busy) onClose();
-      }}
-      className="dialog w-[min(calc(100vw-32px),480px)]"
-    >
-      <form className="flex flex-col gap-3.5 p-[26px]" onSubmit={(e) => void create(e)}>
-        <h2 className="font-serif text-2xl font-medium">{t("notebooks.new")}</h2>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted">{t("nb.titleLabel")}</span>
-          <input value={title} maxLength={MAX_NOTEBOOK_TITLE} onChange={(e) => setTitle(e.target.value)} className={field} />
-        </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm text-muted">{t("nb.topicLabel")}</span>
-          <input
-            value={topic}
-            list="notebook-topics"
-            maxLength={MAX_NOTEBOOK_TOPIC}
-            placeholder={t("nb.topicPlaceholder")}
-            onChange={(e) => setTopic(e.target.value)}
-            className={field}
-          />
-          <datalist id="notebook-topics">
-            {topics.map((x) => (
-              <option key={x} value={x} />
-            ))}
-          </datalist>
-        </label>
-        {error && <Alert>{error}</Alert>}
-        <div className="mt-1.5 flex justify-end gap-2.5">
-          <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>
-            {t("common.cancel")}
-          </button>
-          <button type="submit" className="btn-primary" disabled={!title.trim() || busy}>
-            {t(busy ? "common.working" : "notebooks.create")}
-          </button>
-        </div>
-      </form>
-    </dialog>
-  );
-}
-
 /**
  * The notebooks written before the Notebook became the reader's highlights and notes by document: syntheses
- * the AI wrote from chosen highlights, and blank ones written by hand. They stay readable and editable here;
- * making new ones is switched off with SYNTHESIS.
+ * the AI wrote from chosen highlights, and blank ones written by hand. They stay readable and editable here.
  */
 export default function NotebookArchivePage() {
   const t = useT();
@@ -124,7 +32,6 @@ export default function NotebookArchivePage() {
   const query = useNotebooks();
   const [status, setStatus] = useState<NotebookStatus | "">("");
   const [topic, setTopic] = useState("");
-  const [creating, setCreating] = useState(false);
   const items = query.data ?? [];
   const mixed = items.some((nb) => nb.status === "draft") && items.some((nb) => nb.status === "saved");
   const topics = [...new Set(items.flatMap((nb) => (nb.topic ? [nb.topic] : [])))].sort((a, b) => a.localeCompare(b, lang));
@@ -141,20 +48,6 @@ export default function NotebookArchivePage() {
       <PageHeader
         title={t("notebooks.archiveTitle")}
         lead={t("notebooks.archiveLede")}
-        actions={
-          SYNTHESIS && (
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-              <Icon name="plus" size={16} />
-              {t("notebooks.new")}
-            </button>
-            <Link href="/notebooks/new" className="btn-outline">
-              <Icon name="spark" size={16} />
-              {t("notebooks.fromHighlights")}
-            </Link>
-          </div>
-          )
-        }
       />
 
       {query.isPending ? (
@@ -172,15 +65,7 @@ export default function NotebookArchivePage() {
             <Icon name="note" size={26} />
           </span>
           <span className="font-display text-[28px] font-semibold">{msg("MSG-35")}</span>
-          <span className="max-w-md text-[15px] text-muted">{t(SYNTHESIS ? "notebooks.emptyLong" : "notebooks.archiveEmpty")}</span>
-          <div className={SYNTHESIS ? "flex flex-wrap justify-center gap-2.5" : "hidden"}>
-            <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-              {t("notebooks.new")}
-            </button>
-            <Link href="/notebooks/new" className="btn-outline">
-              {t("notebooks.first")}
-            </Link>
-          </div>
+          <span className="max-w-md text-[15px] text-muted">{t("notebooks.archiveEmpty")}</span>
         </div>
       ) : (
         <>
@@ -242,7 +127,6 @@ export default function NotebookArchivePage() {
         </>
       )}
       {items.some((nb) => nb.status === "draft") && <p className="text-xs text-muted">{t("notebooks.draftNotice")}</p>}
-      <NewNotebookDialog open={creating} topics={topics} onClose={() => setCreating(false)} />
     </div>
   );
 }

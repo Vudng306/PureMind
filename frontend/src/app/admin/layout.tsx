@@ -10,28 +10,17 @@ import { Icon } from "@/components/icons";
 import { LanguageToggle } from "@/components/language-toggle";
 import { Alert, Spinner, Wordmark } from "@/components/ui";
 import { ApiError } from "@/lib/api";
-import { CATALOG, COMMUNITY } from "@/lib/features";
 import { useMsg, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { useAccount } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 
-const ALL_TABS = [
+const TABS = [
   { href: "/admin/traffic", label: "admin.tabTraffic", icon: "chart" },
   { href: "/admin/costs", label: "admin.tabCosts", icon: "coin" },
   { href: "/admin/users", label: "admin.tabUsers", icon: "user" },
-  { href: "/admin/articles", label: "admin.tabArticles", icon: "file" },
-  { href: "/admin/posts", label: "admin.tabPosts", icon: "note" },
-  { href: "/admin/crawl", label: "admin.tabCrawl", icon: "download" },
   { href: "/admin/audit", label: "admin.tabAudit", icon: "history" },
 ] as const;
-// Pages for parts that are out of the interface (src/lib/features.ts) are left out of the menu.
-const OFF: readonly string[] = [
-  ...(COMMUNITY ? [] : ["/admin/posts"]),
-  ...(CATALOG ? [] : ["/admin/articles", "/admin/crawl"]),
-];
-const TABS = ALL_TABS.filter((tab) => !OFF.includes(tab.href));
-
 function signOut() {
   // FR-AUTH-04: network errors never block clearing the local session
   return supabase()

@@ -78,26 +78,16 @@ def make_token(user_id: uuid.UUID | None = None, email: str | None = None, **ove
 @pytest.fixture(autouse=True)
 def _reset_rate_limits():
     from app.core.ratelimit import (
-        comment_limiter,
         explore_check_limiter,
         explore_search_limiter,
-        papers_search_limiter,
-        publish_limiter,
-        report_limiter,
-        translate_article_day_limiter,
         translate_day_limiter,
         translate_minute_limiter,
         upload_limiter,
     )
 
     upload_limiter.reset()
-    papers_search_limiter.reset()
     translate_minute_limiter.reset()
     translate_day_limiter.reset()
-    translate_article_day_limiter.reset()
-    publish_limiter.reset()
-    comment_limiter.reset()
-    report_limiter.reset()
     explore_search_limiter.reset()
     explore_check_limiter.reset()
 

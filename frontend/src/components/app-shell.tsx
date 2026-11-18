@@ -17,7 +17,6 @@ import { useT } from "@/lib/i18n";
 import { useAccount } from "@/lib/queries";
 import { signInHref } from "@/lib/sign-in";
 import { supabase } from "@/lib/supabase";
-import { FEED } from "@/lib/features";
 import { useUi } from "@/lib/ui-store";
 
 // Highlight và Tìm kiếm không nằm trên thanh này: highlight đọc ngay trong tài liệu, còn tìm kiếm
@@ -25,15 +24,14 @@ import { useUi } from "@/lib/ui-store";
 // đại diện, còn tùy chọn đọc thì ngay trong trình đọc.
 const PAGES = [
   { href: "/explore", label: "nav.explore", icon: "compass" },
-  { href: "/feed", label: "nav.feed", icon: "spark" },
   { href: "/library", label: "nav.library", icon: "book" },
   { href: "/notebooks", label: "nav.notebooks", icon: "note" },
 ] as const;
-const NAV = PAGES.filter((page) => FEED || page.href !== "/feed");
+const NAV = PAGES;
 // On a phone the dock holds all of them, around the add button.
 const DOCK = [...NAV, { href: "/settings/account", label: "nav.account", icon: "gear" }] as const;
 // What a visitor can see or be drawn to: the rest is the reader's own.
-export const PUBLIC_NAV = NAV.filter((page) => page.href === "/explore" || page.href === "/feed");
+export const PUBLIC_NAV = NAV.filter((page) => page.href === "/explore");
 
 const isActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 

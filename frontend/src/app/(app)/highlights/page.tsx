@@ -18,7 +18,6 @@ import { api } from "@/lib/api";
 import { KIND_LABEL, relativeTime } from "@/lib/doc-view";
 import { useDocuments } from "@/lib/documents";
 import { downloadText, exportFileName, fetchAllHighlights, highlightsMarkdown } from "@/lib/export";
-import { SYNTHESIS } from "@/lib/features";
 import { useLang, useMsg, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import { COLOR_DOT, HIGHLIGHT_COLORS, colorLabel, usePreferences, type HighlightColor } from "@/lib/preferences";
@@ -104,17 +103,10 @@ export default function HighlightsPage() {
               <Icon name="download" size={16} />
               {t(exporting ? "highlights.exporting" : "highlights.export")}
             </button>
-            {SYNTHESIS ? (
-              <Link href={docId ? `/notebooks/new?document=${docId}` : "/notebooks/new"} className="btn-outline">
-                <Icon name="spark" size={16} />
-                {t("highlights.makeNotebook")}
-              </Link>
-            ) : (
-              <Link href={docId ? `/notebooks/doc/${docId}` : "/notebooks"} className="btn-outline">
-                <Icon name="note" size={16} />
-                {t("highlights.openNotebook")}
-              </Link>
-            )}
+            <Link href={docId ? `/notebooks/doc/${docId}` : "/notebooks"} className="btn-outline">
+              <Icon name="note" size={16} />
+              {t("highlights.openNotebook")}
+            </Link>
           </div>
         )}
       </div>

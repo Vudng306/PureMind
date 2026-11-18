@@ -4,25 +4,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { AddToNotebookDialog } from "@/components/add-to-notebook";
 import { CitationDialog } from "@/components/citation-dialog";
 import { Icon } from "@/components/icons";
-import { kindLabel } from "@/components/post-cards";
 import { DocumentRow, InfoPanel, ReadTabs, type DocActions } from "@/components/library-list";
 import { Alert, ConfirmDialog, Spinner, useModal } from "@/components/ui";
 import { useHighlights } from "@/lib/annotations";
 import { BIBTEX_MIME, bibFileName, bibtex } from "@/lib/citation";
-import { progressLabel, progressOf, relativeTime } from "@/lib/doc-view";
+import { progressLabel, progressOf } from "@/lib/doc-view";
 import { MAX_DOCUMENT_TITLE, useDeleteDocument, useDocuments, useUpdateDocument } from "@/lib/documents";
 import { downloadText } from "@/lib/export";
-import type { Topic } from "@/lib/feed";
 import { useLang, useMsg, useT, type Key, type T } from "@/lib/i18n";
 import {
   MAX_COLLECTION_NAME,
   NO_FILTERS,
   continueReading,
   filterDocuments,
-  noDerivatives,
   readCounts,
   stepSelection,
   useCollections,
@@ -35,14 +31,12 @@ import {
   type LibraryFilters,
 } from "@/lib/library";
 import { MSG } from "@/lib/messages";
-import { COMMUNITY, SYNTHESIS } from "@/lib/features";
-import { useCreatePost, useDeletePost, useMyPosts, useUnpublishPost, type Post, type PostKind } from "@/lib/posts";
 import type { DocumentListItem } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
 
 type Sort = "recent" | "title" | "progress";
-/** The left sidebar: everything, one shelf, or what the reader has made public. */
-type Place = { kind: "all" } | { kind: "collection"; id: string } | { kind: "shared" };
+/** The left sidebar: everything, or one shelf. */
+type Place = { kind: "all" } | { kind: "collection"; id: string };
 
 const SORT_LABEL: Record<Sort, Key> = {
   recent: "library.sortRecentShort",
@@ -125,24 +119,6 @@ function CardMenu({ doc, actions, row = false }: { doc: DocumentListItem; action
             <Icon name="book" size={16} />
             {t("library.readAction")}
           </Link>
-          {SYNTHESIS && (
-            <button type="button" role="menuitem" className={item} onClick={choose(actions.onAddToNotebook)}>
-              <Icon name="note" size={16} />
-              {t("library.addToNotebook")}
-            </button>
-          )}
-          {COMMUNITY && (
-            <>
-              <button type="button" role="menuitem" className={item} onClick={choose(actions.onCreatePost)}>
-                <Icon name="pencil" size={16} />
-                {t("library.createPost")}
-              </button>
-              <button type="button" role="menuitem" className={item} onClick={choose(actions.onShareOriginal)}>
-                <Icon name="link" size={16} />
-                {t("library.shareOriginal")}
-              </button>
-            </>
-          )}
           <span role="separator" className="my-1 border-t border-line" />
           <span className="px-3 pb-0.5 text-xs font-semibold text-muted">{t("library.manage")}</span>
           <button type="button" role="menuitem" className={item} onClick={choose(actions.onRename)}>
@@ -373,13 +349,10 @@ function RemoveDialog({
                 <span key={line}>• {line}</span>
               ))}
             </span>
-            {(data.notebooks > 0 || data.posts > 0) && (
+            {data.notebooks > 0 && (
               <>
                 <span className="font-semibold text-ink">{t("library.removeKept")}</span>
-                <span className="flex flex-col gap-1">
-                  {data.notebooks > 0 && <span>• {t("library.removeNotebooks", { n: data.notebooks })}</span>}
-                  {data.posts > 0 && <span>• {t("library.removePosts", { n: data.posts })}</span>}
-                </span>
+                <span>• {t("library.removeNotebooks", { n: data.notebooks })}</span>
               </>
             )}
           </>
@@ -409,115 +382,6 @@ function ContinueStrip({ doc }: { doc: DocumentListItem }) {
   );
 }
 
-const postBadge = (post: Post) =>
-  post.hidden
-    ? { label: "post.statusHidden" as Key, cls: "bg-danger/10 text-danger" }
-    : post.status === "published"
-      ? { label: "post.statusPublished" as Key, cls: "bg-success-soft text-success" }
-      : { label: "post.statusDraft" as Key, cls: "bg-soft text-ink" };
-
-function SharedPost({ post, onDelete }: { post: Post; onDelete: () => void }) {
-  const t = useT();
-  const showToast = useUi((s) => s.showToast);
-  const unpublish = useUnpublishPost(post.id);
-  const badge = postBadge(post);
-  const sources = post.sources.map((s) => s.title).join(" · ");
-  return (
-    <li className="card flex flex-col gap-2 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={`flex h-6 items-center rounded-full px-2 text-xs font-semibold ${badge.cls}`}>{t(badge.label)}</span>
-        <span className="text-xs font-semibold text-muted">{t(kindLabel(post.kind as PostKind))}</span>
-        <span className="text-xs text-muted">· {relativeTime(post.published_at ?? post.updated_at)}</span>
-      </div>
-      <span className="font-display text-lg font-semibold leading-snug text-ink">{post.title || t("studio.noTitle")}</span>
-      {sources && <span className="line-clamp-1 text-[13px] text-muted">{t("shared.madeFrom", { sources })}</span>}
-      <div className="flex flex-wrap items-center gap-1">
-        <Link href={`/publish/${post.id}`} className="btn-outline h-10 px-3.5 text-sm">
-          {t(post.status === "draft" ? "shared.keepWriting" : "shared.manage")}
-        </Link>
-        {post.status === "published" && !post.hidden && (
-          <>
-            <Link href={`/community/${post.id}`} className="btn-ghost h-10 px-3 text-sm">
-              {t("studio.viewPublic")}
-            </Link>
-            <button
-              type="button"
-              className="btn-ghost h-10 px-3 text-sm"
-              disabled={unpublish.isPending}
-              onClick={() =>
-                unpublish.mutate(undefined, {
-                  onSuccess: () => showToast(t("studio.unpublished")),
-                  onError: (e) => showToast(e instanceof Error ? e.message : MSG["MSG-99"]),
-                })
-              }
-            >
-              {t("studio.unpublish")}
-            </button>
-          </>
-        )}
-        <span className="flex-1" />
-        <button type="button" className="icon-btn h-10 w-10" aria-label={t("studio.delete")} title={t("studio.delete")} onClick={onDelete}>
-          <Icon name="trash" size={16} />
-        </button>
-      </div>
-    </li>
-  );
-}
-
-/** What this reader has made public, or is about to. Their documents themselves never appear here. */
-function SharedByMe() {
-  const t = useT();
-  const showToast = useUi((s) => s.showToast);
-  const posts = useMyPosts();
-  const remove = useDeletePost();
-  const [toDelete, setToDelete] = useState<Post | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function confirmDelete() {
-    if (!toDelete) return;
-    try {
-      await remove.mutateAsync(toDelete.id);
-      showToast(t("studio.deleted"));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : MSG["MSG-99"]);
-    } finally {
-      setToDelete(null);
-    }
-  }
-
-  return (
-    <section className="flex flex-col gap-3.5">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-display text-2xl font-semibold">{t("library.sharedByMe")}</h2>
-        <p className="max-w-2xl text-sm text-muted">{t("shared.lede")}</p>
-      </div>
-      {error && <Alert>{error}</Alert>}
-      {posts.isPending ? (
-        <Spinner />
-      ) : posts.isError ? (
-        <Alert>{posts.error instanceof Error ? posts.error.message : MSG["MSG-99"]}</Alert>
-      ) : posts.data.length === 0 ? (
-        <p className="rounded-[14px] border border-dashed border-field px-6 py-12 text-center text-muted">{t("shared.empty")}</p>
-      ) : (
-        <ul className="grid gap-3 md:grid-cols-2">
-          {posts.data.map((post) => (
-            <SharedPost key={post.id} post={post} onDelete={() => setToDelete(post)} />
-          ))}
-        </ul>
-      )}
-      <ConfirmDialog
-        open={toDelete !== null}
-        title={t("studio.deleteTitle")}
-        busy={remove.isPending}
-        onConfirm={() => void confirmDelete()}
-        onCancel={() => setToDelete(null)}
-      >
-        {t("studio.deleteBody")}
-      </ConfirmDialog>
-    </section>
-  );
-}
-
 function Sidebar({
   place,
   onPlace,
@@ -526,7 +390,6 @@ function Sidebar({
   types,
   total,
   highlights,
-  shared,
   collections,
   onNew,
   onRename,
@@ -540,7 +403,6 @@ function Sidebar({
   types: { type: FileType; count: number }[];
   total: number;
   highlights: number;
-  shared: number;
   collections: Collection[];
   onNew: () => void;
   onRename: (c: Collection) => void;
@@ -582,13 +444,6 @@ function Sidebar({
         <span className="flex-1 truncate">{t("library.highlights")}</span>
         <span className={count}>{highlights}</span>
       </Link>
-      {COMMUNITY && (
-        <button type="button" className={row(place.kind === "shared")} aria-pressed={place.kind === "shared"} onClick={() => onPlace({ kind: "shared" })}>
-          <Icon name="link" size={16} className="shrink-0" />
-          <span className="flex-1 truncate">{t("library.sharedByMe")}</span>
-          <span className={count}>{shared}</span>
-        </button>
-      )}
       <button type="button" className="chip shrink-0 lg:hidden" onClick={() => setCollectionsOpen(true)}>{t("library.collections")}</button>
       <dialog ref={collectionDialog} aria-label={t("library.collections")} onCancel={() => setCollectionsOpen(false)} onClick={(e) => { if(e.target === e.currentTarget) setCollectionsOpen(false); }} className="dialog mobile-collections lg:hidden">
         <div className="flex flex-col gap-2 p-4">
@@ -640,10 +495,8 @@ export default function LibraryPage() {
   const [filters, setFilters] = useState<LibraryFilters>(NO_FILTERS);
   const { data, isLoading, isError, error, refetch } = useDocuments("created_desc");
   const collections = useCollections();
-  const posts = useMyPosts();
   const del = useDeleteDocument();
   const update = useUpdateDocument();
-  const createPost = useCreatePost();
   const createCollection = useCreateCollection();
   const renameCollection = useRenameCollection();
   const deleteCollection = useDeleteCollection();
@@ -651,8 +504,6 @@ export default function LibraryPage() {
   const [renameError, setRenameError] = useState<string | null>(null);
   const [toCite, setToCite] = useState<DocumentListItem | null>(null);
   const [toMove, setToMove] = useState<DocumentListItem | null>(null);
-  const [toLink, setToLink] = useState<DocumentListItem | null>(null);
-  const [toShare, setToShare] = useState<DocumentListItem | null>(null);
   const [toDelete, setToDelete] = useState<DocumentListItem | null>(null);
   const [shelfName, setShelfName] = useState<{ collection: Collection | null } | null>(null);
   const [shelfError, setShelfError] = useState<string | null>(null);
@@ -666,11 +517,6 @@ export default function LibraryPage() {
   const t: T = useT();
   const msg = useMsg();
   const lang = useLang();
-
-  // Read here rather than with useSearchParams, which would make the whole page wait for the client.
-  useEffect(() => {
-    if (COMMUNITY && new URLSearchParams(window.location.search).get("view") === "shared") setPlace({ kind: "shared" });
-  }, []);
 
   const docs = useMemo(() => data ?? [], [data]);
   const shelves = useMemo(() => collections.data ?? [], [collections.data]);
@@ -706,7 +552,6 @@ export default function LibraryPage() {
   const goTo = (next: Place) => {
     setPlace(next);
     patchFilters({ fileType: "all" });
-    window.history.replaceState(null, "", next.kind === "shared" ? "/library?view=shared" : "/library");
   };
   const showType = (type: FileType) => {
     setPlace({ kind: "all" });
@@ -756,7 +601,7 @@ export default function LibraryPage() {
   // Set up again on each render so that it always sees the list as it is now.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.ctrlKey || e.metaKey || e.altKey || place.kind === "shared" || document.querySelector("dialog[open]")) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector("dialog[open]")) return;
       const el = e.target instanceof HTMLElement ? e.target : null;
       if (el?.closest("input, textarea, select, [role=menu], [contenteditable=true]")) return;
       const step = e.key === "ArrowDown" || e.key === "j" ? 1 : e.key === "ArrowUp" || e.key === "k" ? -1 : 0;
@@ -786,17 +631,6 @@ export default function LibraryPage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
-
-  /** A private draft, opened in the Studio. Nothing is public until the author publishes it there. */
-  async function startPost(doc: DocumentListItem, kind: PostKind) {
-    setActionError(null);
-    try {
-      const post = await createPost.mutateAsync({ document_id: doc.id, kind });
-      router.push(`/publish/${post.id}`);
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : MSG["MSG-99"]);
-    }
-  }
 
   async function saveShelf(name: string) {
     if (!shelfName) return;
@@ -831,10 +665,6 @@ export default function LibraryPage() {
   }
 
   const actionsOf = (doc: DocumentListItem): CardActions => ({
-    onAddToNotebook: () => setToLink(doc),
-    // A post's own words about a no-derivatives article are fine; a summary of it is not.
-    onCreatePost: () => void startPost(doc, noDerivatives(doc.license) ? "insight" : "summary"),
-    onShareOriginal: () => setToShare(doc),
     onRename: () => {
       setRenameError(null);
       setToRename(doc);
@@ -853,7 +683,7 @@ export default function LibraryPage() {
           <p className="pb-1.5 text-sm text-muted">{t("library.stats", { docs: docs.length, reading: readingCount, hl: hlCount })}</p>
         )}
         <span className="flex-1" />
-        {place.kind !== "shared" && docs.length > 0 && (
+        {docs.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             {topics.length > 0 && (
               <label>
@@ -862,7 +692,7 @@ export default function LibraryPage() {
                   <option value="">{t("library.allTopics")}</option>
                   {topics.map((x) => (
                     <option key={x} value={x}>
-                      {t(`feed.topic.${x as Topic}` as Key)}
+                      {t(`feed.topic.${x}` as Key)}
                     </option>
                   ))}
                 </select>
@@ -899,7 +729,6 @@ export default function LibraryPage() {
           types={types}
           total={docs.length}
           highlights={hlCount}
-          shared={posts.data?.length ?? 0}
           collections={shelves}
           onNew={() => {
             setShelfError(null);
@@ -912,110 +741,102 @@ export default function LibraryPage() {
           onDelete={setShelfToDelete}
         />
 
-        <div className={`flex min-w-0 flex-col gap-4 ${place.kind === "shared" ? "min-[1400px]:col-span-2" : ""}`}>
-          {place.kind === "shared" ? (
-            <SharedByMe />
-          ) : (
-            <>
-              {shelf && <h2 className="font-display text-2xl font-semibold">{shelf.name}</h2>}
-              {continuing.length > 0 && <div className="hidden lg:block"><ContinueStrip doc={continuing[0]} /></div>}
+        <div className="flex min-w-0 flex-col gap-4">
+          {shelf && <h2 className="font-display text-2xl font-semibold">{shelf.name}</h2>}
+          {continuing.length > 0 && <div className="hidden lg:block"><ContinueStrip doc={continuing[0]} /></div>}
 
-              <div className="flex flex-wrap items-end gap-x-4 border-b border-line">
-                <ReadTabs value={filters.readState} counts={tabCounts} onChange={(readState) => patchFilters({ readState })} />
-                <span className="flex-1" />
-                <div className="flex shrink-0 items-center gap-2 py-1.5">
-                  <button
-                    type="button"
-                    className="chip h-9 px-3 text-[13px]"
-                    onClick={() => setSort(SORT_NEXT[sort])}
-                    aria-label={t("library.sortLabel", { sort: t(SORT_LABEL[sort]) })}
-                    title={t("library.sortLabel", { sort: t(SORT_LABEL[sort]) })}
-                  >
-                    <Icon name="sort" size={15} />
-                    {/* Beside the panel the list is narrow, and the tabs need the room more than this word does. */}
-                    <span className="min-[1400px]:max-[1599px]:hidden">{t(SORT_LABEL[sort])}</span>
-                  </button>
-                  {view.length > 0 && (
-                    <button
-                      type="button"
-                      className="icon-btn h-9 w-9 border border-line bg-surface"
-                      onClick={exportBibtex}
-                      aria-label={t("library.exportBib")}
-                      title={t("library.exportBibHint", { n: view.length })}
-                    >
-                      <Icon name="download" size={16} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {isLoading ? (
-                <Spinner />
-              ) : isError ? (
-                <div className="flex flex-col items-start gap-3">
-                  <Alert>{error instanceof Error ? error.message : MSG["MSG-99"]}</Alert>
-                  <button type="button" className="btn-outline" onClick={() => refetch()}>
-                    {t("common.retry")}
-                  </button>
-                </div>
-              ) : view.length === 0 ? (
-                <div className="flex flex-col items-center gap-3.5 rounded-[22px] border-2 border-dashed border-field bg-surface/60 px-6 py-16 text-center">
-                  <span aria-hidden className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent-text">
-                    <Icon name="book" size={26} />
-                  </span>
-                  <span className="font-display text-[28px] font-semibold">
-                    {narrowed ? t("library.noMatch") : filtered ? t("library.tabEmpty") : shelf ? t("library.shelfEmpty") : msg("MSG-30")}
-                  </span>
-                  <span className="max-w-md text-[15px] text-muted">
-                    {t(narrowed ? "library.noMatchHint" : filtered ? "library.tabEmptyHint" : shelf ? "library.shelfEmptyHint" : "library.emptyHintLong")}
-                  </span>
-                  <div className="flex gap-2.5">
-                    {filtered && (
-                      <button type="button" className="btn-outline" onClick={() => setFilters(NO_FILTERS)}>
-                        {t(narrowed ? "library.clearFilters" : "library.showAll")}
-                      </button>
-                    )}
-                    {!shelf && !filtered && (
-                      <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
-                        {t("nav.addDocument")}
-                      </button>
-                    )}
-                    {!filtered && !shelf && (
-                      <Link href="/explore" className="btn-outline">
-                        {t("nav.explore")}
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <ul aria-label={t("library.listAria")} className="-mt-4 flex flex-col">
-                  {view.map((doc) => {
-                    const actions = actionsOf(doc);
-                    return (
-                      <DocumentRow
-                        key={doc.id}
-                        doc={doc}
-                        selected={doc.id === selectedId}
-                        onSelect={() => pickByPointer(doc.id)}
-                        actions={actions}
-                        menu={<CardMenu doc={doc} actions={actions} row />}
-                      />
-                    );
-                  })}
-                </ul>
+          <div className="flex flex-wrap items-end gap-x-4 border-b border-line">
+            <ReadTabs value={filters.readState} counts={tabCounts} onChange={(readState) => patchFilters({ readState })} />
+            <span className="flex-1" />
+            <div className="flex shrink-0 items-center gap-2 py-1.5">
+              <button
+                type="button"
+                className="chip h-9 px-3 text-[13px]"
+                onClick={() => setSort(SORT_NEXT[sort])}
+                aria-label={t("library.sortLabel", { sort: t(SORT_LABEL[sort]) })}
+                title={t("library.sortLabel", { sort: t(SORT_LABEL[sort]) })}
+              >
+                <Icon name="sort" size={15} />
+                {/* Beside the panel the list is narrow, and the tabs need the room more than this word does. */}
+                <span className="min-[1400px]:max-[1599px]:hidden">{t(SORT_LABEL[sort])}</span>
+              </button>
+              {view.length > 0 && (
+                <button
+                  type="button"
+                  className="icon-btn h-9 w-9 border border-line bg-surface"
+                  onClick={exportBibtex}
+                  aria-label={t("library.exportBib")}
+                  title={t("library.exportBibHint", { n: view.length })}
+                >
+                  <Icon name="download" size={16} />
+                </button>
               )}
-            </>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <Spinner />
+          ) : isError ? (
+            <div className="flex flex-col items-start gap-3">
+              <Alert>{error instanceof Error ? error.message : MSG["MSG-99"]}</Alert>
+              <button type="button" className="btn-outline" onClick={() => refetch()}>
+                {t("common.retry")}
+              </button>
+            </div>
+          ) : view.length === 0 ? (
+            <div className="flex flex-col items-center gap-3.5 rounded-[22px] border-2 border-dashed border-field bg-surface/60 px-6 py-16 text-center">
+              <span aria-hidden className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent-text">
+                <Icon name="book" size={26} />
+              </span>
+              <span className="font-display text-[28px] font-semibold">
+                {narrowed ? t("library.noMatch") : filtered ? t("library.tabEmpty") : shelf ? t("library.shelfEmpty") : msg("MSG-30")}
+              </span>
+              <span className="max-w-md text-[15px] text-muted">
+                {t(narrowed ? "library.noMatchHint" : filtered ? "library.tabEmptyHint" : shelf ? "library.shelfEmptyHint" : "library.emptyHintLong")}
+              </span>
+              <div className="flex gap-2.5">
+                {filtered && (
+                  <button type="button" className="btn-outline" onClick={() => setFilters(NO_FILTERS)}>
+                    {t(narrowed ? "library.clearFilters" : "library.showAll")}
+                  </button>
+                )}
+                {!shelf && !filtered && (
+                  <button type="button" className="btn-primary" onClick={() => setAddOpen(true)}>
+                    {t("nav.addDocument")}
+                  </button>
+                )}
+                {!filtered && !shelf && (
+                  <Link href="/explore" className="btn-outline">
+                    {t("nav.explore")}
+                  </Link>
+                )}
+              </div>
+            </div>
+          ) : (
+            <ul aria-label={t("library.listAria")} className="-mt-4 flex flex-col">
+              {view.map((doc) => {
+                const actions = actionsOf(doc);
+                return (
+                  <DocumentRow
+                    key={doc.id}
+                    doc={doc}
+                    selected={doc.id === selectedId}
+                    onSelect={() => pickByPointer(doc.id)}
+                    actions={actions}
+                    menu={<CardMenu doc={doc} actions={actions} row />}
+                  />
+                );
+              })}
+            </ul>
           )}
         </div>
 
-        {place.kind !== "shared" && (
-          <InfoPanel
-            doc={selected}
-            shelf={selected ? (shelves.find((c) => c.id === selected.collection_id)?.name ?? null) : null}
-            highlights={selected ? highlights.filter((h) => h.docId === selected.id).length : 0}
-            actions={selected ? actionsOf(selected) : null}
-          />
-        )}
+        <InfoPanel
+          doc={selected}
+          shelf={selected ? (shelves.find((c) => c.id === selected.collection_id)?.name ?? null) : null}
+          highlights={selected ? highlights.filter((h) => h.docId === selected.id).length : 0}
+          actions={selected ? actionsOf(selected) : null}
+        />
       </div>
 
       <NameDialog
@@ -1044,7 +865,6 @@ export default function LibraryPage() {
 
       <CitationDialog doc={toCite} onClose={() => setToCite(null)} />
       <MoveDialog doc={toMove} collections={shelves} onClose={() => setToMove(null)} />
-      <AddToNotebookDialog doc={toLink} onClose={() => setToLink(null)} />
 
       <RemoveDialog
         doc={toDelete}
@@ -1061,23 +881,6 @@ export default function LibraryPage() {
         onCancel={() => setShelfToDelete(null)}
       >
         {t("library.deleteCollectionBody", { name: shelfToDelete?.name ?? "", n: shelfToDelete?.document_count ?? 0 })}
-      </ConfirmDialog>
-
-      <ConfirmDialog
-        open={toShare !== null}
-        title={t("library.shareOriginal")}
-        tone="primary"
-        confirmLabel={t(toShare?.url ? "library.shareLink" : "library.writeInstead")}
-        cancelLabel={t("common.cancel")}
-        busy={createPost.isPending}
-        onCancel={() => setToShare(null)}
-        onConfirm={() => {
-          const doc = toShare;
-          setToShare(null);
-          if (doc) void startPost(doc, doc.url ? "link" : noDerivatives(doc.license) ? "insight" : "summary");
-        }}
-      >
-        {t(toShare?.url ? "library.shareLinkBody" : "library.shareUploadBody")}
       </ConfirmDialog>
     </div>
   );

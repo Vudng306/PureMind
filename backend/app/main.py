@@ -14,19 +14,13 @@ from app.api.routes import (
     admin,
     admin_content,
     admin_costs,
-    admin_posts,
-    catalog,
     chat,
     collections,
-    community,
     documents,
     explore,
-    feed,
     highlights,
     notebooks,
     notes,
-    papers,
-    posts,
     reader_ai,
     search,
     summaries,
@@ -36,21 +30,31 @@ from app.core import logging as applog
 from app.core import messages
 from app.core.config import get_settings
 from app.core.messages import MSG
-from app.services import ai_usage, crawler, traffic
+from app.services import ai_usage, traffic
 
 settings = get_settings()
 applog.configure(settings.log_level)
 log = logging.getLogger("app.request")
 
 
+async def write_counts(every: float = 60) -> None:
+    """Traffic counts and AI usage are kept in memory and written every minute."""
+    while True:
+        try:
+            await traffic.flush()
+            await ai_usage.flush()
+        except Exception:
+            log.exception("writing the counts failed")
+        await asyncio.sleep(every)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    """The background loop: traffic counts written every minute, the daily crawl. Not in the tests."""
+    """The background loop that writes the counts. Not in the tests."""
     if settings.environment == "test":
         yield
         return
-    await crawler.recover()
-    task = asyncio.create_task(crawler.loop())
+    task = asyncio.create_task(write_counts())
     try:
         yield
     finally:
@@ -185,15 +189,9 @@ app.include_router(summaries.router, prefix="/api")
 app.include_router(notebooks.router, prefix="/api")
 app.include_router(notes.router, prefix="/api")
 app.include_router(reader_ai.router, prefix="/api")
-app.include_router(posts.router, prefix="/api")
-app.include_router(community.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(translate.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(admin_content.router, prefix="/api")
 app.include_router(admin_costs.router, prefix="/api")
-app.include_router(admin_posts.router, prefix="/api")
-app.include_router(catalog.router, prefix="/api")
-app.include_router(papers.router, prefix="/api")
-app.include_router(feed.router, prefix="/api")
 app.include_router(explore.router, prefix="/api")

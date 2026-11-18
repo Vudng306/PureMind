@@ -140,15 +140,6 @@
 [data-theme="dark"] .tone-5 { --tone: 110 164 226; --tone-bg: 26 46 72; --tone-fg: 180 210 246; }
 [data-theme="dark"] .tone-6 { --tone: 230 120 160; --tone-bg: 70 30 46; --tone-fg: 246 190 210; }
 
-/* Four more for tags and topics, so ten of them rarely share a colour. */
-.tone-7 { --tone: 104 133 38; --tone-bg: 226 236 200; --tone-fg: 62 84 14; }
-.tone-8 { --tone: 24 138 150; --tone-bg: 202 234 238; --tone-fg: 10 84 94; }
-.tone-9 { --tone: 140 96 62; --tone-bg: 238 224 210; --tone-fg: 94 58 30; }
-.tone-10 { --tone: 84 98 118; --tone-bg: 220 226 234; --tone-fg: 46 58 78; }
-[data-theme="dark"] .tone-7 { --tone: 170 200 90; --tone-bg: 44 56 22; --tone-fg: 214 232 160; }
-[data-theme="dark"] .tone-8 { --tone: 80 190 204; --tone-bg: 20 56 62; --tone-fg: 170 226 234; }
-[data-theme="dark"] .tone-9 { --tone: 206 160 120; --tone-bg: 62 46 32; --tone-fg: 236 208 180; }
-[data-theme="dark"] .tone-10 { --tone: 148 164 190; --tone-bg: 36 42 56; --tone-fg: 200 210 228; }
 
 html,
 body {
@@ -212,13 +203,6 @@ body {
   }
   .btn-danger {
     @apply btn bg-danger font-semibold text-on-danger hover:bg-danger/90;
-  }
-  /* Round buttons beside the feed's stage, and on its dark cards. */
-  .round-btn {
-    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink shadow-card transition-colors duration-150 hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40;
-  }
-  .round-btn-glass {
-    @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition-colors duration-150 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-30;
   }
   .icon-btn {
     @apply inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-transparent text-ink transition-colors duration-150 hover:bg-soft disabled:cursor-not-allowed disabled:opacity-40;
@@ -286,28 +270,6 @@ body {
   }
   .split > button[aria-pressed="true"] {
     @apply border-accent bg-accent-soft font-semibold text-accent-on-soft hover:bg-accent-soft;
-  }
-  /* The feed's card fills what is left of the screen, down to where its text would no longer fit: under it are the
-     action bar and, below lg, the app's dock. --feed-chips: the row of topics, when it takes a line of its own. */
-  .feed-card {
-    height: max(440px, min(780px, calc(100dvh - 236px - var(--feed-chips, 0px))));
-  }
-  @media (min-width: 1024px) {
-    .feed-card {
-      height: max(480px, min(760px, calc(100dvh - 228px)));
-    }
-  }
-  @media (min-width: 1200px) {
-    .feed-card {
-      height: max(500px, min(76vh, 760px, calc(100dvh - 164px)));
-    }
-  }
-  /* Centred while it fits; once it does not, it scrolls from its top instead of losing its top. */
-  .safe-center > :first-child {
-    margin-top: auto;
-  }
-  .safe-center > :last-child {
-    margin-bottom: auto;
   }
   .dialog {
     @apply m-auto max-h-[calc(100vh-32px)] w-[min(calc(100vw-32px),580px)] rounded-[18px] border border-line bg-surface p-0 text-ink shadow-raised backdrop:bg-[rgb(var(--scrim)/var(--scrim-alpha))];

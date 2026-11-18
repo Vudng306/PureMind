@@ -1,7 +1,7 @@
 """How much PureMind is used, for the admin page: requests, errors and AI calls per day and part of the app,
 and how many accounts were active each day. Counts only: no address, path parameter or anything a user sent.
 
-Counted in memory as requests come and written every minute (crawler.loop) or when the admin page asks, so a
+Counted in memory as requests come and written every minute (main.write_counts) or when the admin page asks, so a
 request costs no database write.
 """
 
@@ -22,9 +22,7 @@ from app.services.ai_quota import today_vn
 AI_ENDPOINTS = {
     ("POST", "/api/summaries"),
     ("POST", "/api/notebooks/generate"),
-    ("POST", "/api/posts/{post_id}/draft"),
     ("POST", "/api/chat/conversations/{conversation_id}/messages"),
-    ("POST", "/api/feed/chat"),
     ("POST", "/api/translate"),
 }
 ACTIVITY_DAYS = 90

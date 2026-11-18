@@ -34,8 +34,6 @@ import {
   type NotebookVersion,
   type SourceGroup,
 } from "@/lib/notebooks";
-import { COMMUNITY } from "@/lib/features";
-import { useCreatePost } from "@/lib/posts";
 import { usePreferences } from "@/lib/preferences";
 import { useUi } from "@/lib/ui-store";
 
@@ -292,7 +290,6 @@ function Editor({ notebook }: { notebook: Notebook }) {
   latest.current = { title, content, topic };
   const deleted = useRef(false);
   const editorRef = useRef<HTMLTextAreaElement>(null);
-  const createPost = useCreatePost();
 
   const dirty = title !== stored.current.title || content !== stored.current.content || topic !== stored.current.topic;
   const tooLong = content.length > MAX_NOTEBOOK_CHARS;
@@ -400,18 +397,6 @@ function Editor({ notebook }: { notebook: Notebook }) {
     }
   }
 
-  /** Writes what is on screen first, so the draft starts from the notes as they stand. */
-  async function writePost() {
-    setSaveError(null);
-    try {
-      if (dirty && valid) await send("auto");
-      const post = await createPost.mutateAsync({ notebook_id: notebook.id, kind: "synthesis" });
-      router.push(`/publish/${post.id}`);
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : MSG["MSG-99"]);
-    }
-  }
-
   /** The highlights by document, with notes, as a .md file (the same format as the Highlights page). */
   function exportDigest() {
     const docs = new Map(groups.map((g) => [g.documentId, { title: g.title, file_type: g.fileType, url: null }]));
@@ -497,12 +482,6 @@ function Editor({ notebook }: { notebook: Notebook }) {
           >
             <Icon name="trash" />
           </button>
-          {COMMUNITY && (
-            <button type="button" className="btn-outline h-10" onClick={() => void writePost()} disabled={!valid || createPost.isPending}>
-              <Icon name="pencil" size={16} />
-              {t("nb.writePost")}
-            </button>
-          )}
           <button type="button" className="btn-primary h-10" onClick={() => void send("save")} disabled={!valid || saving !== null}>
             {t(saving === "save" ? "common.saving" : "common.save")}
           </button>

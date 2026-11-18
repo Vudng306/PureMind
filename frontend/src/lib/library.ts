@@ -23,7 +23,6 @@ export interface DocumentUsage {
   notes: number;
   has_summary: boolean;
   notebooks: number;
-  posts: number;
 }
 
 export const collectionsKey = ["collections"] as const;
