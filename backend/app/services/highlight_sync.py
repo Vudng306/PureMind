@@ -406,9 +406,7 @@ async def neighbours(
             and row.rects
             and row.page_number == h.page_number
             and squash(row.selected_text) == words
-            and same_selection(
-                row.rects, [r.model_dump() if hasattr(r, "model_dump") else r for r in h.rects]
-            )
+            and same_selection(row.rects, h.rects)
         ):
             same = same or row
     return same, overlapping

@@ -218,10 +218,6 @@ def set_language(language: Language) -> None:
     _current.set(language)
 
 
-def current_language() -> Language:
-    return _current.get()
-
-
 class _Messages:
     """Reads like a dict of messages, answers in the language of the current request."""
 

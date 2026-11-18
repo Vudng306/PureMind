@@ -7,7 +7,6 @@ import {
   filterDocuments,
   noDerivatives,
   readCounts,
-  recentDocuments,
   stepSelection,
 } from "./library";
 import type { DocumentListItem } from "./types";
@@ -62,16 +61,6 @@ describe("continueReading", () => {
   it("keeps to the limit", () => {
     const docs = ["a", "b", "c", "d"].map((id) => doc({ id, last_read_page: 2 }));
     expect(continueReading(docs, 3)).toHaveLength(3);
-  });
-});
-
-describe("recentDocuments", () => {
-  it("goes by when a document arrived, not when it was last read", () => {
-    const docs = [
-      doc({ id: "first", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-09-01T00:00:00Z" }),
-      doc({ id: "second", created_at: "2026-02-01T00:00:00Z" }),
-    ];
-    expect(recentDocuments(docs).map((d) => d.id)).toEqual(["second", "first"]);
   });
 });
 

@@ -106,11 +106,6 @@ export function continueReading(docs: DocumentListItem[], n = 3): DocumentListIt
   return next ? [next] : [];
 }
 
-/** What came into the library last, whatever has happened to it since. */
-export function recentDocuments(docs: DocumentListItem[], n = 4): DocumentListItem[] {
-  return [...docs].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, n);
-}
-
 export interface LibraryFilters {
   source: "all" | "upload" | "manual";
   readState: ReadState | "all";

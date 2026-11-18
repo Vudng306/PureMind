@@ -154,15 +154,13 @@ describe("one highlight in both views", () => {
       note: "",
       page_number: 1,
       created_at: "t",
-      canonical_start: 4,
-      canonical_end: 9,
       clean_anchor: [{ block: "b", start: 4, end: 9 }],
       pdf_anchor: [{ page: 1, rects }],
       sync_status: "synced",
       duplicate: true,
       overlaps: ["o"],
     } satisfies HighlightDto);
-    expect(h).toMatchObject({ canonicalStart: 4, syncStatus: "synced", duplicate: true, overlaps: ["o"] });
+    expect(h).toMatchObject({ syncStatus: "synced", duplicate: true, overlaps: ["o"] });
   });
 });
 
@@ -241,7 +239,7 @@ describe("a passage that already has its highlight", () => {
   });
 
   it("TC-01: a new highlight gets its places from the server's answer", async () => {
-    const places = { syncStatus: "synced" as const, cleanAnchor: [{ block: "b1", start: 0, end: 5 }], canonicalStart: 0 };
+    const places = { syncStatus: "synced" as const, cleanAnchor: [{ block: "b1", start: 0, end: 5 }] };
     const mine = onPdf({ id: "new" });
     const { box, saved, moved } = setup(mine, { create: vi.fn(async (h: Highlight) => ({ ...h, ...places })) });
     box.add(mine);

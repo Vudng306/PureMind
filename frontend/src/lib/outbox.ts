@@ -72,8 +72,6 @@ const plain = (h: Highlight): Highlight => {
 const fromServer = (h: Highlight) => ({
   createdAt: h.createdAt,
   contentVersion: h.contentVersion,
-  canonicalStart: h.canonicalStart,
-  canonicalEnd: h.canonicalEnd,
   cleanAnchor: h.cleanAnchor,
   pdfAnchor: h.pdfAnchor,
   syncStatus: h.syncStatus,

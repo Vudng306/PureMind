@@ -13,21 +13,6 @@ export interface Translation {
   target: string;
 }
 
-/** Fewer letters than this is a stray character or initial, not worth a request. */
-const MIN_LETTERS = 2;
-
-/**
- * Whether a selection reads as English, so the reader translates it as soon as it is selected. Most of its
- * letters must be plain a–z: Vietnamese carries marks on about a third of them and French on about a sixth,
- * while an English passage with a name like "Đặng" or "café" in it stays well above the limit.
- */
-export function looksEnglish(text: string): boolean {
-  const letters = text.match(/\p{L}/gu) ?? [];
-  if (letters.length < MIN_LETTERS) return false;
-  const plain = letters.filter((c) => /[a-z]/i.test(c)).length;
-  return plain / letters.length >= 0.9;
-}
-
 const VI_LETTERS = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/giu;
 
 /** Whether a passage is Vietnamese, as the server decides it: enough of its letters carry Vietnamese marks. */

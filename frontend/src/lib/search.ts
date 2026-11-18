@@ -5,7 +5,6 @@ import type { HighlightColor } from "./preferences";
 
 export type SearchType = "document" | "highlight" | "note" | "summary" | "notebook";
 export const SEARCH_TYPES: SearchType[] = ["document", "highlight", "note", "summary", "notebook"];
-export const SEARCH_PAGE_SIZE = 10;
 export const MIN_QUERY = 2;
 
 export interface SearchHit {

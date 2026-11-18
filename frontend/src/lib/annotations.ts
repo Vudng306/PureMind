@@ -59,9 +59,7 @@ export interface Highlight {
   suffix?: string | null;
   /** Which text of the document it was made on, as the server names it. */
   contentVersion?: string | null;
-  /** The passage itself, the same whichever view it was made in, and where it shows in each view. */
-  canonicalStart?: number | null;
-  canonicalEnd?: number | null;
+  /** Where the passage shows in each view, whichever it was made in. */
   cleanAnchor?: CleanSpan[] | null;
   pdfAnchor?: PdfPlace[] | null;
   syncStatus?: SyncStatus | null;
@@ -134,8 +132,6 @@ export interface HighlightDto {
   content_version?: string | null;
   /** Where the highlight stood when the file was last read again (UC-04); null before that. */
   anchor_status?: "mapped" | "ambiguous" | "unresolved" | null;
-  canonical_start?: number | null;
-  canonical_end?: number | null;
   clean_anchor?: CleanSpan[] | null;
   pdf_anchor?: PdfPlace[] | null;
   sync_status?: SyncStatus | null;
@@ -170,8 +166,6 @@ export const fromDto = (h: HighlightDto): Highlight => ({
   prefix: h.prefix ?? null,
   suffix: h.suffix ?? null,
   contentVersion: h.content_version ?? null,
-  canonicalStart: h.canonical_start,
-  canonicalEnd: h.canonical_end,
   cleanAnchor: h.clean_anchor,
   pdfAnchor: h.pdf_anchor,
   syncStatus: h.sync_status,

@@ -46,7 +46,6 @@ class TimestampMixin:
     )
 
 
-USER_ROLES = ("user", "admin")
 # The version of the terms of use (frontend /terms). Bump it when they change: everyone is asked again.
 TERMS_VERSION = "2026-11-05"
 
@@ -228,10 +227,6 @@ class Document(TimestampMixin, Base):
         return hashlib.sha256(self.content_clean.encode()).hexdigest()[:16]
 
 
-HIGHLIGHT_COLORS = ("yellow", "green", "blue", "pink", "purple")
-HIGHLIGHT_CATEGORIES = ("important", "concept", "question", "example", "review")
-
-
 EXTRACTION_ERRORS = (
     "missing_text", "wrong_order", "metadata_in_body", "missing_media", "ocr_error", "wrongly_hidden", "other",
 )  # fmt: skip
@@ -401,7 +396,6 @@ class Summary(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
-NOTE_ORIGINS = ("user", "ai_saved")
 MAX_NOTE_BODY = 20_000
 MAX_NOTES_PER_DOCUMENT = 500
 
@@ -438,9 +432,6 @@ class Note(TimestampMixin, Base):
     source_key: Mapped[str | None] = mapped_column(String(160))
 
 
-AI_ARTIFACT_KINDS = ("quick", "deep", "mindmap", "analysis")
-
-
 class AiArtifact(Base):
     """What the reader's AI sidebar made for a document: a quick summary, a deep summary, a mind map or a
     research analysis.
@@ -473,7 +464,6 @@ class AiArtifact(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
-NOTEBOOK_STATUSES = ("draft", "saved")
 MAX_NOTEBOOK_CHARS = 200_000  # SRS 5: notebooks.content <= 200,000 characters
 MAX_NOTEBOOK_SOURCES = 100  # FR-NB-01
 MAX_NOTEBOOK_VERSIONS = 50  # FR-NB-03 step 5: older snapshots are dropped
@@ -560,7 +550,6 @@ class NotebookVersion(Base):
 MAX_CHAT_QUESTION = 2000  # FR-CHAT-02: one question, MSG-36
 MAX_CHAT_MESSAGES = 200  # FR-CHAT-03: turns kept in one conversation, MSG-38
 MAX_CHAT_CONVERSATIONS = 50  # FR-CHAT-03: conversations kept per document; the oldest is dropped
-CHAT_ROLES = ("user", "assistant")
 
 
 class DocumentChunk(Base):
@@ -642,29 +631,6 @@ class ChatMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
-ADMIN_ACTIONS = (
-    "user.disable",
-    "user.enable",
-    "user.reset_quota",
-    "user.delete",
-    "article.hide",
-    "article.show",
-    "article.delete",
-    "article.add",
-    "crawl.run",
-    "crawl.settings",
-    "crawl.source",
-    "channel.add",
-    "channel.update",
-    "channel.delete",
-    "post.hide",
-    "post.show",
-    "post.delete",
-    "comment.hide",
-    "comment.show",
-)
-
-
 class AdminAuditLog(Base):
     """FR-ADM-05: every change an admin makes, kept after the admin or the target account is gone.
 
@@ -709,9 +675,6 @@ TOPICS = (
 )
 
 
-# A summary, a personal view, a synthesis of several sources, or just the link to an original on the web.
-POST_KINDS = ("summary", "insight", "synthesis", "link")
-POST_REPORT_REASONS = ("copyright", "inaccurate", "spam", "offensive")
 MIN_POST_CARDS = 3
 MAX_POST_CARDS = 9
 MAX_POST_TITLE = 160

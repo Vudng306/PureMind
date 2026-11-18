@@ -257,13 +257,6 @@ body {
   .page-title {
     @apply font-display text-[28px] font-semibold leading-[1.2] tracking-[-0.01em] sm:text-[34px];
   }
-  /* "display": the hero line on Explore, 46px (32px on mobile). */
-  .display-title {
-    @apply font-display text-[32px] font-semibold leading-[1.15] tracking-[-0.01em] sm:text-[46px];
-  }
-  .section-title {
-    @apply font-display text-[21px] font-semibold leading-[1.3] sm:text-2xl;
-  }
   /* A segmented control: the choices sit in a sunken track, the chosen one raised on paper. */
   .segmented {
     @apply inline-flex max-w-full gap-1 overflow-x-auto rounded-full bg-soft p-1 [scrollbar-width:none];
