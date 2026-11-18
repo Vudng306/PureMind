@@ -36,7 +36,7 @@ export interface Anchored {
 
 export type Placement =
   /** `exact`: the stored position still holds. `moved`: found again, at the one place it can be. */
-  | { state: "exact" | "moved"; spot: Spot }
+  | { state: "exact" | "moved"; spot: Spot; /** Every part, when it runs over several blocks. */ spots?: Spot[] }
   /** `review`: more than one place fits and nothing says which. `lost`: the passage is not in the text. */
   | { state: "review" | "lost"; spot: null };
 
@@ -51,6 +51,96 @@ const AGREE = 12;
 const LONG = 20;
 
 const squash = (s: string) => normalize(s).replace(/\s+/g, "");
+
+/** White space, and what a line end or a typesetter puts inside a word (services/anchors.py `LEFT_OUT`). */
+const LEFT_OUT = /[\s\x1c-\x1f\x85\-\u2010\u2011\u00ad\u2063\u200b\u200c\u200d\ufeff]/gu;
+
+/**
+ * The words without spacing, hyphens, case or accents, as the server compares the clean text and the PDF
+ * (`anchors.squash`). Positions in this form count code points, as the server's do.
+ */
+export function canon(text: string): string {
+  return text
+    .normalize("NFKC")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .replace(LEFT_OUT, "")
+    .replace(/ς/g, "σ");
+}
+
+/** The length of `canon(text)`, in the positions the server counts. */
+export const canonLength = (text: string) => [...canon(text)].length;
+
+/** A part of a passage in one block, in `canon` positions (the server's `clean_anchor`). */
+export interface CleanSpan {
+  block: string;
+  start: number;
+  end: number;
+}
+
+interface CanonText {
+  chars: string[];
+  /** Where each of `chars` comes from in the block's text. */
+  from: number[];
+  to: number[];
+}
+
+const canonTexts = new WeakMap<TextBlock, CanonText>();
+
+function canonOf(block: TextBlock): CanonText {
+  let out = canonTexts.get(block);
+  if (out) return out;
+  out = { chars: [], from: [], to: [] };
+  for (let i = 0; i < block.text.length; ) {
+    const c = String.fromCodePoint(block.text.codePointAt(i) as number);
+    const next = i + c.length;
+    const made = [...canon(c)];
+    for (const m of made) {
+      out.chars.push(m);
+      out.from.push(i);
+      out.to.push(next);
+    }
+    // An accent written apart belongs to its letter.
+    if (!made.length && /\p{M}/u.test(c) && out.to.length) out.to[out.to.length - 1] = next;
+    i = next;
+  }
+  canonTexts.set(block, out);
+  return out;
+}
+
+/**
+ * The places in the page's text of a passage the server has placed, or null. Each part has to read as the
+ * passage does; when the page shows a block a little differently, a part is taken only from the one place of
+ * that block that holds exactly its words.
+ */
+export function spotsFromAnchor(blocks: TextBlock[], text: string, spans: CleanSpan[]): Spot[] | null {
+  const words = [...canon(text)];
+  const out: Spot[] = [];
+  let at = 0;
+  for (const span of spans) {
+    const size = span.end - span.start;
+    const part = words.slice(at, at + size).join("");
+    at += size;
+    const block = blocks.find((b) => b.id === span.block);
+    if (!block || size <= 0) return null;
+    const map = canonOf(block);
+    let first = span.start;
+    if (map.chars.slice(first, span.end).join("") !== part) {
+      const all = map.chars.join("");
+      const found = part ? all.indexOf(part) : -1;
+      if (found < 0 || all.indexOf(part, found + 1) >= 0) return null;
+      first = [...all.slice(0, found)].length;
+    }
+    const start = map.from[first];
+    const end = map.to[first + size - 1];
+    if (start === undefined || end === undefined) return null;
+    out.push({ blockId: block.id, start, end });
+  }
+  return out.length && at === words.length ? out : null;
+}
 
 /** The words right before and after [start, end) in a block, kept with a new highlight. */
 export function contextOf(text: string, start: number, end: number): { prefix: string; suffix: string } {

@@ -11,7 +11,7 @@ also how the reader finds a passage that moved.
 
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.services.extraction import block_key, reader_blocks
 
@@ -20,6 +20,8 @@ AGREE = 12  # how much of a side has to agree for it to count
 LONG = 20  # a passage this long (letters, no spaces) is its own proof when found once
 
 MAPPED, AMBIGUOUS, UNRESOLVED = "mapped", "ambiguous", "unresolved"
+# White space, and what a line end or a typesetter puts inside a word (lib/anchor.ts `canon`).
+LEFT_OUT = re.compile(r"[\s\-\u2010\u2011\u00ad\u2063\u200b\u200c\u200d\ufeff]+")
 
 
 @dataclass
@@ -27,13 +29,16 @@ class TextBlock:
     id: str  # as the reader names it: "b<key>", then "b<key>-1"… for the same block again
     words: str  # squashed: see squash()
     page: int | None
+    text: str = ""  # as the reader shows it, about (see plain)
+    boxes: list = field(default_factory=list)  # [[page, x, y, w, h], …] on the PDF (Document.source_map)
 
 
 def squash(text: str) -> str:
-    """The words without spacing, case or accents (lib/find.ts `normalize`, then no white space)."""
+    """The words without spacing, hyphens, case or accents: the form the clean text and the PDF are compared
+    in, and what canonical offsets count (lib/anchor.ts `canon` gives the same, code point for code point)."""
     text = unicodedata.normalize("NFD", unicodedata.normalize("NFKC", text))
-    text = "".join(c for c in text if not unicodedata.combining(c)).replace("đ", "d").replace("Đ", "D")
-    return re.sub(r"\s+", "", text.lower())
+    text = "".join(c for c in text if unicodedata.category(c)[0] != "M").replace("đ", "d").replace("Đ", "D")
+    return LEFT_OUT.sub("", text.lower()).replace("ς", "σ")
 
 
 def plain(raw: str) -> str:
@@ -49,20 +54,22 @@ def plain(raw: str) -> str:
 
 def text_blocks(content: str, source_map: list | None = None) -> list[TextBlock]:
     """The blocks of a clean text, named as the reader names them, with their PDF page when known."""
-    pages: dict[str, int] = {}
+    places: dict[str, list] = {}
     seen: dict[str, int] = {}
     for key, boxes in source_map or []:
         n = seen.get(key, 0)
         seen[key] = n + 1
         if boxes:
-            pages[f"b{key}{f'-{n}' if n else ''}"] = boxes[0][0]
+            places[f"b{key}{f'-{n}' if n else ''}"] = boxes
     out, counts = [], {}
     for raw in reader_blocks(content):
         key = block_key(raw)
         n = counts.get(key, 0)
         counts[key] = n + 1
         block_id = f"b{key}{f'-{n}' if n else ''}"
-        out.append(TextBlock(block_id, squash(plain(raw)), pages.get(block_id)))
+        text = plain(raw)
+        boxes = places.get(block_id, [])
+        out.append(TextBlock(block_id, squash(text), boxes[0][0] if boxes else None, text, boxes))
     return out
 
 
@@ -76,6 +83,8 @@ class Highlighted:
     prefix: str | None
     suffix: str | None
     on_pdf: bool  # it has rectangles on a page of the original file
+    start: int | None = None  # where it starts in its block, as the reader counted
+    rects: list | None = None
 
 
 def _found(blocks: list[TextBlock], words: str) -> list[tuple[TextBlock, int]]:
@@ -100,6 +109,32 @@ def _agreement(block: TextBlock, at: int, length: int, h: Highlighted) -> int:
     return n
 
 
+def pick(found: list[tuple[TextBlock, int]], words: str, h: Highlighted):
+    """(status, the place): which of the places holding the words is the highlight's, if that is sure."""
+    if not found:
+        return UNRESOLVED, None  # a highlight also drawn on the PDF still shows there, not in the clean text
+    has_context = bool(squash(h.prefix or "") or squash(h.suffix or ""))
+    if len(found) == 1:
+        block, at = found[0]
+        if len(words) >= LONG:
+            sure = True
+        elif has_context:
+            sure = _agreement(block, at, len(words), h) > 0
+        else:
+            sure = h.page is None or block.page == h.page
+        return (MAPPED, found[0]) if sure else (AMBIGUOUS, None)
+    if has_context:
+        scores = [_agreement(block, at, len(words), h) for block, at in found]
+        best = max(scores)
+        if best > 0 and scores.count(best) == 1:
+            return MAPPED, found[scores.index(best)]
+    elif h.page is not None:
+        on_page = [place for place in found if place[0].page == h.page]
+        if len(on_page) == 1:
+            return MAPPED, on_page[0]
+    return AMBIGUOUS, None
+
+
 def status(blocks: list[TextBlock], h: Highlighted) -> str:
     """mapped, ambiguous or unresolved: where the highlight stands in the new text (lib/anchor.ts `locate`)."""
     words = squash(h.text)
@@ -111,22 +146,4 @@ def status(blocks: list[TextBlock], h: Highlighted) -> str:
     own = next((b for b in blocks if b.id == h.block_id), None)
     if own is not None and words in own.words:
         return MAPPED  # the same block, word for word: its id is the hash of its source
-    found = _found(blocks, words)
-    if not found:
-        return UNRESOLVED  # a highlight also drawn on the PDF still shows there, but not in the clean text
-    has_context = bool(squash(h.prefix or "") or squash(h.suffix or ""))
-    if len(found) == 1:
-        block, at = found[0]
-        if len(words) >= LONG:
-            return MAPPED
-        if has_context:
-            return MAPPED if _agreement(block, at, len(words), h) > 0 else AMBIGUOUS
-        return MAPPED if h.page is None or block.page == h.page else AMBIGUOUS
-    if has_context:
-        scores = [_agreement(block, at, len(words), h) for block, at in found]
-        best = max(scores)
-        if best > 0 and scores.count(best) == 1:
-            return MAPPED
-    elif h.page is not None and sum(1 for block, _ in found if block.page == h.page) == 1:
-        return MAPPED
-    return AMBIGUOUS
+    return pick(_found(blocks, words), words, h)[0]

@@ -117,7 +117,7 @@ async def test_generate_edit_save_delete(client, auth, ai):
     assert r.status_code == 422
 
     # Sources: removing one keeps the others' numbers; a new one gets a number never used.
-    extra = (await highlights(client, h, doc, 1))[0]
+    extra = (await create(client, h, doc, block_id="b9", selected_text="một đoạn khác")).json()["id"]
     r = await client.patch(f"/api/notebooks/{nb['id']}", headers=h, json={"highlight_ids": [ids[1], extra]})
     assert [(s["position"], s["highlight"]["id"]) for s in r.json()["sources"]] == [(2, ids[1]), (3, extra)]
 

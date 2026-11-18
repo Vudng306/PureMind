@@ -315,6 +315,19 @@ class NoteIn(BaseModel):
         return v
 
 
+class CleanSpan(BaseModel):
+    """A part of a passage in one block of the clean text, counted as anchors.squash counts."""
+
+    block: str
+    start: int
+    end: int
+
+
+class PdfPlace(BaseModel):
+    page: int
+    rects: list[Rect]
+
+
 class HighlightOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -335,6 +348,15 @@ class HighlightOut(BaseModel):
     content_version: str | None = None
     # Where it stood when the document was last read again: mapped, ambiguous or unresolved (models).
     anchor_status: Literal["mapped", "ambiguous", "unresolved"] | None = None
+    # The passage itself, and where it shows in each view (services/highlight_sync).
+    canonical_start: int | None = None
+    canonical_end: int | None = None
+    clean_anchor: list[CleanSpan] | None = None
+    pdf_anchor: list[PdfPlace] | None = None
+    sync_status: Literal["synced", "unsynced", "ambiguous"] | None = None
+    # Answering a create only: this passage already had this highlight; other highlights it overlaps.
+    duplicate: bool = False
+    overlaps: list[uuid.UUID] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 

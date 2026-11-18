@@ -5,17 +5,38 @@ import { useEffect, useMemo } from "react";
 
 import { useAuth } from "@/components/auth-provider";
 
-import { locate, type AnchorIssue, type Placement, type Spot, type TextBlock } from "./anchor";
+import {
+  canon,
+  locate,
+  spotsFromAnchor,
+  type AnchorIssue,
+  type CleanSpan,
+  type Placement,
+  type Spot,
+  type TextBlock,
+} from "./anchor";
 import { ApiError, api } from "./api";
 import { supportsHighlights } from "./find";
 import { createOutbox, mergeUnsaved, type Outbox, type Patch } from "./outbox";
-import type { PdfRect } from "./pdf-rects";
+import { sameArea, type PdfRect } from "./pdf-rects";
 import { MSG } from "./messages";
 import { HIGHLIGHT_COLORS, currentLang, type HighlightColor } from "./preferences";
 import type { Lang } from "./types";
 import { useUi } from "./ui-store";
 
 /** Highlights are stored on the server; edits show at once and are sent in the background. */
+
+/** Where a highlight shows on one page of the PDF, line by line. */
+export interface PdfPlace {
+  page: number;
+  rects: PdfRect[];
+}
+
+/**
+ * Synced: it shows in every view the document has. Unsynced: its place in the other view is not known.
+ * Ambiguous: several places fit and none is chosen. The server decides; neither view guesses.
+ */
+export type SyncStatus = "synced" | "unsynced" | "ambiguous";
 
 export interface Highlight {
   id: string;
@@ -38,6 +59,15 @@ export interface Highlight {
   suffix?: string | null;
   /** Which text of the document it was made on, as the server names it. */
   contentVersion?: string | null;
+  /** The passage itself, the same whichever view it was made in, and where it shows in each view. */
+  canonicalStart?: number | null;
+  canonicalEnd?: number | null;
+  cleanAnchor?: CleanSpan[] | null;
+  pdfAnchor?: PdfPlace[] | null;
+  syncStatus?: SyncStatus | null;
+  /** Answering a create only: the passage already had this highlight; the others it overlaps. */
+  duplicate?: boolean;
+  overlaps?: string[];
   /** AN-105: on its way to the server, or not saved after the tries. Absent once the server has it. */
   save?: "saving" | "failed";
   /** Why the server refused it, when it said. */
@@ -104,6 +134,13 @@ export interface HighlightDto {
   content_version?: string | null;
   /** Where the highlight stood when the file was last read again (UC-04); null before that. */
   anchor_status?: "mapped" | "ambiguous" | "unresolved" | null;
+  canonical_start?: number | null;
+  canonical_end?: number | null;
+  clean_anchor?: CleanSpan[] | null;
+  pdf_anchor?: PdfPlace[] | null;
+  sync_status?: SyncStatus | null;
+  duplicate?: boolean;
+  overlaps?: string[];
 }
 
 export interface HighlightPage {
@@ -133,7 +170,50 @@ export const fromDto = (h: HighlightDto): Highlight => ({
   prefix: h.prefix ?? null,
   suffix: h.suffix ?? null,
   contentVersion: h.content_version ?? null,
+  canonicalStart: h.canonical_start,
+  canonicalEnd: h.canonical_end,
+  cleanAnchor: h.clean_anchor,
+  pdfAnchor: h.pdf_anchor,
+  syncStatus: h.sync_status,
+  ...(h.duplicate ? { duplicate: true } : {}),
+  ...(h.overlaps?.length ? { overlaps: h.overlaps } : {}),
 });
+
+/** Where it shows on the PDF: where it was made there, or where the server found its passage. */
+export const pdfPlaces = (h: Pick<Highlight, "rects" | "page" | "pdfAnchor">): PdfPlace[] =>
+  h.rects && h.page ? [{ page: h.page, rects: h.rects }] : (h.pdfAnchor ?? []);
+
+const inCleanText = (h: Pick<Highlight, "blockId" | "cleanAnchor">) => h.blockId !== null || Boolean(h.cleanAnchor?.length);
+
+/** FR-05: the view this highlight could not be carried to, as the server found; null when there is none. */
+export function missingView(h: Highlight): "clean" | "pdf" | null {
+  if (h.syncStatus !== "unsynced" && h.syncStatus !== "ambiguous") return null;
+  if (!inCleanText(h)) return "clean";
+  return pdfPlaces(h).length ? null : "pdf";
+}
+
+/** FR-04: the view to open a highlight in: the one being read when it shows there, else the other. */
+export function viewFor(h: Highlight, reading: "clean" | "original"): "clean" | "original" {
+  const onPdf = pdfPlaces(h).length > 0;
+  if (reading === "original") return onPdf || !inCleanText(h) ? "original" : "clean";
+  return inCleanText(h) || !onPdf ? "clean" : "original";
+}
+
+/** A selection in either view, as far as telling which passage it is goes. */
+export type PassagePick =
+  | { blockId: string; start: number; end: number; canonStart: number; canonEnd: number }
+  | { page: number; rects: PdfRect[]; text: string };
+
+/** FR-02: this highlight is on exactly the passage selected. The same words elsewhere are another passage. */
+export function samePassage(h: Highlight, sel: PassagePick): boolean {
+  if ("rects" in sel) {
+    const places = pdfPlaces(h);
+    return places.length === 1 && places[0].page === sel.page && canon(h.text) === canon(sel.text) && sameArea(places[0].rects, sel.rects);
+  }
+  if (h.blockId === sel.blockId && h.start === sel.start && h.end === sel.end) return true;
+  const only = h.cleanAnchor?.length === 1 ? h.cleanAnchor[0] : null;
+  return only !== null && only.block === sel.blockId && only.start === sel.canonStart && only.end === sel.canonEnd;
+}
 
 /** What is sent to make a highlight. Which text it was made on is the server's to say, so it is not sent. */
 export const toDto = (h: Omit<Highlight, "createdAt">) => ({
@@ -204,6 +284,13 @@ const show = (h: Highlight) =>
     old.some((x) => x.id === h.id) ? old.map((x) => (x.id === h.id ? h : x)) : [...old, h],
   );
 
+/** The highlight the passage already had takes the place of the one shown while waiting. */
+const replace = (from: string, h: Highlight) =>
+  client?.setQueryData<Highlight[]>(highlightsKey, (old = []) => {
+    const rest = old.filter((x) => x.id !== from);
+    return rest.some((x) => x.id === h.id) ? rest.map((x) => (x.id === h.id ? h : x)) : [...rest, h];
+  });
+
 function outbox(qc: QueryClient): Outbox {
   client = qc;
   return (box ??= createOutbox({
@@ -218,6 +305,7 @@ function outbox(qc: QueryClient): Outbox {
       remove: (id) => api(`/highlights/${id}`, { method: "DELETE" }),
     },
     put: show,
+    moved: replace,
     saved(h) {
       show(h);
       void client?.invalidateQueries({ queryKey: notebookKey });
@@ -243,19 +331,25 @@ if (typeof document !== "undefined") {
   });
 }
 
-const cached = (qc: QueryClient, id: string) => qc.getQueryData<Highlight[]>(highlightsKey)?.find((h) => h.id === id);
+const cached = (qc: QueryClient, given: string) => {
+  const id = box?.resolve(given) ?? given;
+  return qc.getQueryData<Highlight[]>(highlightsKey)?.find((h) => h.id === id);
+};
 
 export function useHighlightActions() {
   const qc = useQueryClient();
   return useMemo(
     () => ({
-      /** `onSaved` is called once the server has the highlight, never before. */
+      /**
+       * `onSaved` is called once the server has the highlight, never before, with the highlight as saved: the
+       * one the passage already had (`duplicate`) when it had one.
+       */
       addHighlight(
         input: Omit<Highlight, "id" | "createdAt" | "note" | "category" | "save" | "saveError" | "contentVersion"> & {
           note?: string;
           category?: HighlightCategory | null;
         },
-        { onSaved }: { onSaved?: () => void } = {},
+        { onSaved }: { onSaved?: (saved: Highlight) => void } = {},
       ): Highlight {
         const h: Highlight = { note: "", category: null, ...input, id: newId(), createdAt: new Date().toISOString() };
         outbox(qc).add(h, onSaved);
@@ -271,7 +365,8 @@ export function useHighlightActions() {
         outbox(qc).retry(id);
       },
       /** `onDone` is called once the server has deleted it. */
-      removeHighlight(id: string, { onDone }: { onDone?: () => void } = {}) {
+      removeHighlight(given: string, { onDone }: { onDone?: () => void } = {}) {
+        const id = outbox(qc).resolve(given);
         qc.setQueryData<Highlight[]>(highlightsKey, (old) => old?.filter((h) => h.id !== id));
         outbox(qc)
           .remove(id)
@@ -361,13 +456,21 @@ export type { AnchorIssue, Placement, Spot };
  */
 export function placeHighlight(
   root: HTMLElement,
-  h: Pick<Highlight, "blockId" | "start" | "end" | "text" | "page" | "prefix" | "suffix">,
+  h: Pick<Highlight, "blockId" | "start" | "end" | "text" | "page" | "prefix" | "suffix" | "cleanAnchor" | "syncStatus">,
   blocks: () => TextBlock[] = () => readBlocks(root),
 ): Placement {
   if (h.blockId !== null && h.start !== null && h.end !== null) {
     const stored = { blockId: h.blockId, start: h.start, end: h.end };
     if (rangeFor(root, { ...stored, text: h.text })) return { state: "exact", spot: stored };
   }
+  if (h.cleanAnchor?.length) {
+    const spots = spotsFromAnchor(blocks(), h.text, h.cleanAnchor);
+    if (spots?.every((s) => rangeAt(root, s))) {
+      return { state: h.blockId === null ? "exact" : "moved", spot: spots[0], spots };
+    }
+  }
+  // Made on the PDF: only the server, which sees where on the page it was, can say where it is in the text.
+  if (h.blockId === null) return { state: h.syncStatus === "ambiguous" ? "review" : "lost", spot: null };
   const placed = locate(blocks(), h);
   // A place the page cannot make a range for is no place.
   if (placed.spot && !rangeAt(root, placed.spot)) return { state: "lost", spot: null };
@@ -377,8 +480,8 @@ export function placeHighlight(
 /** Paint highlights by color; the active one also gets an underline, `flash` a short strong tint. */
 export function paintAnnotations(
   ranges: { color: HighlightColor; range: Range }[],
-  active: Range | null,
-  flash: Range | null = null,
+  active: Range | Range[] | null,
+  flash: Range | Range[] | null = null,
 ) {
   if (!supportsHighlights()) return;
   for (const color of HIGHLIGHT_COLORS) {
@@ -386,13 +489,15 @@ export function paintAnnotations(
     hl.priority = 0;
     CSS.highlights.set(`pm-hl-${color}`, hl);
   }
-  if (active) {
-    const hl = new Highlight(active);
+  const activeRanges = [active ?? []].flat();
+  const flashRanges = [flash ?? []].flat();
+  if (activeRanges.length) {
+    const hl = new Highlight(...activeRanges);
     hl.priority = 1;
     CSS.highlights.set("pm-hl-active", hl);
   } else CSS.highlights.delete("pm-hl-active");
-  if (flash) {
-    const hl = new Highlight(flash);
+  if (flashRanges.length) {
+    const hl = new Highlight(...flashRanges);
     hl.priority = 2;
     CSS.highlights.set("pm-hl-flash", hl);
   } else CSS.highlights.delete("pm-hl-flash");

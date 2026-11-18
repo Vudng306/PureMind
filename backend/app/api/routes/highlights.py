@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser, SessionDep, SettingsDep
 from app.api.routes.documents import _owned_document
 from app.models import Document, Highlight, Note, User
 from app.schemas import (
@@ -22,6 +22,7 @@ from app.schemas import (
     NoteIn,
     file_type_of,
 )
+from app.services import highlight_sync
 
 router = APIRouter(tags=["highlights"])
 
@@ -80,50 +81,90 @@ async def list_highlights(
     return HighlightPage(items=items, total=total)
 
 
-def _saved_already(existing: Highlight, user: User, doc: Document) -> Highlight:
+def _saved_already(existing: Highlight, user_id: uuid.UUID, document_id: uuid.UUID) -> Highlight:
     """AN-105: the id is the client's key for one highlight, so sending it again gives the one saved.
     Someone else's id, or one used on another document, is a conflict and says nothing about that row."""
-    if existing.user_id != user.id or existing.document_id != doc.id:
+    if existing.user_id != user_id or existing.document_id != document_id:
         raise HTTPException(status.HTTP_409_CONFLICT, EXISTS)
     return existing
 
 
+def _keep_note(existing: Highlight, note: str) -> None:
+    """A note written on a passage that turned out to be highlighted already joins the note it has."""
+    if note.strip() and note not in existing.note:
+        existing.note = f"{existing.note}\n\n{note}" if existing.note.strip() else note
+
+
 @router.post("/highlights", response_model=HighlightOut, status_code=status.HTTP_201_CREATED)
 async def create_highlight(
-    payload: HighlightCreate, response: Response, user: CurrentUser, session: SessionDep
+    payload: HighlightCreate, response: Response, user: CurrentUser, session: SessionDep, settings: SettingsDep
 ):
-    """FR-HL-01. Sent again with the same id (a retry after a lost reply), it gives the highlight already
-    saved (200) instead of a second one."""
+    """FR-HL-01, one highlight per passage. Sent again with the same id (a retry after a lost reply), or for a
+    passage that already has its highlight, from either view, it gives that highlight (200, `duplicate`). A
+    selection that only overlaps others is a highlight of its own: they are named in `overlaps`, none is
+    changed or joined."""
     doc = await _owned_document(session, user, payload.document_id)
+    user_id, document_id, version = user.id, doc.id, doc.content_version
     if payload.id is not None and (existing := await session.get(Highlight, payload.id)) is not None:
         response.status_code = status.HTTP_200_OK
-        return _saved_already(existing, user, doc)
-    count = await session.scalar(select(func.count()).where(Highlight.document_id == doc.id))
-    if (count or 0) >= MAX_HIGHLIGHTS_PER_DOCUMENT:
-        raise HTTPException(422, "Tài liệu này đã có quá nhiều highlight.")
+        return _saved_already(existing, user_id, document_id)
     if error := _position_error(doc, payload):
         raise HTTPException(422, error)
+
+    index = await highlight_sync.index_of(session, settings, doc)
+    payload_rects = [r.model_dump() for r in payload.rects] if payload.rects else None
+    where = await highlight_sync.place_in(index, payload.model_copy(update={"rects": payload_rects}))
+    same, overlaps = await highlight_sync.neighbours(session, user_id, doc, payload, where)
+    if same is not None:
+        _keep_note(same, payload.note)
+        await session.commit()
+        await session.refresh(same)
+        same.duplicate = True
+        response.status_code = status.HTTP_200_OK
+        return same
+
+    count = await session.scalar(select(func.count()).where(Highlight.document_id == document_id))
+    if (count or 0) >= MAX_HIGHLIGHTS_PER_DOCUMENT:
+        raise HTTPException(422, "Tài liệu này đã có quá nhiều highlight.")
 
     data = payload.model_dump(exclude={"id", "document_id"})
     new_id = payload.id or uuid.uuid4()
     hl = Highlight(
         id=new_id,
-        user_id=user.id,
-        document_id=doc.id,
-        content_version=doc.content_version,  # the server's own reading of which text this is
+        user_id=user_id,
+        document_id=document_id,
+        content_version=version,  # the server's own reading of which text this is
         **data,
     )
+    highlight_sync.put(hl, where, version)
     session.add(hl)
     try:
         await session.commit()
-    except IntegrityError:  # the same id arrived twice at once
+    except IntegrityError:  # the same id, or the same passage, arrived twice at once
         await session.rollback()
         existing = await session.get(Highlight, new_id)
+        if existing is None and where.start is not None:
+            existing = await session.scalar(
+                select(Highlight).where(
+                    Highlight.user_id == user_id,
+                    Highlight.document_id == document_id,
+                    Highlight.content_version == version,
+                    Highlight.canonical_start == where.start,
+                    Highlight.canonical_end == where.end,
+                )
+            )
         if existing is None:
             raise HTTPException(status.HTTP_409_CONFLICT, EXISTS) from None
         response.status_code = status.HTTP_200_OK
-        return _saved_already(existing, user, doc)
+        found = _saved_already(existing, user_id, document_id)
+        if found.id != new_id:
+            _keep_note(found, payload.note)
+            await session.commit()
+            await session.refresh(found)
+            found.duplicate = True
+        return found
     await session.refresh(hl)
+    hl.overlaps = overlaps
     return hl
 
 
@@ -168,7 +209,9 @@ async def delete_note(highlight_id: uuid.UUID, user: CurrentUser, session: Sessi
 
 
 @router.post("/annotations/import", response_model=AnnotationsImportResult)
-async def import_annotations(payload: AnnotationsImport, user: CurrentUser, session: SessionDep):
+async def import_annotations(
+    payload: AnnotationsImport, user: CurrentUser, session: SessionDep, settings: SettingsDep
+):
     """One-time move of browser-local data. Idempotent: known ids, existing notes and progress are kept."""
     wanted = {h.document_id for h in payload.highlights} | set(payload.notes) | set(payload.progress)
     docs = (
@@ -192,6 +235,7 @@ async def import_annotations(payload: AnnotationsImport, user: CurrentUser, sess
     )
 
     added = 0
+    touched: set[uuid.UUID] = set()
     for h in payload.highlights:
         if (
             h.document_id not in docs
@@ -204,9 +248,15 @@ async def import_annotations(payload: AnnotationsImport, user: CurrentUser, sess
         if h.created_at:
             hl.created_at = h.created_at
         session.add(hl)
+        touched.add(h.document_id)
         if h.id:
             existing.add(h.id)
         added += 1
+
+    await session.flush()
+    for doc_id in touched:  # placed like any other; each keeps its own row
+        rows = (await session.scalars(select(Highlight).where(Highlight.document_id == doc_id))).all()
+        await highlight_sync.recheck(session, settings, docs[doc_id], list(rows), statuses=False)
 
     # A document's locally kept note becomes its first note, unless it already has one of the reader's own.
     noted = (

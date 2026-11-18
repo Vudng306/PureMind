@@ -28,7 +28,7 @@ import {
   type AnchorIssue,
   type Highlight,
 } from "@/lib/annotations";
-import { contextOf, type TextBlock } from "@/lib/anchor";
+import { canonLength, contextOf, type TextBlock } from "@/lib/anchor";
 import { clearHighlights, findRanges, paintHighlights, scrollRangeIntoView } from "@/lib/find";
 import { useLang, useT } from "@/lib/i18n";
 import { ChartData } from "@/components/chart-data";
@@ -50,6 +50,9 @@ export interface TextSelection {
   blockId: string;
   start: number;
   end: number;
+  /** The same in the count the server places passages by (`canon`). */
+  canonStart: number;
+  canonEnd: number;
   text: string;
   /** The words right before and after it in its block, kept with a highlight to find it again (AN-102). */
   prefix: string;
@@ -481,12 +484,12 @@ export function CleanReader({
   useEffect(() => clearHighlights, []);
 
   // ---- highlights (placed where their passage is now, and only where that is sure; see locate)
-  const anchors = useRef(new Map<string, Anchor>());
+  const anchors = useRef(new Map<string, Anchor[]>());
   useEffect(() => {
     const article = articleRef.current;
     if (!article) return;
-    let active: Range | null = null;
-    let flash: Range | null = null;
+    let active: Range[] = [];
+    let flash: Range[] = [];
     const painted: { color: Highlight["color"]; range: Range }[] = [];
     const issues: Record<string, AnchorIssue> = {};
     let texts: TextBlock[] | null = null;
@@ -494,16 +497,18 @@ export function CleanReader({
     anchors.current = new Map();
     for (const h of highlights) {
       const placed = placeHighlight(article, h, blocksNow);
-      const range = placed.spot && rangeAt(article, placed.spot);
-      if (!placed.spot || !range) {
-        // A highlight that is not sure of its place is painted nowhere (TSD §5.2).
-        issues[h.id] = placed.state === "review" ? "review" : "lost";
+      const spots = placed.spot ? (placed.spots ?? [placed.spot]) : [];
+      const ranges = spots.map((s) => rangeAt(article, s)).filter((r) => r !== null);
+      if (!ranges.length) {
+        // A highlight that is not sure of its place is painted nowhere (TSD §5.2). One still on its way to
+        // the server has not been told its place yet.
+        if (h.save !== "saving") issues[h.id] = placed.state === "review" ? "review" : "lost";
         continue;
       }
-      anchors.current.set(h.id, placed.spot);
-      painted.push({ color: h.color, range });
-      if (h.id === activeHighlightId) active = range;
-      if (h.id === flashHighlightId) flash = range;
+      anchors.current.set(h.id, spots);
+      for (const range of ranges) painted.push({ color: h.color, range });
+      if (h.id === activeHighlightId) active = ranges;
+      if (h.id === flashHighlightId) flash = ranges;
     }
     paintAnnotations(painted, active, flash);
     onUnanchored?.(issues);
@@ -623,6 +628,8 @@ export function CleanReader({
       blockId: block.dataset.blockId,
       start,
       end,
+      canonStart: canonLength(blockText.slice(0, start)),
+      canonEnd: canonLength(blockText.slice(0, start)) + canonLength(text),
       text,
       ...contextOf(blockText, start, end),
       rect: (exact ?? range).getBoundingClientRect(),
@@ -664,7 +671,11 @@ export function CleanReader({
         if (!caret || !block?.dataset.blockId) return;
         const offset = offsetIn(block, caret.node, caret.offset);
         const blockId = block.dataset.blockId;
-        const hit = [...anchors.current].find(([, a]) => a.blockId === blockId && a.start <= offset && offset < a.end);
+        // Of highlights that overlap, the shortest: the longer one can be clicked outside it.
+        const size = (spots: Anchor[]) => spots.reduce((sum, a) => sum + a.end - a.start, 0);
+        const [hit] = [...anchors.current]
+          .filter(([, spots]) => spots.some((a) => a.blockId === blockId && a.start <= offset && offset < a.end))
+          .sort((a, b) => size(a[1]) - size(b[1]));
         if (hit) onHighlightClick(hit[0]);
       });
     },

@@ -20,8 +20,12 @@ import {
   CATEGORY_FOR_COLOR,
   MAX_SELECTION,
   flushHighlightEdits,
+  missingView,
+  pdfPlaces,
+  samePassage,
   useHighlightActions,
   useHighlights,
+  viewFor,
   type AnchorIssue,
   type Highlight,
 } from "@/lib/annotations";
@@ -306,8 +310,9 @@ function Reader({ id }: { id: string }) {
     linkVisit.current = { hl: hlId, q: params.get("q")?.trim() || null };
     const target = hlId ? (highlights.find((h) => h.id === hlId) ?? null) : null;
     setHlTarget(target);
-    // A link to a highlight opens the view it was made in: the PDF page or the clean text.
-    setMode(target ? (target.blockId === null ? "original" : "clean") : hlId ? "clean" : (readStoredMode(id) ?? (window.matchMedia("(max-width: 639px)").matches ? "clean" : defaultMode)));
+    const reading = readStoredMode(id) ?? (window.matchMedia("(max-width: 639px)").matches ? "clean" : defaultMode);
+    // A link to a highlight opens the view being read when the highlight shows there, else the other one.
+    setMode(target ? viewFor(target, reading) : hlId ? "clean" : reading);
     // A summary found by search opens the summary panel (FR-SRCH-01 step 6).
     if (params.get("panel") === "summary") {
       setPanelOpen(true);
@@ -625,10 +630,12 @@ function Reader({ id }: { id: string }) {
       if (target) {
         const back = fromPanel ? here() : saved;
         if (!jumpTo(target)) {
-          // Made on the PDF page and not found in the clean text: show it where it was made.
-          if (target.rects && isPdf) {
-            beginDetour(back, { landPage: target.page });
+          // Not in the clean text, but on the PDF: show it there.
+          const [onPdf] = pdfPlaces(target);
+          if (onPdf && isPdf) {
+            beginDetour(back, { landPage: onPdf.page });
             pendingJump.current = target;
+            showToast(t("reader.hlOtherView"));
             return chooseMode("original");
           }
           return unplaced(target);
@@ -662,7 +669,7 @@ function Reader({ id }: { id: string }) {
     if (!fromPanel && linkVisit.current && doc) {
       linkVisit.current = null;
       const saved = resumeOf({ fraction: doc.read_fraction, position: doc.read_position, page: doc.last_read_page });
-      beginDetour(saved, { landPage: target.page });
+      beginDetour(saved, { landPage: pdfPlaces(target)[0]?.page ?? target.page });
     }
     setPanelOpen(true);
     setPanelTab("highlights");
@@ -724,6 +731,7 @@ function Reader({ id }: { id: string }) {
       // A highlight made on the PDF that the PDF cannot show, or no clean text to look in: say so.
       if (!hasClean || h.rects) return unplaced(h);
       pendingJump.current = h;
+      showToast(t("reader.hlOtherView"));
       return chooseMode("clean");
     }
     const back = here();
@@ -731,9 +739,10 @@ function Reader({ id }: { id: string }) {
       beginDetour(back, { fromHere: true });
       return flash(h.id);
     }
-    if (h.rects && isPdf) {
+    if (pdfPlaces(h).length && isPdf) {
       beginDetour(back, { fromHere: true });
       pendingJump.current = h;
+      showToast(t("reader.hlOtherView"));
       return chooseMode("original");
     }
     unplaced(h);
@@ -774,14 +783,9 @@ function Reader({ id }: { id: string }) {
     setSelection(null);
   }, []);
 
-  /** The highlight already on exactly this passage, if there is one. */
+  /** The highlight already on exactly this passage, from whichever view it was made in. */
   function highlightAt(sel: TextSelection | PdfSelection): Highlight | undefined {
-    const onPdf = "rects" in sel;
-    return highlights.find((h) =>
-      onPdf
-        ? h.rects !== null && h.page === sel.page && h.text === sel.text
-        : h.blockId === sel.blockId && h.start === sel.start && h.end === sel.end,
-    );
+    return highlights.find((h) => samePassage(h, sel));
   }
 
   function highlightSelection(color: HighlightColor): Highlight | null {
@@ -801,10 +805,24 @@ function Reader({ id }: { id: string }) {
       note !== undefined
         ? () => showToast(t("panel.savedNote"))
         : () => showToast(t("reader.highlighted", { name: colorLabel(colorLabels, color, lang) }));
+    // What the server found out about a new highlight: the passage had one, or it could not be carried over.
+    const onAdded = (saved: Highlight) => {
+      if (saved.duplicate) {
+        setActiveHl((current) => (current === h.id ? saved.id : current));
+        return showToast(t("reader.hlAlready"));
+      }
+      const missing = missingView(saved);
+      if (missing) return showToast(t(missing === "clean" ? "reader.hlNotSyncedClean" : "reader.hlNotSyncedPdf"));
+      if (saved.overlaps?.length) return showToast(t("reader.hlOverlap"));
+      onSaved();
+    };
     let h: Highlight;
     if (existing && note !== undefined) {
       updateHighlight(existing.id, { note }, { now: true, onSaved });
       h = { ...existing, note };
+    } else if (existing?.color === color) {
+      showToast(t("reader.hlAlready"));
+      h = existing;
     } else if (existing) {
       const category = CATEGORY_FOR_COLOR[color];
       updateHighlight(existing.id, { color, category }, { onSaved });
@@ -822,7 +840,7 @@ function Reader({ id }: { id: string }) {
         category: CATEGORY_FOR_COLOR[color],
         page: sel.page,
         note: note ?? "",
-      }, { onSaved });
+      }, { onSaved: onAdded });
     } else {
       h = addHighlight({
         docId: id,
@@ -837,7 +855,7 @@ function Reader({ id }: { id: string }) {
         prefix: sel.prefix,
         suffix: sel.suffix,
         note: note ?? "",
-      }, { onSaved });
+      }, { onSaved: onAdded });
     }
     return h;
   }

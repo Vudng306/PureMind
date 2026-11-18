@@ -1,7 +1,6 @@
 import logging
 import re
 import uuid
-from collections import Counter
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -43,7 +42,17 @@ from app.models import (
 )
 from app.models import Article as CatalogArticle
 from app.schemas import DocumentListItem, DocumentOut, DocumentUpdate, DocumentUsage
-from app.services import anchors, equation_ocr, figure_notes, page_ocr, rights, storage, table_ocr, web
+from app.services import (
+    anchors,
+    equation_ocr,
+    figure_notes,
+    highlight_sync,
+    page_ocr,
+    rights,
+    storage,
+    table_ocr,
+    web,
+)
 from app.services.epub import extract_epub, looks_like_epub
 from app.services.extraction import (
     IMAGE_NAME,
@@ -336,18 +345,13 @@ async def reprocess(document_id: uuid.UUID, settings: Settings) -> None:
         else:
             apply_extraction(doc, out)
             blocks = anchors.text_blocks(out.content, out.source_map)
-            counts = Counter({anchors.MAPPED: 0, anchors.AMBIGUOUS: 0, anchors.UNRESOLVED: 0})
-            for h in await session.scalars(select(Highlight).where(Highlight.document_id == doc.id)):
-                h.anchor_status = anchors.status(
-                    blocks,
-                    anchors.Highlighted(
-                        h.block_id, h.selected_text, h.page_number, h.prefix, h.suffix, h.rects is not None
-                    ),
+            rows = (
+                await session.scalars(
+                    select(Highlight).where(Highlight.document_id == doc.id).order_by(Highlight.created_at)
                 )
-                if h.anchor_status == anchors.MAPPED:
-                    h.content_version = doc.content_version  # checked against this text
-                counts[h.anchor_status] += 1
-            report["anchors"] = dict(counts)
+            ).all()
+            await session.flush()  # the new text and its source map, which the highlights are placed in
+            report["anchors"] = await highlight_sync.recheck(session, settings, doc, list(rows))
             # TSD §9.1 step 6: a place in a block the new text no longer has falls back to the page and the
             # fraction read; the old place is kept in the report.
             place = doc.read_position or {}

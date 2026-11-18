@@ -71,3 +71,22 @@ export function rangeRects(range: Range, page: HTMLElement): PdfRect[] {
 export function hitRects(rects: PdfRect[], px: number, py: number, pad = 0.002): boolean {
   return rects.some((r) => px >= r.x - pad && px <= r.x + r.w + pad && py >= r.y - pad && py <= r.y + r.h + pad);
 }
+
+const areaOf = (rects: PdfRect[]) => rects.reduce((sum, r) => sum + r.w * r.h, 0);
+
+/** How much of a page the rectangles cover: the smaller of two overlapping marks is the one meant. */
+export const rectsArea = areaOf;
+
+/** Two sets of rectangles on one page covering mostly the same area (`same_selection` on the server). */
+export function sameArea(a: PdfRect[], b: PdfRect[]): boolean {
+  let shared = 0;
+  for (const p of a) {
+    for (const q of b) {
+      const w = Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x);
+      const h = Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y);
+      if (w > 0 && h > 0) shared += w * h;
+    }
+  }
+  const area = Math.min(areaOf(a), areaOf(b));
+  return area > 0 && shared / area >= 0.5;
+}

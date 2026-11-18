@@ -6,12 +6,12 @@ import { createPortal } from "react-dom";
 
 import "pdfjs-dist/web/pdf_viewer.css";
 
-import type { Highlight } from "@/lib/annotations";
+import { pdfPlaces, type Highlight } from "@/lib/annotations";
 import { API_URL, authHeader } from "@/lib/api";
 import type { SourceBox } from "@/lib/documents";
-import { clearHighlights, findLoose, findMatches, findRanges, paintHighlights, scrollRangeIntoView } from "@/lib/find";
+import { clearHighlights, findMatches, findRanges, paintHighlights, scrollRangeIntoView } from "@/lib/find";
 import { useT } from "@/lib/i18n";
-import { hitRects, rangeRects, type PdfRect } from "@/lib/pdf-rects";
+import { hitRects, rangeRects, rectsArea, type PdfRect } from "@/lib/pdf-rects";
 import type { HighlightColor } from "@/lib/preferences";
 
 import type { SearchState } from "./clean-reader";
@@ -619,62 +619,19 @@ export function PdfViewer({
   useEffect(() => clearHighlights, []);
 
   // ---- highlights (FR-HL-02)
-  // Highlights made in the clean text have no rectangles: their passage is looked up in the page's text
-  // layer once it is rendered. Positions are kept (normalised) after the page is unloaded.
-  const located = useRef(new Map<string, { page: number; rects: PdfRect[] }>());
-  const [locatedVersion, setLocatedVersion] = useState(0);
-
-  useEffect(() => {
-    located.current.clear();
-  }, [pdf]);
-
-  useEffect(() => {
-    let changed = false;
-    for (const h of highlights) {
-      if (h.rects) continue;
-      const pages = h.page ? [h.page] : [...textLayers.current.keys()];
-      for (const page of pages) {
-        const layer = textLayers.current.get(page);
-        const host = layer?.parentElement;
-        if (!layer || !host) continue;
-        const known = located.current.get(h.id);
-        if (known && known.page === page) break;
-        const [range] = findRanges(layer, h.text, findLoose);
-        const rects = range ? rangeRects(range, host) : [];
-        if (rects.length) {
-          located.current.set(h.id, { page, rects });
-          changed = true;
-          break;
-        }
-      }
-    }
-    if (changed) setLocatedVersion((v) => v + 1);
-  }, [highlights, layersVersion]);
-
-  const positionOf = useCallback(
-    (h: Highlight): { page: number; rects: PdfRect[] } | null =>
-      h.rects && h.page ? { page: h.page, rects: h.rects } : (located.current.get(h.id) ?? null),
-    [],
-  );
-
+  // Each shows where the server placed it, over as many lines and pages as it runs. One it could not place
+  // here is not looked for by its words: the same words may stand somewhere else on the page.
   const marksByPage = useMemo(() => {
     const out = new Map<number, Mark[]>();
     for (const h of highlights) {
-      const pos = positionOf(h);
-      if (!pos) continue;
-      const list = out.get(pos.page) ?? [];
-      list.push({
-        id: h.id,
-        color: h.color,
-        rects: pos.rects,
-        active: h.id === activeHighlightId,
-        flash: h.id === flashHighlightId,
-      });
-      out.set(pos.page, list);
+      for (const { page, rects } of pdfPlaces(h)) {
+        const list = out.get(page) ?? [];
+        list.push({ id: h.id, color: h.color, rects, active: h.id === activeHighlightId, flash: h.id === flashHighlightId });
+        out.set(page, list);
+      }
     }
     return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [highlights, activeHighlightId, flashHighlightId, locatedVersion, positionOf]);
+  }, [highlights, activeHighlightId, flashHighlightId]);
 
   // The passage "view in the original" points at, outlined until it fades.
   const [source, setSource] = useState<Map<number, PdfRect[]> | null>(null);
@@ -701,8 +658,8 @@ export function PdfViewer({
     handleRef,
     () => ({
       scrollToHighlight(h) {
-        const pos = positionOf(h);
-        return scrollToPoint(pos?.page ?? h.page ?? 0, pos?.rects[0]?.y ?? 0);
+        const [first] = pdfPlaces(h);
+        return first ? scrollToPoint(first.page, first.rects[0]?.y ?? 0) : false;
       },
       showSource(boxes) {
         if (!boxes.length || !scrollToPoint(boxes[0].page, boxes[0].y)) return false;
@@ -715,7 +672,7 @@ export function PdfViewer({
       },
       scrollToPage: (page) => scrollToPoint(page, 0),
     }),
-    [positionOf, scrollToPoint],
+    [scrollToPoint],
   );
 
   // Selecting text on a page opens the highlight menu; a click on a highlight opens it in the panel.
@@ -772,7 +729,10 @@ export function PdfViewer({
         const box = host.getBoundingClientRect();
         const px = (point.x - box.left) / box.width;
         const py = (point.y - box.top) / box.height;
-        const hit = [...(marksByPage.get(Number(host.dataset.page)) ?? [])].reverse().find((m) => hitRects(m.rects, px, py));
+        // Of highlights that overlap, the smallest: the larger one can be clicked outside it.
+        const [hit] = (marksByPage.get(Number(host.dataset.page)) ?? [])
+          .filter((m) => hitRects(m.rects, px, py))
+          .sort((a, b) => rectsArea(a.rects) - rectsArea(b.rects));
         if (hit) onHighlightClick(hit.id);
       });
     },

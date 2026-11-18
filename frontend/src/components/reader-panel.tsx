@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   CATEGORY_FOR_COLOR,
   MAX_HIGHLIGHT_NOTE,
+  missingView,
   useHighlightActions,
   type AnchorIssue,
   type Highlight,
@@ -87,6 +88,7 @@ export function HighlightCard({
   const opened = useRef(h.note);
   const [confirm, setConfirm] = useState<"note" | "highlight" | null>(null);
   const [usedIn, setUsedIn] = useState(0);
+  const missing = missingView(h);
 
   useEffect(() => {
     if (active) ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -194,7 +196,19 @@ export function HighlightCard({
           )}
         </div>
       )}
-      {issue && (
+      {missing && !h.save && (
+        <div className="flex flex-col items-start gap-1.5 rounded-lg bg-soft px-3 py-2 text-xs leading-normal text-muted">
+          <p className="font-semibold text-ink">{t("panel.notSynced")}</p>
+          <p>
+            {t(missing === "clean" ? "panel.notSyncedClean" : "panel.notSyncedPdf")}
+            {h.syncStatus === "ambiguous" ? ` ${t("panel.notSyncedAmbiguous")}` : ""}
+          </p>
+          <button type="button" onClick={onJump} className="font-semibold text-accent-text hover:underline">
+            {t("panel.openSource")}
+          </button>
+        </div>
+      )}
+      {issue && missing !== "clean" && (
         <div className="flex flex-col items-start gap-1.5 rounded-lg bg-soft px-3 py-2 text-xs leading-normal text-muted">
           {issue === "review" && !h.rects && <p className="font-semibold text-ink">{t("panel.review")}</p>}
           <p>

@@ -21,11 +21,14 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 JsonType = JSON().with_variant(JSONB(), "postgresql")
+# None is stored as SQL NULL, not as the JSON value null.
+NullableJson = JSON(none_as_null=True).with_variant(JSONB(none_as_null=True), "postgresql")
 
 
 def utcnow() -> datetime:
@@ -266,15 +269,37 @@ class ExtractionReport(Base):
 
 
 class Highlight(TimestampMixin, Base):
-    """A highlighted passage.
+    """A highlighted passage: one row, whichever view it was made in.
 
-    Anchored in the clean text (block id + [start, end) character offsets), on the original PDF page
-    (page_number + rectangles normalised to 0..1 of the page size, FR-HL-01 step 2), or both.
+    `block_id` + offsets or `page_number` + `rects` (normalised to 0..1 of the page) say where the reader made
+    it. `canonical_*` is the passage itself, `clean_anchor` and `pdf_anchor` where it shows in each view
+    (services/highlight_sync).
     """
 
     __tablename__ = "highlights"
     __table_args__ = (
         Index("ix_highlights_document_created", "document_id", "created_at"),
+        # One highlight per passage of a text, even when two requests arrive together.
+        Index(
+            "uq_highlights_passage",
+            "user_id",
+            "document_id",
+            "content_version",
+            "canonical_start",
+            "canonical_end",
+            unique=True,
+            postgresql_where=text("canonical_start IS NOT NULL"),
+            sqlite_where=text("canonical_start IS NOT NULL"),
+        ),
+        CheckConstraint(
+            "(canonical_start IS NULL AND canonical_end IS NULL)"
+            " OR (canonical_start >= 0 AND canonical_end > canonical_start)",
+            name="ck_highlights_canonical",
+        ),
+        CheckConstraint(
+            "sync_status IS NULL OR sync_status IN ('synced', 'unsynced', 'ambiguous')",
+            name="ck_highlights_sync_status",
+        ),
         CheckConstraint(
             "block_id IS NULL OR (start_offset >= 0 AND end_offset > start_offset)",
             name="ck_highlights_offsets",
@@ -325,6 +350,32 @@ class Highlight(TimestampMixin, Base):
     # guess), `unresolved` (not in the new text). The highlight and its note stay either way. None: the
     # document has not been read again since the highlight was made.
     anchor_status: Mapped[str | None] = mapped_column(String(12))
+    # [start, end) in the text of `content_version` with spacing, hyphens, case and accents left out
+    # (anchors.squash), counted over all its blocks: what tells one passage from the same words elsewhere.
+    canonical_start: Mapped[int | None] = mapped_column(Integer)
+    canonical_end: Mapped[int | None] = mapped_column(Integer)
+    # Where it shows in the clean text, [{block, start, end}] in the same count inside each block…
+    clean_anchor: Mapped[list | None] = mapped_column(NullableJson)
+    # … and on the PDF, [{page, rects: [{x, y, w, h}]}], over as many lines and pages as it runs.
+    pdf_anchor: Mapped[list | None] = mapped_column(NullableJson)
+    # synced: it shows in every view the document has. unsynced: only where it was made, its place in the
+    # other view is not known. ambiguous: several places fit, none is chosen. None: not looked at yet.
+    sync_status: Mapped[str | None] = mapped_column(String(12))
+
+
+class HighlightMerge(Base):
+    """FR-06: a highlight joined into another because both were sure to be the same passage, as it was."""
+
+    __tablename__ = "highlight_merges"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    kept_highlight_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False, index=True)
+    merged_row: Mapped[dict] = mapped_column(JsonType, nullable=False)
+    notebook_links: Mapped[list] = mapped_column(JsonType, nullable=False)
+    merged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
 class Summary(Base):
