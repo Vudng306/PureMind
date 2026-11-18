@@ -258,7 +258,7 @@ async def _condense(settings: Settings, bodies: list[str], language: Language, u
                     },
                 ],
                 purpose="reader_part",
-                max_tokens=1500,
+                max_tokens=3000,
             )
         usage.add(res.usage)
         return res.text.strip()

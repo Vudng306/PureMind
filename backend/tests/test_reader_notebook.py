@@ -60,7 +60,14 @@ class FakeAI:
         self.calls: list[dict] = []
 
     async def __call__(self, settings, messages, *, purpose, json_schema=None, max_tokens=4000):
-        self.calls.append({"purpose": purpose, "messages": messages, "json_schema": json_schema})
+        self.calls.append(
+            {
+                "purpose": purpose,
+                "messages": messages,
+                "json_schema": json_schema,
+                "max_tokens": max_tokens,
+            }
+        )
         answer = self.answers.pop(0) if len(self.answers) > 1 else self.answers[0]
         if isinstance(answer, Exception):
             raise answer
@@ -438,6 +445,7 @@ async def test_long_document_is_condensed_with_passage_numbers(client, auth, ai,
     assert r.status_code == 201, r.text
     purposes = [c["purpose"] for c in fake.calls]
     assert purposes.count("reader_part") >= 2 and purposes[-1] == "reader_quick"
+    assert all(c["max_tokens"] == 3000 for c in fake.calls if c["purpose"] == "reader_part")
     assert "notes on consecutive parts" in fake.calls[-1]["messages"][1]["content"]
 
 
