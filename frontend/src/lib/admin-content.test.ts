@@ -11,6 +11,8 @@ describe("niceMax", () => {
     expect(niceMax([120])).toBe(200);
     expect(niceMax([500])).toBe(500);
     expect(niceMax([5001])).toBe(10000);
+    expect(niceMax([1])).toBe(1);
+    expect(niceMax([0.037])).toBeCloseTo(0.05);
   });
 });
 

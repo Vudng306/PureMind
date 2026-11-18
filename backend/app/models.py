@@ -1015,3 +1015,33 @@ class UserActivityDaily(Base):
 
     day: Mapped[date] = mapped_column(Date, primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+
+
+class AiUsageEvent(Base):
+    """One call to OpenAI: tokens and cost, never the text (services/ai_usage).
+
+    `user_id` has no foreign key: rows are written a little after the call, when the account may be gone. Deleting
+    an account clears it here, and the cost stays in the totals. `cost_usd` is empty for a model with no known price.
+    """
+
+    __tablename__ = "ai_usage_events"
+    __table_args__ = (
+        Index("ix_ai_usage_events_day", "day"),
+        Index("ix_ai_usage_events_request", "request_id"),
+        Index("ix_ai_usage_events_user", "user_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    day: Mapped[date] = mapped_column(Date, nullable=False)  # Vietnam time, like the traffic
+    request_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False)
+    model: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cached_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completion_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    web_searches: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cost_usd: Mapped[float | None] = mapped_column(Float)
+    ok: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

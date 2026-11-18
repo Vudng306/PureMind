@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import httpx
 
 from app.core.config import Settings
+from app.services import ai_usage
 
 log = logging.getLogger("app.ai")
 
@@ -64,6 +65,7 @@ async def chat(
     last: Exception | None = None
     for attempt in range(2):
         started = time.monotonic()
+        tokens = ai_usage.Tokens()
         try:
             async with httpx.AsyncClient(timeout=settings.openai_timeout_seconds) as client:
                 res = await client.post(
@@ -74,14 +76,15 @@ async def chat(
             if res.status_code != 200:
                 raise AIError(f"HTTP {res.status_code}", retryable=res.status_code in RETRY_STATUS)
             data = res.json()
+            tokens = ai_usage.read_tokens(data)  # first: an answer cut short is unusable but still billed
             choice = data["choices"][0]
             text = choice["message"].get("content") or ""
             if choice.get("finish_reason") not in (None, "stop") or not text.strip():
                 raise AIError(f"finish_reason={choice.get('finish_reason')}")
-            u = data.get("usage") or {}
-            usage = Usage(int(u.get("prompt_tokens") or 0), int(u.get("completion_tokens") or 0))
+            usage = Usage(tokens.prompt, tokens.completion)
         except (httpx.HTTPError, AIError, KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
             last = e
+            ai_usage.record(purpose, model, tokens, started, ok=False)
             log.warning(
                 "openai call failed purpose=%s model=%s attempt=%d duration_ms=%d error=%s",
                 purpose,
@@ -94,6 +97,7 @@ async def chat(
             if not (isinstance(e, httpx.HTTPError) or getattr(e, "retryable", False)):
                 break
             continue
+        ai_usage.record(purpose, model, tokens, started)
         log.info(
             "openai call ok purpose=%s model=%s prompt_tokens=%d completion_tokens=%d duration_ms=%d",
             purpose,
@@ -134,6 +138,7 @@ async def chat_stream(
         sent = False
         finish: str | None = None
         got = Usage()
+        tokens = ai_usage.Tokens()
         try:
             async with (
                 httpx.AsyncClient(timeout=settings.openai_timeout_seconds) as client,
@@ -153,8 +158,9 @@ async def chat_stream(
                     if data == "[DONE]":
                         break
                     chunk = json.loads(data)
-                    if u := chunk.get("usage"):
-                        got = Usage(int(u.get("prompt_tokens") or 0), int(u.get("completion_tokens") or 0))
+                    if chunk.get("usage"):
+                        tokens = ai_usage.read_tokens(chunk)
+                        got = Usage(tokens.prompt, tokens.completion)
                     for choice in chunk.get("choices") or []:
                         if text := (choice.get("delta") or {}).get("content"):
                             sent = True
@@ -164,6 +170,7 @@ async def chat_stream(
                 raise AIError(f"finish_reason={finish}")
         except (httpx.HTTPError, AIError, KeyError, TypeError, json.JSONDecodeError) as e:
             last = e
+            ai_usage.record(purpose, model, tokens, started, ok=False)
             log.warning(
                 "openai stream failed purpose=%s model=%s attempt=%d duration_ms=%d error=%s",
                 purpose,
@@ -176,6 +183,7 @@ async def chat_stream(
                 break
             continue
         usage.add(got)
+        ai_usage.record(purpose, model, tokens, started)
         log.info(
             "openai stream ok purpose=%s model=%s prompt_tokens=%d completion_tokens=%d duration_ms=%d",
             purpose,

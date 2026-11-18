@@ -15,7 +15,7 @@ import sys
 from app.core.config import get_settings
 from app.db.session import SessionLocal, engine
 from app.models import TOPICS
-from app.services import shorts
+from app.services import ai_usage, shorts
 from app.services.openai_client import AIError
 
 
@@ -52,6 +52,7 @@ async def main(argv: list[str]) -> None:
     try:
         await run(args.topics or list(TOPICS), args.per_topic)
     finally:
+        await ai_usage.flush()
         await engine.dispose()
 
 

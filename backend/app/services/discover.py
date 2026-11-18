@@ -22,7 +22,7 @@ from bs4 import BeautifulSoup
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import Settings
-from app.services import openai_client, web
+from app.services import ai_usage, openai_client, web
 from app.services.openai_client import RETRY_STATUS, AIError, Usage
 
 log = logging.getLogger("app.ai")
@@ -178,11 +178,20 @@ def tidy_title(title: str, url: str) -> str:
 # ---------------------------------------------------------------- the search
 
 
+def _web_searches(data: object) -> int:
+    """How many searches an answer ran: each is billed on top of the tokens."""
+    output = data.get("output") if isinstance(data, dict) else None
+    items = output if isinstance(output, list) else []
+    return sum(1 for item in items if isinstance(item, dict) and item.get("type") == "web_search_call")
+
+
 async def _responses(settings: Settings, body: dict, purpose: str, usage: Usage) -> dict:
     """One call of the Responses API, retried once on a timeout or a 429/5xx, logged like the chat calls."""
     last: Exception | None = None
     for attempt in range(2):
         started = time.monotonic()
+        tokens = ai_usage.Tokens()
+        searches = 0
         try:
             async with httpx.AsyncClient(timeout=settings.openai_timeout_seconds) as client:
                 res = await client.post(
@@ -193,12 +202,14 @@ async def _responses(settings: Settings, body: dict, purpose: str, usage: Usage)
             if res.status_code != 200:
                 raise AIError(f"HTTP {res.status_code}", retryable=res.status_code in RETRY_STATUS)
             data = res.json()
+            tokens = ai_usage.read_tokens(data)  # first: an unfinished answer is still billed
+            searches = _web_searches(data)
             if data.get("status") not in (None, "completed"):
                 raise AIError(f"status={data.get('status')}")
-            u = data.get("usage") or {}
-            got = Usage(int(u.get("input_tokens") or 0), int(u.get("output_tokens") or 0))
+            got = Usage(tokens.prompt, tokens.completion)
         except (httpx.HTTPError, AIError, AttributeError, TypeError, json.JSONDecodeError) as e:
             last = e
+            ai_usage.record(purpose, body["model"], tokens, started, ok=False, web_searches=searches)
             log.warning(
                 "openai call failed purpose=%s model=%s attempt=%d duration_ms=%d error=%s",
                 purpose,
@@ -211,6 +222,7 @@ async def _responses(settings: Settings, body: dict, purpose: str, usage: Usage)
                 break
             continue
         usage.add(got)
+        ai_usage.record(purpose, body["model"], tokens, started, web_searches=searches)
         log.info(
             "openai call ok purpose=%s model=%s prompt_tokens=%d completion_tokens=%d duration_ms=%d",
             purpose,

@@ -14,7 +14,7 @@ import sys
 
 from app.db.session import SessionLocal, engine
 from app.models import CrawlRun
-from app.services import crawler
+from app.services import ai_usage, crawler
 
 
 async def sync(names: list[str] | None) -> None:
@@ -46,6 +46,7 @@ async def main(argv: list[str]) -> None:
     try:
         await sync(args.sources or None)
     finally:
+        await ai_usage.flush()
         await engine.dispose()
 
 

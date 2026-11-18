@@ -16,7 +16,8 @@ import sys
 
 from app.api.routes.catalog import catalog
 from app.core.config import get_settings
-from app.services import quick_reads
+from app.db.session import engine
+from app.services import ai_usage, quick_reads
 from app.services.openai_client import AIError
 
 
@@ -45,6 +46,8 @@ async def run(wanted: list[str]) -> None:
         print(f"  {quick[article['id']]['title']}  ← {article['title']}")
     quick_reads.save(quick)
     print(f"{written} Quick Reads written")
+    await ai_usage.flush()
+    await engine.dispose()
 
 
 def main(argv: list[str]) -> None:

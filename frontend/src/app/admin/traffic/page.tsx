@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
+import { DayBars, StatCard as Stat } from "@/components/admin-parts";
 import { Alert, Spinner } from "@/components/ui";
-import { AREAS, niceMax, useTraffic, type TrafficDay, type TrafficRange } from "@/lib/admin-content";
+import { AREAS, useTraffic, type TrafficRange } from "@/lib/admin-content";
 import { CATALOG } from "@/lib/features";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import type { Lang } from "@/lib/types";
@@ -12,12 +13,6 @@ const RANGES: TrafficRange[] = [7, 30, 90];
 
 function number(n: number, lang: Lang) {
   return n.toLocaleString(lang === "en" ? "en-GB" : "vi-VN");
-}
-
-function shortDay(iso: string, lang: Lang) {
-  // The day is Vietnam's, sent as a bare date: read it as such, not as UTC midnight.
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(lang === "en" ? "en-GB" : "vi-VN", { day: "2-digit", month: "2-digit" });
 }
 
 /** How much PureMind is used: counts per day and part of the app, never who asked for what. */
@@ -34,6 +29,7 @@ export default function AdminTrafficPage() {
   const n = (v: number) => number(v, lang);
   const errorRate = totals.requests ? `${((totals.errors / totals.requests) * 100).toFixed(totals.errors ? 2 : 0)}%` : "0%";
   const areaTotal = data.areas.reduce((sum, a) => sum + a.requests, 0);
+  const dayList = data.days.map((d) => d.day);
 
   return (
     <section className={`flex flex-col gap-6 transition-opacity ${isFetching ? "opacity-70" : ""}`}>
@@ -71,10 +67,10 @@ export default function AdminTrafficPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <DayBars title={t("traffic.chartRequests")} days={data.days} field="requests" />
-        <DayBars title={t("traffic.chartActive")} days={data.days} field="active_users" />
-        <DayBars title={t("traffic.chartAi")} days={data.days} field="ai_calls" />
-        <DayBars title={t("traffic.chartSignups")} days={data.days} field="signups" />
+        <DayBars title={t("traffic.chartRequests")} days={dayList} values={data.days.map((d) => d.requests)} format={n} />
+        <DayBars title={t("traffic.chartActive")} days={dayList} values={data.days.map((d) => d.active_users)} format={n} />
+        <DayBars title={t("traffic.chartAi")} days={dayList} values={data.days.map((d) => d.ai_calls)} format={n} />
+        <DayBars title={t("traffic.chartSignups")} days={dayList} values={data.days.map((d) => d.signups)} format={n} />
       </div>
 
       <div className="card overflow-x-auto">
@@ -122,74 +118,3 @@ export default function AdminTrafficPage() {
   );
 }
 
-function Stat({ label, value, sub, alert = false }: { label: string; value: string; sub: string; alert?: boolean }) {
-  return (
-    <div className="card flex flex-col gap-1.5 p-5">
-      <span className="text-[13px] font-semibold text-muted">{label}</span>
-      <span className={`font-display text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums ${alert ? "text-danger" : "text-ink"}`}>
-        {value}
-      </span>
-      <span className="text-[13px] text-muted">{sub}</span>
-    </div>
-  );
-}
-
-type Field = "requests" | "active_users" | "ai_calls" | "signups";
-
-/** One measure per day as bars from a shared baseline; hovering a day reads its value in the header. */
-function DayBars({ title, days, field }: { title: string; days: TrafficDay[]; field: Field }) {
-  const lang = useLang();
-  const [hover, setHover] = useState<number | null>(null);
-  const values = days.map((d) => d[field]);
-  const max = niceMax(values);
-  const total = values.reduce((a, b) => a + b, 0);
-  const shown = hover === null ? null : days[hover];
-  const gap = days.length > 40 ? 1 : 2;
-
-  return (
-    <figure className="card flex flex-col gap-3 p-5">
-      <figcaption className="flex items-baseline justify-between gap-3">
-        <span className="text-[15px] font-semibold text-ink">{title}</span>
-        <span className="text-sm tabular-nums text-muted" aria-live="polite">
-          {shown ? (
-            <>
-              {shortDay(shown.day, lang)} · <b className="font-semibold text-ink">{number(shown[field], lang)}</b>
-            </>
-          ) : (
-            <>
-              Σ <b className="font-semibold text-ink">{number(total, lang)}</b>
-            </>
-          )}
-        </span>
-      </figcaption>
-      <div className="relative">
-        <span className="absolute -top-2 left-0 text-[11px] tabular-nums text-muted">{number(max, lang)}</span>
-        <div
-          role="img"
-          aria-label={`${title}: ${days.map((d) => `${shortDay(d.day, lang)} ${d[field]}`).join(", ")}`}
-          className="ml-9 flex h-[150px] items-end border-b border-line"
-          style={{ gap }}
-          onMouseLeave={() => setHover(null)}
-        >
-          <span aria-hidden className="pointer-events-none absolute left-9 right-0 top-0 border-t border-dashed border-line" />
-          {days.map((d, i) => (
-            <span
-              key={d.day}
-              className="flex h-full flex-1 cursor-default items-end"
-              onMouseEnter={() => setHover(i)}
-            >
-              <span
-                className={`block w-full rounded-t-[4px] transition-colors ${hover === i ? "bg-ink" : "bg-accent"}`}
-                style={{ height: d[field] ? `${Math.max((d[field] / max) * 100, 2)}%` : 0 }}
-              />
-            </span>
-          ))}
-        </div>
-        <div className="ml-9 mt-1.5 flex justify-between text-[11px] tabular-nums text-muted">
-          <span>{shortDay(days[0].day, lang)}</span>
-          <span>{shortDay(days[days.length - 1].day, lang)}</span>
-        </div>
-      </div>
-    </figure>
-  );
-}

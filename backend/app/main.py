@@ -13,6 +13,7 @@ from app.api.routes import (
     account,
     admin,
     admin_content,
+    admin_costs,
     admin_posts,
     catalog,
     chat,
@@ -35,7 +36,7 @@ from app.core import logging as applog
 from app.core import messages
 from app.core.config import get_settings
 from app.core.messages import MSG
-from app.services import crawler, traffic
+from app.services import ai_usage, crawler, traffic
 
 settings = get_settings()
 applog.configure(settings.log_level)
@@ -57,6 +58,7 @@ async def lifespan(_: FastAPI):
         with contextlib.suppress(asyncio.CancelledError):
             await task
         await traffic.flush()
+        await ai_usage.flush()
 
 
 app = FastAPI(
@@ -189,6 +191,7 @@ app.include_router(chat.router, prefix="/api")
 app.include_router(translate.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(admin_content.router, prefix="/api")
+app.include_router(admin_costs.router, prefix="/api")
 app.include_router(admin_posts.router, prefix="/api")
 app.include_router(catalog.router, prefix="/api")
 app.include_router(papers.router, prefix="/api")

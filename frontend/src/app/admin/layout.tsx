@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase";
 
 const ALL_TABS = [
   { href: "/admin/traffic", label: "admin.tabTraffic", icon: "chart" },
+  { href: "/admin/costs", label: "admin.tabCosts", icon: "coin" },
   { href: "/admin/users", label: "admin.tabUsers", icon: "user" },
   { href: "/admin/articles", label: "admin.tabArticles", icon: "file" },
   { href: "/admin/posts", label: "admin.tabPosts", icon: "note" },

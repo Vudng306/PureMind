@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models import TOPICS, AppSetting, Article, BlockedArticle, CrawlChannel, CrawlRun, utcnow
-from app.services import articles, explore_chat, traffic
+from app.services import ai_usage, articles, explore_chat, traffic
 from app.services.ai_quota import VN
 from app.services.openai_client import AIError, Usage
 from app.services.sources import (
@@ -457,8 +457,9 @@ async def due(session: AsyncSession, now: datetime | None = None) -> bool:
 
 
 async def tick() -> None:
-    """One beat of the background loop: write the traffic counts, and start the daily crawl when it is due."""
+    """One beat of the background loop: write the traffic and AI usage, and start the daily crawl when due."""
     await traffic.flush()
+    await ai_usage.flush()
     async with SessionLocal() as session:
         if not await due(session):
             return

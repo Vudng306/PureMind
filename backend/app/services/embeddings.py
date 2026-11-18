@@ -13,6 +13,7 @@ import time
 import httpx
 
 from app.core.config import Settings
+from app.services import ai_usage
 from app.services.openai_client import RETRY_STATUS, AIError, Usage
 
 log = logging.getLogger("app.ai")
@@ -52,6 +53,7 @@ async def _request(settings: Settings, inputs: list[str], purpose: str, usage: U
     last: Exception | None = None
     for attempt in range(2):
         started = time.monotonic()
+        got = ai_usage.Tokens()
         try:
             async with httpx.AsyncClient(timeout=settings.openai_timeout_seconds) as client:
                 res = await client.post(
@@ -62,13 +64,15 @@ async def _request(settings: Settings, inputs: list[str], purpose: str, usage: U
             if res.status_code != 200:
                 raise AIError(f"HTTP {res.status_code}", retryable=res.status_code in RETRY_STATUS)
             data = res.json()
+            got = ai_usage.read_tokens(data)
             items = sorted(data["data"], key=lambda d: d["index"])
             vectors = [[float(v) for v in item["embedding"]] for item in items]
             if len(vectors) != len(inputs) or any(len(v) != settings.embedding_dimensions for v in vectors):
                 raise AIError("unexpected embedding shape")
-            tokens = int((data.get("usage") or {}).get("prompt_tokens") or 0)
+            tokens = got.prompt
         except (httpx.HTTPError, AIError, KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
             last = e
+            ai_usage.record(purpose, settings.openai_embedding_model, got, started, ok=False)
             log.warning(
                 "openai embeddings failed purpose=%s model=%s attempt=%d duration_ms=%d error=%s",
                 purpose,
@@ -81,6 +85,7 @@ async def _request(settings: Settings, inputs: list[str], purpose: str, usage: U
                 break
             continue
         usage.add(Usage(tokens, 0))
+        ai_usage.record(purpose, settings.openai_embedding_model, got, started)
         log.info(
             "openai embeddings ok purpose=%s model=%s inputs=%d prompt_tokens=%d duration_ms=%d",
             purpose,

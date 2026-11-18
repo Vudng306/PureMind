@@ -19,8 +19,8 @@ from app.api.routes.catalog import VI, catalog
 from app.core.config import get_settings
 from app.db.session import SessionLocal, engine
 from app.models import ContentTranslation
+from app.services import ai_usage, quick_reads
 from app.services import article_translation as translation
-from app.services import quick_reads
 from app.services.openai_client import AIError
 
 PARALLEL = 5
@@ -81,6 +81,7 @@ async def run(texts: bool) -> None:
     await write_cards(settings)
     if texts:
         await write_texts(settings)
+    await ai_usage.flush()
     await engine.dispose()
 
 

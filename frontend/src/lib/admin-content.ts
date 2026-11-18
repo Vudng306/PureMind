@@ -301,7 +301,7 @@ export function runTotals(run: CrawlRun): Omit<SourceStats, "error_messages"> {
 /** The tallest bar's value, rounded up to a figure an axis can show (1, 2, 5 × 10ⁿ). */
 export function niceMax(values: number[]): number {
   const max = Math.max(0, ...values);
-  if (max <= 1) return 1;
+  if (max <= 0) return 1;
   const step = 10 ** Math.floor(Math.log10(max));
   return ([1, 2, 5, 10].map((m) => m * step).find((n) => n >= max) ?? max) as number;
 }

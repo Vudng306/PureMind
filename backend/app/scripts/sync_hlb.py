@@ -20,7 +20,7 @@ from sqlalchemy.orm import undefer
 from app.core.config import get_settings
 from app.db.session import SessionLocal, engine
 from app.models import Article, Short
-from app.services import articles, crawler, shorts
+from app.services import ai_usage, articles, crawler, shorts
 from app.services.openai_client import AIError
 from app.services.sources import hlb
 
@@ -81,6 +81,7 @@ async def main(argv: list[str]) -> None:
         if args.shorts:
             await write_shorts()
     finally:
+        await ai_usage.flush()
         await engine.dispose()
 
 

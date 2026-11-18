@@ -1,9 +1,13 @@
 "use client";
 
+import { useState } from "react";
+
 import type { AdminAuditEntry, AdminUserItem, Page } from "@/lib/admin";
 import { pageCount } from "@/lib/admin";
+import { niceMax } from "@/lib/admin-content";
 import { TOPICS, type Topic } from "@/lib/feed";
-import { useT, type Key, type T } from "@/lib/i18n";
+import { useLang, useT, type Key, type T } from "@/lib/i18n";
+import type { Lang } from "@/lib/types";
 
 import { Icon } from "./icons";
 
@@ -45,6 +49,86 @@ export function Pager({ data, onPage }: { data?: Page<unknown>; onPage: (page: n
         </button>
       </div>
     </div>
+  );
+}
+
+export function StatCard({ label, value, sub, alert = false }: { label: string; value: string; sub: string; alert?: boolean }) {
+  return (
+    <div className="card flex min-w-0 flex-col gap-1.5 p-5">
+      <span className="text-[13px] font-semibold text-muted">{label}</span>
+      <span className={`font-display text-[34px] font-semibold leading-none tracking-[-0.02em] tabular-nums ${alert ? "text-danger" : "text-ink"}`}>
+        {value}
+      </span>
+      <span className="text-[13px] text-muted">{sub}</span>
+    </div>
+  );
+}
+
+function shortDay(iso: string, lang: Lang) {
+  // The day is Vietnam's, sent as a bare date: read it as such, not as UTC midnight.
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(lang === "en" ? "en-GB" : "vi-VN", { day: "2-digit", month: "2-digit" });
+}
+
+/** One measure per day as bars from a shared baseline; hovering a day reads its value in the header. */
+export function DayBars({
+  title,
+  days,
+  values,
+  format,
+}: {
+  title: string;
+  days: string[];
+  values: number[];
+  format: (value: number) => string;
+}) {
+  const lang = useLang();
+  const [hover, setHover] = useState<number | null>(null);
+  const max = niceMax(values);
+  const total = values.reduce((a, b) => a + b, 0);
+  const gap = days.length > 40 ? 1 : 2;
+
+  return (
+    <figure className="card flex flex-col gap-3 p-5">
+      <figcaption className="flex items-baseline justify-between gap-3">
+        <span className="text-[15px] font-semibold text-ink">{title}</span>
+        <span className="text-sm tabular-nums text-muted" aria-live="polite">
+          {hover !== null ? (
+            <>
+              {shortDay(days[hover], lang)} · <b className="font-semibold text-ink">{format(values[hover])}</b>
+            </>
+          ) : (
+            <>
+              Σ <b className="font-semibold text-ink">{format(total)}</b>
+            </>
+          )}
+        </span>
+      </figcaption>
+      <div className="relative">
+        <span className="absolute -top-2 left-0 max-w-[68px] truncate text-[11px] tabular-nums text-muted">{format(max)}</span>
+        <div
+          role="img"
+          aria-label={`${title}: ${days.map((d, i) => `${shortDay(d, lang)} ${format(values[i])}`).join(", ")}`}
+          className="ml-[72px] flex h-[150px] items-end border-b border-line"
+          style={{ gap }}
+          onMouseLeave={() => setHover(null)}
+        >
+          <span aria-hidden className="pointer-events-none absolute left-[72px] right-0 top-0 border-t border-dashed border-line" />
+          {days.map((d, i) => (
+            <span key={d} className="flex h-full flex-1 cursor-default items-end" onMouseEnter={() => setHover(i)}>
+              <span
+                className={`block w-full rounded-t-[4px] transition-colors ${hover === i ? "bg-ink" : "bg-accent"}`}
+                style={{ height: values[i] ? `${Math.max((values[i] / max) * 100, 2)}%` : 0 }}
+              />
+            </span>
+          ))}
+        </div>
+        <div className="ml-[72px] mt-1.5 flex justify-between text-[11px] tabular-nums text-muted">
+          <span>{shortDay(days[0], lang)}</span>
+          <span>{shortDay(days[days.length - 1], lang)}</span>
+        </div>
+      </div>
+    </figure>
   );
 }
 
