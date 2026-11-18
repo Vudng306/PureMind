@@ -117,7 +117,7 @@ function CardMenu({ doc, actions, row = false }: { doc: DocumentListItem; action
         <div
           role="menu"
           aria-label={doc.title}
-          className={`absolute right-0 z-20 flex w-60 flex-col gap-0.5 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-float ${
+          className={`mobile-action-menu absolute right-0 z-20 flex w-60 flex-col gap-0.5 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-float ${
             row ? "top-10" : "top-12"
           }`}
         >
@@ -552,8 +552,10 @@ function Sidebar({
       active ? "bg-soft font-semibold text-ink" : "text-body hover:bg-soft/70"
     }`;
   const count = "text-xs text-muted";
+  const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const collectionDialog = useModal(collectionsOpen);
   return (
-    <nav aria-label={t("library.sections")} className="flex flex-col gap-1 lg:sticky lg:top-[96px] lg:self-start">
+    <nav aria-label={t("library.sections")} className="library-categories flex flex-col gap-1 lg:sticky lg:top-[96px] lg:self-start">
       <button
         type="button"
         className={row(place.kind === "all" && fileType === "all")}
@@ -587,6 +589,19 @@ function Sidebar({
           <span className={count}>{shared}</span>
         </button>
       )}
+      <button type="button" className="chip shrink-0 lg:hidden" onClick={() => setCollectionsOpen(true)}>{t("library.collections")}</button>
+      <dialog ref={collectionDialog} aria-label={t("library.collections")} onCancel={() => setCollectionsOpen(false)} onClick={(e) => { if(e.target === e.currentTarget) setCollectionsOpen(false); }} className="dialog mobile-collections lg:hidden">
+        <div className="flex flex-col gap-2 p-4">
+          <button type="button" className="btn-outline" onClick={() => setCollectionsOpen(false)}>{t("common.close")}</button>
+          {collections.map((c) => <div key={c.id} className="flex items-center gap-1">
+            <button className="btn-ghost min-w-0 flex-1 justify-start truncate" onClick={() => { onPlace({ kind: "collection", id: c.id }); setCollectionsOpen(false); }}>{c.name} · {c.document_count}</button>
+            <button className="icon-btn" aria-label={t("library.renameCollection", { name: c.name })} onClick={() => { setCollectionsOpen(false); onRename(c); }}><Icon name="pencil" size={16} /></button>
+            <button className="icon-btn" aria-label={t("library.deleteCollection", { name: c.name })} onClick={() => { setCollectionsOpen(false); onDelete(c); }}><Icon name="x" size={16} /></button>
+          </div>)}
+          <button className="btn-outline" onClick={() => { setCollectionsOpen(false); onNew(); }}>{t("library.newCollection")}</button>
+        </div>
+      </dialog>
+      <div className="hidden lg:contents">
       <div className="mt-3 flex items-center gap-1 px-2.5">
         <span className="eyebrow flex-1">{t("library.collections")}</span>
         <button type="button" className="icon-btn h-8 w-8" aria-label={t("library.newCollection")} title={t("library.newCollection")} onClick={onNew}>
@@ -613,6 +628,7 @@ function Sidebar({
           );
         })}
       </ul>
+      </div>
     </nav>
   );
 }
@@ -873,6 +889,7 @@ export default function LibraryPage() {
 
       {actionError && <Alert>{actionError}</Alert>}
 
+      {continuing.length > 0 && <div className="lg:hidden"><ContinueStrip doc={continuing[0]} /></div>}
       <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-7 min-[1400px]:grid-cols-[200px_minmax(0,1fr)_300px]">
         <Sidebar
           place={place}
@@ -901,9 +918,9 @@ export default function LibraryPage() {
           ) : (
             <>
               {shelf && <h2 className="font-display text-2xl font-semibold">{shelf.name}</h2>}
-              {continuing.length > 0 && <ContinueStrip doc={continuing[0]} />}
+              {continuing.length > 0 && <div className="hidden lg:block"><ContinueStrip doc={continuing[0]} /></div>}
 
-              <div className="flex items-end gap-x-4 border-b border-line">
+              <div className="flex flex-wrap items-end gap-x-4 border-b border-line">
                 <ReadTabs value={filters.readState} counts={tabCounts} onChange={(readState) => patchFilters({ readState })} />
                 <span className="flex-1" />
                 <div className="flex shrink-0 items-center gap-2 py-1.5">

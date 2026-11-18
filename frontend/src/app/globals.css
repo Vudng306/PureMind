@@ -543,3 +543,58 @@ mark.pm-mark {
     background-color: #e3d8f5;
   }
 }
+
+/* Phone surfaces share safe areas and the visual viewport (including the iOS keyboard). */
+@media (max-width: 639px) {
+  body { min-height: 100dvh; }
+  input:not([type=checkbox]):not([type=radio]), textarea, select { font-size: 16px !important; }
+  .icon-btn { min-width: 44px; min-height: 44px; }
+  .reader-root { height: var(--visible-height, 100dvh); padding-top: env(safe-area-inset-top); position: relative; }
+  .reader-toolbar { height: 56px; flex-wrap: nowrap; }
+  .reader-toolbar > [aria-hidden] { display: none; }
+  .reader-toolbar:has(.reader-pager) { margin-bottom: 100px; }
+  .reader-pager, .reader-zoom { position: absolute; left: 0; right: 0; margin: 0; display: flex; justify-content: center; background: rgb(var(--surface)); border-bottom: 1px solid rgb(var(--line)); z-index: 10; }
+  .reader-pager { top: 59px; height: 50px; }
+  .reader-zoom { top: 109px; height: 50px; }
+  .reader-bottom { order: 10; padding-bottom: env(safe-area-inset-bottom); }
+  .reader-bottom button { display: flex; align-items: center; gap: 6px; padding-inline: 10px; font-size: 13px; }
+  .reader-sheet { top: auto; bottom: var(--keyboard-inset, 0px); height: min(54dvh, var(--visible-height, 54dvh)); width: 100%; border-radius: 22px 22px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  .reader-sheet[data-expanded=true], .reader-sheet:focus-within:has(textarea:focus) { height: var(--visible-height, 100dvh); border-radius: 0; }
+  .reader-sheet [role=tablist] { gap: 16px; min-width: 0; }
+  .reader-sheet [role=tab] { font-size: 14px; }
+  .mobile-selection { left: 8px !important; right: 8px; top: auto !important; bottom: calc(var(--keyboard-inset, 0px) + env(safe-area-inset-bottom) + 8px); width: auto !important; max-width: calc(100vw - 16px); z-index: 40; padding-bottom: 6px; }
+  .mobile-selection button { min-height: 44px; }
+  .mobile-note, .mobile-translation { left: 0 !important; top: auto !important; bottom: var(--keyboard-inset, 0px) !important; width: 100% !important; max-height: var(--visible-height, 100dvh) !important; padding-bottom: max(14px, env(safe-area-inset-bottom)); z-index: 45; }
+  .mobile-add, .mobile-collections { margin: auto 0 0; width: 100%; max-width: 100%; max-height: var(--visible-height, 92dvh); border-radius: 22px 22px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  .mobile-action-menu { position: fixed; top: auto !important; bottom: env(safe-area-inset-bottom); left: 8px; right: 8px; width: auto; max-height: 85dvh; overflow-y: auto; z-index: 40; }
+  .mobile-action-menu [role=menuitem] { min-height: 44px; }
+}
+@media (max-width: 1023px) {
+  .library-categories { flex-direction: row; overflow-x: auto; align-items: center; }
+  .library-categories > button, .library-categories > a { flex: 0 0 auto; white-space: nowrap; min-height: 44px; }
+  .library-categories > button span, .library-categories > a span { flex: none; }
+}
+
+@media (max-width: 639px) {
+  .reader-toolbar, .reader-bottom { transition: opacity 160ms ease; }
+  .reader-root[data-chrome-hidden=true] .reader-toolbar,
+  .reader-root[data-chrome-hidden=true] .reader-bottom { opacity: 0; pointer-events: none; }
+  .reader-root:has(:focus-visible) .reader-toolbar,
+  .reader-root:has(:focus-visible) .reader-bottom { opacity: 1; pointer-events: auto; }
+  .reader-more { padding-top: max(8px, env(safe-area-inset-top)); }
+  .reader-more button { padding-inline: 14px; }
+  .mobile-map { width: 100vw; max-width: 100vw; height: var(--visible-height, 100dvh); max-height: 100dvh; margin: 0; border-radius: 0; }
+  .mobile-map > div { height: 100%; max-height: 100% !important; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
+  .mobile-note-editor { position: fixed; inset-inline: 0; top: var(--visible-top, 0px); height: var(--visible-height, 100dvh); padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); background: rgb(var(--surface)); z-index: 50; overflow-y: auto; }
+  .mobile-note-editor > textarea { flex: 1; min-height: 120px; resize: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reader-toolbar, .reader-bottom { transition: none; }
+}
+
+@media (max-width: 639px) {
+  .chip, .btn-outline, .btn-primary, .btn-ghost { min-height: 44px; }
+  .highlight-colors > button { flex-shrink: 0; min-width: 44px; min-height: 44px; }
+  .reader-root [role=region], .mobile-map [class*=overflow-auto] { touch-action: pan-x pan-y; }
+  .reader-toolbar button, .reader-toolbar input, .reader-toolbar select { min-height: 44px; }
+}

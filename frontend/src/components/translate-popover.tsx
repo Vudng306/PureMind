@@ -150,7 +150,7 @@ export function TranslatePopover({
           ref={ref}
           role="dialog"
           aria-label={t("translate.title")}
-          className="fixed z-30 flex flex-col gap-2.5 rounded-[14px] border border-line bg-surface p-3.5 font-sans shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
+          className="mobile-translation fixed z-30 flex flex-col gap-2.5 rounded-[14px] border border-line bg-surface p-3.5 font-sans shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
           style={{ left, width, maxHeight: CARD_MAX_H, ...place }}
         >
           <div className="flex items-center gap-2">

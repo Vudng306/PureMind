@@ -360,13 +360,13 @@ export function ChatPanel({
             placeholder={t("chat.questionPlaceholder")}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia("(min-width: 640px) and (hover: hover) and (pointer: fine)").matches) {
                 e.preventDefault();
                 void send();
               }
             }}
             disabled={busy || quota === 0}
-            className="max-h-40 min-h-[44px] flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-normal text-ink outline-none placeholder:text-muted"
+            className="max-h-40 min-h-[44px] flex-1 resize-none bg-transparent py-1.5 text-base leading-normal text-ink outline-none placeholder:text-muted"
           />
           <button
             type="button"
@@ -379,11 +379,8 @@ export function ChatPanel({
           </button>
         </div>
         <span className={`text-xs ${quota === 0 ? "text-danger" : "text-muted"}`}>
-          {quota === 0
-            ? MSG["MSG-CHAT-QUOTA"]
-            : quota === undefined
-              ? t("chat.enterHint")
-              : t("chat.quotaHint", { n: quota })}
+          <span className="hidden sm:inline">{quota === 0 ? MSG["MSG-CHAT-QUOTA"] : quota === undefined ? t("chat.enterHint") : t("chat.quotaHint", { n: quota })}</span>
+          <span className="sm:hidden">{quota === 0 ? MSG["MSG-CHAT-QUOTA"] : quota === undefined ? t("chat.mobileEnterHint") : t("chat.mobileQuotaHint", { n: quota })}</span>
         </span>
       </div>
 

@@ -58,11 +58,11 @@ export function SelectionMenu({
       if (e.key === "Escape") onDismiss();
     }
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("touchstart", onDown);
+    // selectionchange handles touch selection, including native handles.
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("touchstart", onDown);
+
       document.removeEventListener("keydown", onKey);
     };
   }, [onDismiss]);
@@ -73,7 +73,7 @@ export function SelectionMenu({
   const left = Math.min(Math.max(12, rect.left + rect.width / 2 - width / 2), vw - width - 12);
   const { top } = selectionMenuBounds(rect);
 
-  const item = "flex h-11 items-center gap-1.5 rounded-lg px-2 text-sm hover:bg-menu-fg/10";
+  const item = "flex shrink-0 whitespace-nowrap h-11 items-center gap-1.5 rounded-lg px-2 text-sm hover:bg-menu-fg/10";
 
   return (
     <div
@@ -83,7 +83,7 @@ export function SelectionMenu({
       aria-label={t("selection.aria")}
       // Keep the text selection alive while clicking buttons.
       onMouseDown={(e) => e.preventDefault()}
-      className="fixed z-30 flex flex-col gap-0.5 rounded-[14px] bg-menu p-1.5 font-sans text-menu-fg shadow-[0_12px_30px_rgba(0,0,0,0.28)]"
+      className="mobile-selection fixed z-30 flex flex-col gap-0.5 rounded-[14px] bg-menu p-1.5 font-sans text-menu-fg shadow-[0_12px_30px_rgba(0,0,0,0.28)]"
       style={{ left, top, width }}
     >
       <div className="flex items-center gap-0.5 overflow-x-auto [scrollbar-width:none]">
@@ -101,7 +101,7 @@ export function SelectionMenu({
         ))}
       </div>
       <span className="mx-2 my-0.5 h-px bg-menu-fg/20" />
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-0.5 overflow-x-auto">
         <button type="button" onClick={onNote} className={item}>
           <Icon name="note" size={16} />
           {t("selection.note")}

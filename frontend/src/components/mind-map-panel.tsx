@@ -10,6 +10,7 @@ import { findSnippet, type Artifact, type MapNode } from "@/lib/reader-ai";
 import { ArtifactFrame } from "./ai-summary-panel";
 import { AiBadge, Cites, SaveToNotes } from "./cite";
 import { Icon } from "./icons";
+import { useTouchZoom } from "./mobile-surfaces";
 import { useModal } from "./ui";
 
 const MARGIN = 12;
@@ -134,6 +135,25 @@ function MapCanvas({
   );
 }
 
+function ZoomCanvas({ boxRef, scale, onScale, children }: { boxRef: React.RefObject<HTMLDivElement | null>; scale: number; onScale: (value: number) => void; children: React.ReactNode }) {
+  useTouchZoom(boxRef, scale, onScale, MIN_SCALE, MAX_SCALE);
+  const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  return <div ref={boxRef} className="min-h-[240px] flex-1 overflow-auto rounded-xl border border-line bg-bg"
+    onPointerDown={(event) => {
+      if (event.pointerType !== "mouse" || (event.target as Element).closest("[role=button]")) return;
+      const box = event.currentTarget;
+      drag.current = { x: event.clientX, y: event.clientY, left: box.scrollLeft, top: box.scrollTop };
+      box.setPointerCapture(event.pointerId);
+    }}
+    onPointerMove={(event) => {
+      if (!drag.current) return;
+      event.currentTarget.scrollLeft = drag.current.left + drag.current.x - event.clientX;
+      event.currentTarget.scrollTop = drag.current.top + drag.current.y - event.clientY;
+    }}
+    onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }}
+  >{children}</div>;
+}
+
 function Zoom({ scale, onScale, onFit }: { scale: number; onScale: (s: number) => void; onFit: () => void }) {
   const t = useT();
   const step = (d: number) => onScale(Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.round((scale + d) * 10) / 10)));
@@ -212,6 +232,9 @@ function MindMapView({
   const small = useRef<HTMLDivElement>(null);
   const big = useRef<HTMLDivElement>(null);
   const dialog = useModal(large);
+  useTouchZoom(small, scale, setScale, MIN_SCALE, MAX_SCALE);
+  // The dialog canvas mounts when opened; bind its gesture through a mounted child below.
+
 
   const layout = useMemo(() => layoutMindMap(nodes, collapsed), [nodes, collapsed]);
   const sources = useMemo(() => new Map(citations.map((c) => [c.position, c])), [citations]);
@@ -274,7 +297,7 @@ function MindMapView({
         onClick={(e) => {
           if (e.target === e.currentTarget) setLarge(false);
         }}
-        className="dialog w-[min(calc(100vw-32px),1180px)]"
+        className="dialog mobile-map w-[min(calc(100vw-32px),1180px)]"
       >
         {large && (
           <div className="flex max-h-[calc(100vh-34px)] flex-col gap-3 p-5">
@@ -287,9 +310,9 @@ function MindMapView({
                 <Icon name="x" size={18} />
               </button>
             </div>
-            <div ref={big} className="min-h-[240px] flex-1 overflow-auto rounded-xl border border-line bg-bg">
+            <ZoomCanvas boxRef={big} scale={largeScale} onScale={setLargeScale}>
               <MapCanvas layout={layout} scale={largeScale} selected={selected} onSelect={setSelected} onToggle={toggle} />
-            </div>
+            </ZoomCanvas>
             <NodeCard
               docId={docId}
               artifactId={artifact.id}

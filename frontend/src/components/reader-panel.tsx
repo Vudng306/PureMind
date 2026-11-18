@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSheet } from "./mobile-surfaces";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -134,13 +135,14 @@ export function HighlightCard({
       ref={ref}
       className={`flex flex-col gap-2.5 rounded-xl border p-3.5 transition-colors ${active ? "border-accent" : "border-line"}`}
     >
-      <div className="flex items-center gap-2 text-xs text-muted">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
         <span className="flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-soft pl-1.5 pr-2 text-xs font-semibold text-ink">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_DOT[h.color] }} />
           {colorLabel(labels, h.color, lang)}
         </span>
         {h.page ? <span className="whitespace-nowrap">{t("panel.pageN", { page: h.page })}</span> : null}
         <span className="flex-1" />
+        <div className="highlight-colors flex items-center max-sm:basis-full max-sm:overflow-x-auto">
         {HIGHLIGHT_COLORS.map((c) => (
           <button
             key={c}
@@ -169,6 +171,7 @@ export function HighlightCard({
         >
           <Icon name="trash" size={16} />
         </button>
+        </div>
       </div>
       <button type="button" onClick={onJump} className="text-left font-serif text-base leading-normal text-ink hover:underline">
         “{h.text}”
@@ -206,7 +209,7 @@ export function HighlightCard({
         </div>
       )}
       {editing ? (
-        <div className="flex flex-col gap-2">
+        <div className="mobile-note-editor flex flex-col gap-2">
           <textarea
             aria-label={t("panel.noteAria")}
             autoFocus
@@ -333,6 +336,7 @@ export function ReaderPanel({
   const { data: doc } = useDocument(docId);
   const { data: notes } = useNotes(docId);
   const [filter, setFilter] = useState<HighlightColor | "all">("all");
+  const sheet = useSheet(onClose);
 
   const sorted = [...highlights].sort((a, b) => (a.page ?? 0) - (b.page ?? 0) || a.createdAt.localeCompare(b.createdAt));
   // Filtering by color is filtering by category: the two are the same choice (CATEGORY_FOR_COLOR).
@@ -360,8 +364,12 @@ export function ReaderPanel({
   return (
     <aside
       aria-label={t("panel.aria")}
-      className="fixed inset-y-0 right-0 z-20 flex w-full min-h-0 flex-col border-l border-line bg-surface shadow-pop sm:w-[380px] lg:static lg:z-auto lg:shadow-none"
+      data-expanded={sheet.expanded}
+      className="reader-sheet fixed inset-y-0 right-0 z-20 flex w-full min-h-0 flex-col border-l border-line bg-surface shadow-pop sm:w-[380px] lg:static lg:z-auto lg:shadow-none"
     >
+      <button type="button" {...sheet.handle} aria-label={t("panel.aria")} aria-expanded={sheet.expanded} className="sheet-handle grid h-11 shrink-0 touch-none place-items-center sm:hidden">
+        <span className="h-1 w-12 rounded-full bg-muted/40" />
+      </button>
       <div className="flex h-14 shrink-0 items-center border-b border-line pl-4 pr-2">
         {/* Only the tabs are in the tab list; the close button beside them is not a tab (WCAG 4.1.2). */}
         <div className="flex h-14 items-center gap-5" role="tablist">

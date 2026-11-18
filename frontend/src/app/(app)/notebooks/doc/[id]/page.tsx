@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { NoteCard, NoteComposer } from "@/components/doc-notes";
 import { Icon } from "@/components/icons";
 import { HighlightCard } from "@/components/reader-panel";
-import { Alert, Spinner } from "@/components/ui";
+import { Alert, Spinner, useModal } from "@/components/ui";
 import { useHighlights } from "@/lib/annotations";
 import { ApiError } from "@/lib/api";
 import type { ChatCitation } from "@/lib/chat";
@@ -65,6 +65,8 @@ export default function NotebookDocumentPage() {
   const labels = usePreferences((s) => s.colorLabels);
   const showToast = useUi((s) => s.showToast);
   const [sort, setSort] = useState<NotebookSort>("document");
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortDialog = useModal(sortOpen);
   const [filter, setFilter] = useState<Filter>("all");
   const [text, setText] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -206,9 +208,9 @@ export default function NotebookDocumentPage() {
       </header>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 border-y border-line py-3">
-        <div role="group" aria-label={t("notebook.filterAria")} className="flex flex-wrap gap-1.5">
+        <div role="group" aria-label={t("notebook.filterAria")} className="flex max-w-full gap-1.5 overflow-x-auto sm:flex-wrap">
           {FILTERS.map(([value, label]) => (
-            <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} className="chip h-9 px-3 text-[13px]">
+            <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} className="chip h-11 shrink-0 px-3 text-[13px]">
               {t(label)}
             </button>
           ))}
@@ -226,7 +228,14 @@ export default function NotebookDocumentPage() {
             className="input h-9 pl-9 text-sm"
           />
         </label>
-        <label className="flex items-center gap-2 text-[13px] text-muted">
+        <button type="button" className="chip sm:hidden" onClick={() => setSortOpen(true)}><Icon name="sort" size={16} />{t("notebook.sortLabel")}</button>
+        <dialog ref={sortDialog} aria-label={t("notebook.sortLabel")} onCancel={() => setSortOpen(false)} className="dialog mobile-collections">
+          <div className="flex flex-col gap-2 p-4">
+            {SORTS.map(([value, label]) => <button type="button" className="chip h-11" aria-pressed={sort === value} key={value} onClick={() => { setSort(value); setSortOpen(false); }}>{t(label)}</button>)}
+            <button type="button" className="btn-outline" onClick={() => setSortOpen(false)}>{t("common.close")}</button>
+          </div>
+        </dialog>
+        <label className="hidden items-center gap-2 text-[13px] text-muted sm:flex">
           {t("notebook.sortLabel")}
           <select
             value={sort}

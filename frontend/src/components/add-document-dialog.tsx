@@ -118,7 +118,7 @@ export function AddDocumentDialog() {
       onClick={(e) => {
         if (e.target === e.currentTarget && !busy) onClose();
       }}
-      className="dialog"
+      className="dialog mobile-add"
       aria-labelledby="add-doc-title"
     >
       <div className="flex flex-col gap-5 p-5 sm:p-7">

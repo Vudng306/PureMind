@@ -7,6 +7,7 @@ import { usePreferences } from "@/lib/preferences";
 import { useUi } from "@/lib/ui-store";
 
 import { AuthProvider } from "./auth-provider";
+import { useVisualViewport } from "./mobile-surfaces";
 import { Toast } from "./ui";
 
 function ThemeApplier() {
@@ -29,6 +30,7 @@ function LangApplier() {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  useVisualViewport();
   const [queryClient] = useState(
     () =>
       new QueryClient({

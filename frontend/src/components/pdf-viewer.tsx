@@ -16,6 +16,7 @@ import type { HighlightColor } from "@/lib/preferences";
 
 import type { SearchState } from "./clean-reader";
 import { Icon } from "./icons";
+import { useTouchZoom } from "./mobile-surfaces";
 
 export type ZoomMode = "fit-width" | "fit-page" | number;
 
@@ -479,6 +480,8 @@ export function PdfViewer({
     [tops, total],
   );
 
+  useTouchZoom(scrollerRef, scale, (value) => setZoom(clampZoom(value)), MIN_ZOOM, MAX_ZOOM);
+
   const zoomBy = useCallback((delta: number) => setZoom(clampZoom(scale + delta)), [scale]);
 
   const onSize = useCallback((page: number, size: Size) => {
@@ -739,6 +742,23 @@ export function PdfViewer({
     return { page, rects, text, rect: range.getBoundingClientRect() };
   }, []);
 
+  useEffect(() => {
+    let frame = 0;
+    const changed = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        // Toolbar presses must retain the captured range until its action completes.
+        if (document.activeElement?.closest("[data-selection-menu]")) return;
+        onSelect(readSelection());
+      });
+    };
+    document.addEventListener("selectionchange", changed);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("selectionchange", changed);
+    };
+  }, [readSelection, onSelect]);
+
   const onPointerUp = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
       const target = e.target as Element;
@@ -772,7 +792,7 @@ export function PdfViewer({
   const zoomValue = typeof zoom === "number" ? String(zoom) : zoom;
 
   const inSlots = pagerSlot !== undefined || zoomSlot !== undefined;
-  const step = inSlots ? "icon-btn hidden h-9 w-9 sm:inline-flex" : "icon-btn h-10 w-10";
+  const step = inSlots ? "icon-btn h-11 w-11" : "icon-btn h-10 w-10";
 
   const pager = (
     <div className="flex items-center gap-1 text-sm">

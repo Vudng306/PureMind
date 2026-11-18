@@ -187,6 +187,10 @@ function Reader({ id }: { id: string }) {
   const [thumbsSlot, setThumbsSlot] = useState<HTMLElement | null>(null);
   // FR-RDR-03: the reading options live behind this gear, so the toolbar stays short.
   const [optsOpen, setOptsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [chromeHidden, setChromeHidden] = useState(false);
+  const chromeScroll = useRef(0);
+  const chromeEngaged = useRef(false);
   const [activeHl, setActiveHl] = useState<string | null>(null);
   const [flashHl, setFlashHl] = useState<string | null>(null);
   // Highlights not placed in the clean text as it is now, and why (AN-104).
@@ -303,7 +307,7 @@ function Reader({ id }: { id: string }) {
     const target = hlId ? (highlights.find((h) => h.id === hlId) ?? null) : null;
     setHlTarget(target);
     // A link to a highlight opens the view it was made in: the PDF page or the clean text.
-    setMode(target ? (target.blockId === null ? "original" : "clean") : hlId ? "clean" : (readStoredMode(id) ?? defaultMode));
+    setMode(target ? (target.blockId === null ? "original" : "clean") : hlId ? "clean" : (readStoredMode(id) ?? (window.matchMedia("(max-width: 639px)").matches ? "clean" : defaultMode)));
     // A summary found by search opens the summary panel (FR-SRCH-01 step 6).
     if (params.get("panel") === "summary") {
       setPanelOpen(true);
@@ -370,6 +374,7 @@ function Reader({ id }: { id: string }) {
         setFindOpen(true);
       } else if (e.key === "Escape") {
         setOptsOpen(false);
+        setMoreOpen(false);
         setFocus(false);
       }
     }
@@ -1025,14 +1030,32 @@ function Reader({ id }: { id: string }) {
     );
 
   return (
-    <div className="flex h-screen bg-bg text-ink">
+    <div className="reader-root flex h-dvh bg-bg text-ink" data-chrome-hidden={chromeHidden && !panelOpen && !sideOpen && !optsOpen && !moreOpen && !findOpen}
+      onWheelCapture={() => { chromeEngaged.current = true; }}
+      onTouchStartCapture={() => { chromeEngaged.current = true; }}
+      onScrollCapture={(event) => {
+        const target = event.target as HTMLElement;
+        if (!target.matches("[data-reader-scroll], [role=region]")) return;
+        const top = target.scrollTop;
+        if (!chromeEngaged.current) { chromeScroll.current = top; return; }
+        if (Math.abs(top - chromeScroll.current) > 12) {
+          setChromeHidden(top > chromeScroll.current && top > 80);
+          chromeScroll.current = top;
+        }
+      }}
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest("button, a, input, textarea, select, [data-selection-menu]")) return;
+        if (window.getSelection()?.toString()) return;
+        setChromeHidden(false);
+      }}
+    >
       <div className="flex min-w-0 flex-1 flex-col">
         <div aria-hidden className="h-[3px] shrink-0 bg-line">
           <div className="h-[3px] bg-accent transition-[width] duration-200" style={{ width: `${Math.round(pct * 100)}%` }} />
         </div>
 
         {!focus && (
-          <header className="flex h-14 shrink-0 items-center gap-1 border-b border-line px-2 sm:px-3">
+          <header className="reader-toolbar flex h-14 shrink-0 items-center gap-1 border-b border-line px-2 sm:px-3">
             <Link href="/library" className={toolIcon} aria-label={t("reader.backToLibrary")} title={t("reader.backToLibrary")}>
               <Icon name="back" size={20} />
             </Link>
@@ -1042,7 +1065,7 @@ function Reader({ id }: { id: string }) {
             </div>
             <button
               type="button"
-              className={`${toolIcon} ${sideOpen ? "bg-soft" : ""}`}
+              className={`hidden sm:inline-flex ${toolIcon} ${sideOpen ? "bg-soft" : ""}`}
               aria-pressed={sideOpen}
               aria-label={t("reader.toggleSide")}
               title={t("reader.toggleSide")}
@@ -1080,13 +1103,13 @@ function Reader({ id }: { id: string }) {
                 ))}
               </div>
             )}
-            {original && <div ref={setZoomSlot} className="ml-1 hidden shrink-0 lg:block" />}
-            {original && <div ref={setPagerSlot} className="ml-1 shrink-0" />}
+            {original && <div ref={setZoomSlot} className="reader-zoom ml-1 shrink-0" />}
+            {original && <div ref={setPagerSlot} className="reader-pager ml-1 shrink-0" />}
             {divider}
 
             <button
               type="button"
-              className={toolIcon}
+              className={`hidden sm:inline-flex ${toolIcon}`}
               aria-label={t("reader.findCtrlF")}
               title={t("reader.findCtrlF")}
               onClick={() => setFindOpen((o) => !o)}
@@ -1106,7 +1129,7 @@ function Reader({ id }: { id: string }) {
             </button>
             <button
               type="button"
-              className={toolIcon}
+              className={`hidden sm:inline-flex ${toolIcon}`}
               aria-label={t("reader.focus")}
               title={t("reader.focus")}
               data-keep-selection
@@ -1120,7 +1143,7 @@ function Reader({ id }: { id: string }) {
 
             <button
               type="button"
-              className={`${tool} ${openGroup === "notes" ? "bg-soft" : ""}`}
+              className={`hidden sm:inline-flex ${tool} ${openGroup === "notes" ? "bg-soft" : ""}`}
               aria-pressed={openGroup === "notes"}
               aria-label={t("reader.notesButton", { n: highlights.length })}
               title={t("reader.notesButton", { n: highlights.length })}
@@ -1132,7 +1155,7 @@ function Reader({ id }: { id: string }) {
             </button>
             <button
               type="button"
-              className={`${tool} ${openGroup === "ai" ? "bg-soft" : ""}`}
+              className={`hidden sm:inline-flex ${tool} ${openGroup === "ai" ? "bg-soft" : ""}`}
               aria-pressed={openGroup === "ai"}
               aria-label={t("reader.aiButton")}
               title={t("reader.aiButton")}
@@ -1141,9 +1164,22 @@ function Reader({ id }: { id: string }) {
               <Icon name="spark" />
               <span>{t("reader.tabAi")}</span>
             </button>
+            <button type="button" className="icon-btn sm:hidden" aria-label={t("library.manage")} aria-expanded={moreOpen} onClick={() => setMoreOpen((value) => !value)}><Icon name="more" /></button>
           </header>
         )}
 
+        {moreOpen && !focus && <div className="reader-more absolute inset-x-3 top-16 z-30 flex flex-col rounded-2xl border border-line bg-surface p-2 shadow-pop sm:hidden" role="menu" aria-label={t("library.manage")}>
+          <button role="menuitem" className="btn-ghost min-h-11 text-left" onClick={() => { setFindOpen(true); setMoreOpen(false); }}>{t("reader.findCtrlF")}</button>
+          <button role="menuitem" className="btn-ghost min-h-11 text-left" onClick={() => { toggleFocus(true); setMoreOpen(false); }}>{t("reader.focus")}</button>
+          {isPdf && <button role="menuitem" disabled={original && !hasClean} className="btn-ghost min-h-11 text-left" onClick={() => { chooseMode(original ? "clean" : "original"); setMoreOpen(false); }}>{t(original ? "reader.switchClean" : "reader.viewOriginal")}</button>}
+          <button role="menuitem" className="btn-ghost min-h-11 text-left" onClick={() => { setPanelTab("info"); showPanel(true); setMoreOpen(false); }}>{t("reader.tabInfo")}</button>
+          <button role="menuitem" className="btn-ghost min-h-11 text-left" onClick={() => setMoreOpen(false)}>{t("common.close")}</button>
+        </div>}
+        {!focus && <nav className="reader-bottom flex shrink-0 items-center justify-around border-t border-line bg-surface sm:hidden" aria-label={t("panel.aria")}>
+          <button className="btn-ghost min-h-11" onClick={toggleSide}><Icon name="toc" size={18} />{t("reader.outline")}</button>
+          <button className="btn-ghost min-h-11" aria-pressed={openGroup === "notes"} onClick={() => togglePanel("notes")}><Icon name="note" size={18} />{t("reader.tabNotes")}</button>
+          <button className="btn-ghost min-h-11" aria-pressed={openGroup === "ai"} onClick={() => togglePanel("ai")}><Icon name="spark" size={18} />{t("reader.tabAi")}</button>
+        </nav>}
         <div className="flex min-h-0 flex-1">
           {sideOpen && !focus && (
             <aside

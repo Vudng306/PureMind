@@ -31,7 +31,7 @@ const PAGES = [
 ] as const;
 const NAV = PAGES.filter((page) => FEED || page.href !== "/feed");
 // On a phone the dock holds all of them, around the add button.
-const DOCK = NAV;
+const DOCK = [...NAV, { href: "/settings/account", label: "nav.account", icon: "gear" }] as const;
 // What a visitor can see or be drawn to: the rest is the reader's own.
 export const PUBLIC_NAV = NAV.filter((page) => page.href === "/explore" || page.href === "/feed");
 
@@ -98,19 +98,19 @@ export function useLockedOut() {
   }, [error, router]);
 }
 
-function DockLink({ item, active, label }: { item: (typeof NAV)[number]; active: boolean; label: string }) {
+function DockLink({ item, active, label }: { item: (typeof DOCK)[number]; active: boolean; label: string }) {
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`flex w-16 flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] transition-colors ${
+      className={`flex min-w-0 flex-col items-center gap-0.5 rounded-full py-1.5 text-[10px] transition-colors ${
         active ? "font-semibold text-ink" : "text-muted hover:text-ink"
       }`}
     >
       <span className={`grid h-8 w-11 place-items-center rounded-full ${active ? "bg-ink text-bg" : ""}`}>
         <Icon name={item.icon} size={19} />
       </span>
-      {label}
+      <span className="max-w-full truncate">{label}</span>
     </Link>
   );
 }
@@ -220,21 +220,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* The phone's dock: the pages within reach of a thumb, and adding a document in the middle. */}
       <nav
         aria-label={t("nav.ariaMobile")}
-        className="glass fixed inset-x-3 bottom-3 z-30 mx-auto flex max-w-[440px] items-center justify-around rounded-full border px-2 py-1.5 shadow-pop lg:hidden print:hidden"
+        className="glass fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 mx-auto grid max-w-[440px] grid-cols-5 items-center rounded-full border px-2 py-1.5 shadow-pop lg:hidden print:hidden"
       >
         {DOCK.slice(0, 2).map((item) => (
-          <DockLink key={item.href} item={item} active={isActive(pathname, item.href)} label={t(item.label)} />
+          <DockLink key={item.href} item={item} active={isActive(pathname, item.href)} label={t(item.href === "/settings/account" ? "nav.accountMobile" : item.href === "/notebooks" ? "nav.notebooksMobile" : item.label)} />
         ))}
         <button
           type="button"
           onClick={() => setAddOpen(true)}
           aria-label={t("nav.addDocument")}
-          className="-my-4 grid h-14 w-14 place-items-center rounded-full bg-accent text-on-accent shadow-pop ring-4 ring-bg"
+          className="-my-4 grid h-12 w-12 justify-self-center place-items-center rounded-full bg-accent text-on-accent shadow-pop ring-4 ring-bg"
         >
           <Icon name="plus" size={24} />
         </button>
         {DOCK.slice(2).map((item) => (
-          <DockLink key={item.href} item={item} active={isActive(pathname, item.href)} label={t(item.label)} />
+          <DockLink key={item.href} item={item} active={isActive(pathname, item.href)} label={t(item.href === "/settings/account" ? "nav.accountMobile" : item.href === "/notebooks" ? "nav.notebooksMobile" : item.label)} />
         ))}
       </nav>
     </div>

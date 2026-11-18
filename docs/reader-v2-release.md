@@ -107,7 +107,7 @@ Thứ tự rollback: (1) tắt cờ và deploy lại frontend; (2) nếu cần, 
 4. Highlight chưa lưu được chỉ giữ trong bộ nhớ (mất khi tải lại trang).
 5. Nhận diện tiếng Việt theo tỉ lệ chữ có dấu: câu tiếng Anh ngắn có tên riêng tiếng Việt có thể bị dịch sang tiếng Anh.
 6. A11y: chưa thử trình đọc màn hình, zoom 400%, giao diện tối. Mobile chỉ kiểm tra cơ bản.
-7. Theo phạm vi đồ án, đã thống nhất bỏ: bảng `document_versions`, Trash/GDPR purge, telemetry, signed URL, TTS, bottom sheet mobile.
+7. Theo phạm vi đồ án, đã thống nhất bỏ: bảng `document_versions`, Trash/GDPR purge, telemetry, signed URL, TTS. Quyết định bỏ bottom sheet mobile được thay thế ngày 18/11/2026 theo kế hoạch responsive; xem `mobile-responsive.md`.
 
 ## 8. Thay đổi sau GĐ5
 

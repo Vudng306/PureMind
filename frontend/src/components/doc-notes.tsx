@@ -125,7 +125,7 @@ export function NoteCard({ note, onOpen }: { note: Note; onOpen: (c: ChatCitatio
       {draft === null ? (
         <NoteBody note={note} onOpen={onOpen} />
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="mobile-note-editor flex flex-col gap-2">
           <textarea
             aria-label={t("notes.editAria")}
             autoFocus
@@ -178,6 +178,7 @@ export function NoteComposer({ docId }: { docId: string }) {
   const showToast = useUi((s) => s.showToast);
   const { add } = useNoteActions(docId);
   const [draft, setDraft] = useState("");
+  const [writing, setWriting] = useState(false);
   // One id per draft: a second press after a failure cannot make the note twice.
   const draftId = useRef<string | null>(null);
 
@@ -189,6 +190,7 @@ export function NoteComposer({ docId }: { docId: string }) {
       onSuccess: () => {
         draftId.current = null;
         setDraft("");
+        setWriting(false);
         showToast(t("panel.savedNote"));
       },
       onError: (e) => showToast(e instanceof ApiError ? e.message : MSG["MSG-23"]),
@@ -196,12 +198,14 @@ export function NoteComposer({ docId }: { docId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={`${writing ? "mobile-note-editor" : ""} flex flex-col gap-2`}>
+      {writing && <button type="button" className="btn-outline shrink-0 sm:hidden" onClick={() => setWriting(false)}>{t("common.close")}</button>}
       <label className="sr-only" htmlFor={`note-new-${docId}`}>
         {t("notes.newAria")}
       </label>
       <textarea
         id={`note-new-${docId}`}
+        onFocus={() => setWriting(true)}
         rows={3}
         value={draft}
         maxLength={MAX_NOTE_BODY}

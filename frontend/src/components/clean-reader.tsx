@@ -634,6 +634,23 @@ export function CleanReader({
   const readSelectionRef = useRef(readSelection);
   readSelectionRef.current = readSelection;
 
+  useEffect(() => {
+    let frame = 0;
+    const changed = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        // Toolbar presses must retain the captured range until its action completes.
+        if (document.activeElement?.closest("[data-selection-menu]")) return;
+        onSelect(readSelection());
+      });
+    };
+    document.addEventListener("selectionchange", changed);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("selectionchange", changed);
+    };
+  }, [readSelection, onSelect]);
+
   const onPointerUp = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
       // Let the browser finish updating the selection first.
@@ -683,7 +700,7 @@ export function CleanReader({
         }
       }
       onScrollProgress({ fraction, page, place: readPlace(), top: scroller.scrollTop, view: scroller.clientHeight });
-      onSelect(null);
+      if (!window.matchMedia("(pointer: coarse)").matches) onSelect(null);
     });
   }, [onScrollProgress, onSelect, readPlace]);
 
@@ -692,6 +709,7 @@ export function CleanReader({
   return (
     <div
       ref={scrollerRef}
+      data-reader-scroll
       onScroll={onScroll}
       onWheel={takeOver}
       onTouchStart={takeOver}
