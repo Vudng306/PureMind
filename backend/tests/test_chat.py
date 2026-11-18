@@ -428,7 +428,7 @@ async def test_embeddings_of_the_wrong_shape_fail(monkeypatch):
 
 
 async def test_a_question_uses_the_stronger_model(monkeypatch):
-    """A question goes to openai_chat_model; summaries and notebooks stay on the cheaper default."""
+    """A question goes to openai_chat_model; summaries and notebooks stay on openai_model."""
     seen: list[dict] = []
     chunk = {
         "choices": [{"delta": {"content": "Có."}, "finish_reason": "stop"}],

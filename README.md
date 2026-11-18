@@ -22,7 +22,7 @@ Các bản v1.1–v1.4 vẫn được giữ trong `docs/` để đối chiếu.
 | Cơ sở dữ liệu | PostgreSQL 16 (image `pgvector/pgvector:pg16`, dùng `unaccent` cho tìm kiếm tiếng Việt) |
 | Xác thực | Supabase Auth |
 | Xử lý tài liệu | PyMuPDF (PDF, bộ phân loại khối theo quy tắc), BeautifulSoup (EPUB, bài viết web) |
-| AI | OpenAI API (mặc định `gpt-4.1-mini`; embedding `text-embedding-3-small` cho hỏi đáp) |
+| AI | OpenAI API (tóm tắt, notebook và OCR `gpt-4.1-mini`, hỏi đáp `gpt-4.1`; embedding `text-embedding-3-small` cho hỏi đáp) |
 | Hosting | Vercel (frontend), Render (backend, Docker) |
 
 ## Tính năng
@@ -274,7 +274,7 @@ Phải trả về `{"status":"ok"}`. Ở `ENVIRONMENT=production`, `/api/docs` t
 | `SUPABASE_SERVICE_ROLE_KEY` | `backend/.env`, `.env` | để xóa tài khoản | Secret key. Chỉ để ở backend. |
 | `SUPABASE_JWT_SECRET` | `backend/.env`, `.env` | không | Chỉ cần cho dự án còn ký token HS256. |
 | `OPENAI_API_KEY` | `backend/.env`, `.env` | cho tính năng AI | Chỉ để ở backend. |
-| `OPENAI_MODEL` | `backend/.env`, `.env` | không | Model viết: tóm tắt, tổng hợp highlight và notebook. Mặc định `gpt-4o-mini`. |
+| `OPENAI_MODEL` | `backend/.env`, `.env` | không | Model viết: tóm tắt, tổng hợp highlight, notebook và OCR. Mặc định `gpt-4.1-mini`. |
 | `OPENAI_CHAT_MODEL` | `backend/.env`, `.env` | không | Model trả lời câu hỏi về tài liệu (FR-CHAT). Mặc định `gpt-4.1`. |
 | `OPENAI_EMBEDDING_MODEL` | `backend/.env`, `.env` | không | Model nhúng dùng cho trò chuyện. Mặc định `text-embedding-3-small`. Đổi model thì tài liệu sẽ được nhúng lại ở câu hỏi kế tiếp. |
 | `CHAT_DAILY_QUOTA` | `backend/.env`, `.env` | không | Số câu hỏi trò chuyện mỗi người mỗi ngày. Mặc định `50`. |

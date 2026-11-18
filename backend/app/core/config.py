@@ -33,11 +33,10 @@ class Settings(BaseSettings):
     async_extraction_threshold_bytes: int = 10 * 1024 * 1024  # FR-DOC-02 step 6
 
     # AI (FR-SUM, FR-NB). The key stays on the server (NFR-SEC-01); the models are configurable (NFR-MNT-03).
-    # Summaries and notebooks read a whole document and write to a fixed shape, so a small model is enough.
-    # A question is answered from a handful of passages and has to reason about them, so it gets a
-    # stronger model: the answer is short, which keeps the cost of the better model low.
+    # openai_model writes summaries, notebooks and the reader's AI results, and reads scans (OCR).
+    # A question is answered from a handful of passages and has to reason about them, so it has its own setting.
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
+    openai_model: str = "gpt-4.1-mini"
     openai_chat_model: str = "gpt-4.1"
     # Feed guides (services/guides) are written once and read by everyone: worth the stronger model.
     openai_guide_model: str = "gpt-4.1"
