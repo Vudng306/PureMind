@@ -97,7 +97,11 @@ def _keep_note(existing: Highlight, note: str) -> None:
 
 @router.post("/highlights", response_model=HighlightOut, status_code=status.HTTP_201_CREATED)
 async def create_highlight(
-    payload: HighlightCreate, response: Response, user: CurrentUser, session: SessionDep, settings: SettingsDep
+    payload: HighlightCreate,
+    response: Response,
+    user: CurrentUser,
+    session: SessionDep,
+    settings: SettingsDep,
 ):
     """FR-HL-01, one highlight per passage. Sent again with the same id (a retry after a lost reply), or for a
     passage that already has its highlight, from either view, it gives that highlight (200, `duplicate`). A
