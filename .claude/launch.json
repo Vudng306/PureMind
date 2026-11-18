@@ -13,6 +13,17 @@
       "port": 3000
     },
     {
+      "name": "frontend-mobile",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        ".claude/worktrees/mobile-web/frontend",
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
       "name": "backend",
       "runtimeExecutable": "backend/.venv/Scripts/python.exe",
       "runtimeArgs": [
