@@ -12,6 +12,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, SessionDep, SettingsDep
+from app.api.routes.collections import owned_collection
 from app.api.routes.highlights import NOT_FOUND as HIGHLIGHT_NOT_FOUND
 from app.api.routes.summaries import CONSENT_REQUIRED, NOT_CONFIGURED
 from app.core.config import Settings
@@ -45,7 +46,7 @@ from app.schemas import (
     NotebookVersionOut,
     file_type_of,
 )
-from app.services import ai_quota, notebook_writer, rights
+from app.services import ai_quota, highlight_sync, notebook_writer, rights
 from app.services.openai_client import AIError, Usage
 from app.services.summarizer import detect_language
 
@@ -195,18 +196,69 @@ async def _out(session: AsyncSession, nb: Notebook) -> NotebookOut:
     )
 
 
-def _sources(rows: list[tuple]) -> tuple[list[uuid.UUID], list[notebook_writer.Source]]:
-    """Number the highlights by document, then position in the document (FR-NB-02 step 2)."""
-    rows = sorted(
-        rows,
-        key=lambda r: (r[1].title.lower(), str(r[1].id), r[0].page_number or 0, r[0].created_at),
-    )
-    return [h.id for h, _ in rows], [
-        notebook_writer.Source(
-            text=h.selected_text, category=h.category, note=h.note, document_title=d.title, page=h.page_number
+ONE_DOCUMENT = "Notebook AI được viết từ highlight của một tài liệu. Muốn gộp nhiều tài liệu, hãy cho chúng vào cùng một bộ sưu tập."
+OUTSIDE_COLLECTION = "Có highlight thuộc tài liệu không nằm trong bộ sưu tập này."
+
+
+async def _check_scope(
+    session: AsyncSession, user: User, rows: list[tuple], collection_id: uuid.UUID | None
+) -> None:
+    """One document, or the documents of one of the user's collections: never highlights from anywhere."""
+    documents = {d.id: d for _, d in rows}
+    if collection_id is not None:
+        await owned_collection(session, user, collection_id)
+        if any(d.collection_id != collection_id for d in documents.values()):
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, OUTSIDE_COLLECTION)
+    elif len(documents) > 1:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, ONE_DOCUMENT)
+
+
+def _reading_order(row: tuple) -> tuple:
+    """By document, then where the passage stands in its text; by page and age when that is not known."""
+    h, d = row
+    known = h.canonical_start is not None
+    return (d.title.lower(), str(d.id), not known, h.canonical_start or 0, h.page_number or 0, h.created_at)
+
+
+def _block_of(h: Highlight) -> str | None:
+    """The paragraph of the clean text the passage is in: where it shows now, else where it was made."""
+    for span in h.clean_anchor or []:
+        if isinstance(span, dict) and span.get("block"):
+            return str(span["block"])
+    return h.block_id
+
+
+async def _sources(
+    session: AsyncSession, settings: Settings, rows: list[tuple]
+) -> tuple[list[uuid.UUID], list[notebook_writer.Source]]:
+    """Number the highlights by document, then position in the document (FR-NB-02 step 2). Each comes with
+    the sentence it was taken from and its paragraph, so pieces of one idea can be read together."""
+    rows = sorted(rows, key=_reading_order)
+    indexes: dict[uuid.UUID, highlight_sync.TextIndex | None] = {}
+    sources = []
+    for h, d in rows:
+        if d.id not in indexes:
+            try:
+                indexes[d.id] = (
+                    await highlight_sync.index_of(session, settings, d) if d.content_clean else None
+                )
+            except Exception:  # the notebook is written without the sentences rather than not at all
+                log.warning("no clean text read for a notebook's document")
+                indexes[d.id] = None
+        ix, block = indexes[d.id], _block_of(h)
+        paragraph = ix.by_id[block].text if ix is not None and block in ix.by_id else ""
+        sources.append(
+            notebook_writer.Source(
+                text=h.selected_text,
+                category=h.category,
+                note=h.note,
+                document_title=d.title,
+                page=h.page_number,
+                context=notebook_writer.sentence_around(paragraph, h.selected_text),
+                paragraph=f"{d.id}:{block}" if block else None,
+            )
         )
-        for h, d in rows
-    ]
+    return [h.id for h, _ in rows], sources
 
 
 async def _save_draft(
@@ -325,6 +377,7 @@ async def generate_notebook(
     ids = _unique(payload.highlight_ids)
     _check_count(ids)
     rows = await _owned_highlights(session, user.id, ids)
+    await _check_scope(session, user, rows, payload.collection_id)
     title = _clean_title(payload.title) if payload.title and payload.title.strip() else None
     if not (user.reading_preferences or {}).get("ai_consent"):  # NFR-PRV
         raise HTTPException(status.HTTP_403_FORBIDDEN, CONSENT_REQUIRED)
@@ -335,7 +388,7 @@ async def generate_notebook(
     if user.id in _running:
         raise HTTPException(status.HTTP_409_CONFLICT, IN_PROGRESS)
 
-    ordered, sources = _sources(rows)
+    ordered, sources = await _sources(session, settings, rows)
     language = payload.language or detect_language(" ".join(s.text for s in sources))
     user_id = user.id
     layout = payload.layout

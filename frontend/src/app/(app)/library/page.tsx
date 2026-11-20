@@ -742,7 +742,17 @@ export default function LibraryPage() {
         />
 
         <div className="flex min-w-0 flex-col gap-4">
-          {shelf && <h2 className="font-display text-2xl font-semibold">{shelf.name}</h2>}
+          {shelf && (
+            <div className="flex items-center gap-2">
+              <h2 className="min-w-0 flex-1 font-display text-2xl font-semibold">{shelf.name}</h2>
+              {shelf.document_count > 0 && (
+                <Link href={`/notebooks/new?collection=${shelf.id}&from=library`} className="btn-outline h-10 px-3.5 text-sm">
+                  <Icon name="spark" size={16} />
+                  <span className="max-sm:sr-only">{t("notebooks.generate")}</span>
+                </Link>
+              )}
+            </div>
+          )}
           {continuing.length > 0 && <div className="hidden lg:block"><ContinueStrip doc={continuing[0]} /></div>}
 
           <div className="flex flex-wrap items-end gap-x-4 border-b border-line">

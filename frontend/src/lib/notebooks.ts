@@ -3,7 +3,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { HighlightDto } from "./annotations";
-import { api } from "./api";
+import { ApiError, api, apiFetch } from "./api";
+import { MSG } from "./messages";
+import { accountKey } from "./queries";
+import type { User } from "./types";
 
 /** FR-NB-01..05: AI notebooks built from highlights. */
 
@@ -59,7 +62,7 @@ export interface NotebookListItem {
   updated_at: string;
 }
 
-/** How the AI cuts the notebook into sections: one per topic, or one per document. */
+export type NotebookLanguage = "auto" | "vi" | "en";
 
 export const notebooksKey = ["notebooks"] as const;
 const notebookKey = (id: string) => ["notebooks", "one", id] as const;
@@ -200,6 +203,49 @@ export async function* readEvents(body: ReadableStream<Uint8Array>): AsyncGenera
     }
     if (done) return;
   }
+}
+
+/**
+ * FR-NB-02: asks the AI for a notebook, calling `onDelta` with the Markdown as it is written.
+ * Resolves with the saved draft; throws ApiError (MSG-26 etc.) when it fails — nothing is saved then.
+ */
+export async function generateNotebook(
+  // One document's highlights, or those of the documents in `collection_id`: never from anywhere.
+  input: { highlight_ids: string[]; title?: string; language?: NotebookLanguage; collection_id?: string },
+  onDelta: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<Notebook> {
+  const body: Record<string, unknown> = { highlight_ids: input.highlight_ids };
+  if (input.title?.trim()) body.title = input.title.trim();
+  if (input.language && input.language !== "auto") body.language = input.language;
+  if (input.collection_id) body.collection_id = input.collection_id;
+
+  const res = await apiFetch("/notebooks/generate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.body) throw new ApiError(0, MSG["MSG-99"]);
+  try {
+    for await (const { event, data } of readEvents(res.body)) {
+      const payload = JSON.parse(data);
+      if (event === "delta") onDelta(payload.text);
+      else if (event === "done") return payload as Notebook;
+      else if (event === "error") throw new ApiError(502, payload.detail ?? MSG["MSG-26"]);
+    }
+  } catch (e) {
+    if (e instanceof ApiError || signal?.aborted) throw e;
+    throw new ApiError(0, MSG["MSG-26"]); // connection dropped mid-stream
+  }
+  throw new ApiError(0, MSG["MSG-26"]);
+}
+
+/** After a successful generation: one AI request used, the list has a new draft. */
+export function afterGenerate(qc: ReturnType<typeof useQueryClient>, nb: Notebook) {
+  qc.setQueryData(notebookKey(nb.id), nb);
+  qc.setQueryData<User>(accountKey, (u) => (u ? { ...u, ai_quota_remaining: Math.max(0, u.ai_quota_remaining - 1) } : u));
+  void qc.invalidateQueries({ queryKey: [...notebooksKey, "list"] });
 }
 
 /** Reference numbers [n] used in the content, in order of first use. */

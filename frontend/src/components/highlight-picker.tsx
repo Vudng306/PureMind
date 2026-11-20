@@ -27,9 +27,10 @@ const PAGE_SIZE = 50;
 const selectCls =
   "h-10 max-w-full rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-focus";
 
-function highlightsPath(docId: string, category: string, page: number, pageSize = PAGE_SIZE) {
+function highlightsPath(docId: string, collectionId: string, category: string, page: number, pageSize = PAGE_SIZE) {
   const params = new URLSearchParams({ sort: "document", page: String(page), page_size: String(pageSize) });
   if (docId) params.set("document_id", docId);
+  else if (collectionId) params.set("collection_id", collectionId);
   if (category) params.set("category", category);
   return `/highlights?${params}`;
 }
@@ -38,40 +39,49 @@ function highlightsPath(docId: string, category: string, page: number, pageSize 
  * FR-NB-01: pick up to 100 highlights, with the same filters as the Highlights page. They are listed under
  * the document they come from, and a whole document can be taken or dropped at once.
  * `fixed` highlights are already in the notebook: shown checked and not selectable again.
+ * `documentId` keeps the list to that document; `collectionId` to the documents of that collection.
  */
 export function HighlightPicker({
   selected,
   onChange,
   initialDocId = "",
   fixed,
+  documentId = "",
+  collectionId = "",
 }: {
   selected: string[];
   onChange: (ids: string[]) => void;
   initialDocId?: string;
   fixed?: Set<string>;
+  documentId?: string;
+  collectionId?: string;
 }) {
   const t = useT();
   const lang = useLang();
   const { data: docs } = useDocuments("created_desc");
-  const [docId, setDocId] = useState(initialDocId);
+  const [docId, setDocId] = useState(documentId || initialDocId);
   const [category, setCategory] = useState<HighlightCategory | "">("");
   const [limitHit, setLimitHit] = useState(false);
   const [selectingAll, setSelectingAll] = useState(false);
 
   const docById = useMemo(() => new Map((docs ?? []).map((d) => [d.id, d])), [docs]);
+  const choices = useMemo(
+    () => (docs ?? []).filter((d) => !collectionId || d.collection_id === collectionId),
+    [docs, collectionId],
+  );
   const chosen = useMemo(() => new Set(selected), [selected]);
   const taken = fixed?.size ?? 0;
   const room = MAX_NOTEBOOK_SOURCES - taken;
 
   const query = useInfiniteQuery({
-    queryKey: [...highlightsKey, "picker", { docId, category }],
+    queryKey: [...highlightsKey, "picker", { docId, collectionId, category }],
     initialPageParam: 1,
-    queryFn: ({ pageParam }) => api<HighlightPage>(highlightsPath(docId, category, pageParam)),
+    queryFn: ({ pageParam }) => api<HighlightPage>(highlightsPath(docId, collectionId, category, pageParam)),
     getNextPageParam: (last, pages) => (pages.length * PAGE_SIZE < last.total ? pages.length + 1 : undefined),
   });
   const items = query.data?.pages.flatMap((p) => p.items.map(fromDto)) ?? [];
   const total = query.data?.pages[0]?.total ?? 0;
-  const filtered = Boolean(docId || category);
+  const filtered = Boolean((docId && docId !== documentId) || category);
   // The API lists them by document, so the highlights of one document follow each other.
   const sections: { docId: string; items: Highlight[] }[] = [];
   for (const h of items) {
@@ -91,7 +101,7 @@ export function HighlightPicker({
   async function matchingIds(doc: string) {
     const ids: string[] = [];
     for (let page = 1; ; page++) {
-      const res = await api<HighlightPage>(highlightsPath(doc, category, page, 500));
+      const res = await api<HighlightPage>(highlightsPath(doc, collectionId, category, page, 500));
       ids.push(...res.items.map((h) => h.id));
       if (page * 500 >= res.total) return ids;
     }
@@ -149,17 +159,19 @@ export function HighlightPicker({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2.5">
-        <label className="min-w-0">
-          <span className="sr-only">{t("highlights.document")}</span>
-          <select value={docId} onChange={(e) => setDocId(e.target.value)} className={`${selectCls} w-[260px]`}>
-            <option value="">{t("highlights.allDocuments")}</option>
-            {(docs ?? []).map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.title}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!documentId && (
+          <label className="min-w-0">
+            <span className="sr-only">{t("highlights.document")}</span>
+            <select value={docId} onChange={(e) => setDocId(e.target.value)} className={`${selectCls} w-[260px]`}>
+              <option value="">{t(collectionId ? "picker.wholeCollection" : "highlights.allDocuments")}</option>
+              {choices.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           <span className="sr-only">{t("highlights.category")}</span>
           <select value={category} onChange={(e) => setCategory(e.target.value as HighlightCategory | "")} className={selectCls}>

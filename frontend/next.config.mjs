@@ -10,7 +10,6 @@ const nextConfig = {
       { source: "/feed/:path*", destination: "/explore", permanent: false },
       { source: "/community/:path*", destination: "/explore", permanent: false },
       { source: "/publish/:path*", destination: "/library", permanent: false },
-      { source: "/notebooks/new", destination: "/notebooks", permanent: false },
       { source: "/admin/posts", destination: "/admin", permanent: false },
       { source: "/admin/articles", destination: "/admin", permanent: false },
       { source: "/admin/crawl", destination: "/admin", permanent: false },

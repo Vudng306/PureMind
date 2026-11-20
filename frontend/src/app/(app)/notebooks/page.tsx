@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { Alert, PageHeader, Spinner } from "@/components/ui";
 import { KIND_CLASS, KIND_LABEL, relativeTime } from "@/lib/doc-view";
 import { useLang, useT } from "@/lib/i18n";
+import { useCollections } from "@/lib/library";
 import { MSG } from "@/lib/messages";
 import { readingState, useNotebookGroups, type NotebookGroup } from "@/lib/notebook";
 import { useNotebooks } from "@/lib/notebooks";
@@ -82,6 +83,9 @@ export default function NotebookPage() {
 
   const query = useNotebookGroups(q);
   const { data: old } = useNotebooks();
+  // An AI notebook is made from one document (on its page) or by topic from one collection: only the latter here.
+  const { data: shelves } = useCollections();
+  const hasShelf = (shelves ?? []).some((c) => c.document_count > 0);
   const items = query.data?.items ?? [];
   const searching = q.length >= 2;
   const empty = query.isSuccess && items.length === 0;
@@ -91,6 +95,14 @@ export default function NotebookPage() {
       <PageHeader
         title={t("notebooks.title")}
         lead={query.isSuccess && !searching && items.length ? t("notebook.count", { n: query.data.total }) : t("notebook.lede")}
+        actions={
+          query.isSuccess && hasShelf && (items.length > 0 || searching) ? (
+            <Link href="/notebooks/new?from=notebook" className="btn-outline">
+              <Icon name="spark" size={16} />
+              {t("notebooks.byCollection")}
+            </Link>
+          ) : undefined
+        }
       />
 
       {(!empty || searching || text) && !query.isError && (

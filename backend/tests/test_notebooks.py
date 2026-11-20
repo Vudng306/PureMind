@@ -349,9 +349,80 @@ def test_writer_helpers():
     )
     assert '[1] from "T", page 4 — marked as question' in prompt and "Text: a b" in prompt
     assert "n" * 2000 + "…" in prompt and "n" * 2001 not in prompt
+    assert "In sentence" not in prompt and "same paragraph" not in prompt
     assert "one per topic" in notebook_writer.system_prompt("vi", False, False)
     by_document = notebook_writer.system_prompt("vi", False, False, "document")
     assert "One `## ` section per document" in by_document and "one per topic" not in by_document
+
+
+def test_sentence_around():
+    """A short highlight comes with the sentence it was taken from; a whole sentence needs none."""
+    para = (
+        "Mỗi chương sẽ mang đến cho bạn những hiểu biết mới. Trong chương hai chúng ta sẽ khám phá những giá trị "
+        "của đàn ông và đàn bà: đàn ông thường sai lầm. Chương ba nói về hang động."
+    )
+    around = notebook_writer.sentence_around(para, "chương  hai")
+    # Up to the colon: what follows it was not marked and is not needed to know what "chương hai" is.
+    assert around == "Trong chương hai chúng ta sẽ khám phá những giá trị của đàn ông và đàn bà:"
+    assert notebook_writer.sentence_around(para, "Chương hai") == around  # case is not what makes it differ
+    assert notebook_writer.sentence_around(para, "Chương ba nói về hang động.") == ""
+    # A passage long enough to say what it is about gets no sentence.
+    assert notebook_writer.sentence_around(para, "những giá trị của đàn ông và đàn bà") == ""
+    assert notebook_writer.sentence_around(para, "không có ở đây") == ""
+    assert notebook_writer.sentence_around("", "x") == ""
+    long = "Mở đầu. " + "từ " * 400 + "đích " + "từ " * 400 + "hết."
+    cut = notebook_writer.sentence_around(long, "đích")
+    assert "đích" in cut and cut.startswith("…") and cut.endswith("…")
+    assert len(cut) <= notebook_writer.MAX_CONTEXT_CHARS + 2
+
+
+def test_prompt_marks_one_paragraph():
+    def src(text, paragraph, context=""):
+        return notebook_writer.Source(
+            text=text,
+            category=None,
+            note="",
+            document_title="T",
+            page=5,
+            context=context,
+            paragraph=paragraph,
+        )
+
+    prompt = notebook_writer.user_prompt(
+        [
+            src("quyển sách này", "d:b1"),
+            src("chương hai", "d:b2", "Trong chương hai chúng ta sẽ khám phá."),
+            src("khám phá", "d:b2"),
+            src("khác", None),
+        ]
+    )
+    assert "In sentence: Trong chương hai chúng ta sẽ khám phá." in prompt
+    assert (
+        "Text: chương hai\nIn sentence: Trong chương hai chúng ta sẽ khám phá.\nIn the same paragraph as [3]"
+        in prompt
+    )
+    assert "Text: khám phá\nIn the same paragraph as [2]" in prompt
+    assert prompt.count("same paragraph") == 2  # [1] and [4] are alone in theirs
+    assert "Never give a fragment" in notebook_writer.system_prompt("vi", False, False)
+
+
+async def test_generate_sends_paragraphs(client, auth, ai):
+    """Highlights in one paragraph reach the AI marked as such, in the order they stand in the text."""
+    h = auth()
+    await consent(client, h)
+    fake = ai()
+    doc = await new_doc(client, h)
+    ids = []
+    for block, text in [("b7", "thứ nhất"), ("b7", "thứ hai"), ("b8", "thứ ba")]:
+        r = await create(client, h, doc, block_id=block, selected_text=text)
+        assert r.status_code == 201, r.text
+        ids.append(r.json()["id"])
+    r = await client.post("/api/notebooks/generate", headers=h, json={"highlight_ids": ids})
+    assert r.status_code == 201, r.text
+    prompt = fake.calls[0][1]["content"]
+    assert "Text: thứ nhất\nIn the same paragraph as [2]" in prompt
+    assert "Text: thứ hai\nIn the same paragraph as [1]" in prompt
+    assert "Text: thứ ba\n" in prompt and prompt.count("same paragraph") == 2
 
 
 async def test_generate_by_document(client, auth, ai):
@@ -372,3 +443,36 @@ async def test_generate_by_document(client, auth, ai):
 
     r = await client.post("/api/notebooks/generate", headers=h, json={"highlight_ids": ids, "layout": "page"})
     assert r.status_code == 422
+
+
+async def test_generate_one_document_or_one_collection(client, auth, ai):
+    """Highlights from two documents need a collection holding both; a collection of someone else is missing."""
+    h = auth()
+    await consent(client, h)
+    fake = ai()
+    first, second = await new_doc(client, h), await new_doc(client, h)
+    ids = await highlights(client, h, first, 1) + await highlights(client, h, second, 1)
+
+    r = await client.post("/api/notebooks/generate", headers=h, json={"highlight_ids": ids})
+    assert r.status_code == 422 and "bộ sưu tập" in r.json()["detail"] and not fake.calls
+
+    shelf = (await client.post("/api/collections", headers=h, json={"name": "Chủ đề"})).json()
+    await client.patch(f"/api/documents/{first}", headers=h, json={"collection_id": shelf["id"]})
+    body = {"highlight_ids": ids, "collection_id": shelf["id"]}
+    r = await client.post("/api/notebooks/generate", headers=h, json=body)
+    assert r.status_code == 422 and not fake.calls  # the second is not on the shelf
+
+    # The picker lists a shelf's highlights only.
+    r = await client.get("/api/highlights", headers=h, params={"collection_id": shelf["id"]})
+    assert [x["id"] for x in r.json()["items"]] == ids[:1]
+
+    await client.patch(f"/api/documents/{second}", headers=h, json={"collection_id": shelf["id"]})
+    r = await client.post("/api/notebooks/generate", headers=h, json=body)
+    assert r.status_code == 201, r.text
+    assert len(r.json()["sources"]) == 2
+
+    other = auth()
+    await consent(client, other)
+    theirs = (await client.post("/api/collections", headers=other, json={"name": "Của họ"})).json()
+    body = {"highlight_ids": ids[:1], "collection_id": theirs["id"]}
+    assert (await client.post("/api/notebooks/generate", headers=h, json=body)).status_code == 404

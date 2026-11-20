@@ -54,6 +54,7 @@ async def list_highlights(
     user: CurrentUser,
     session: SessionDep,
     document_id: uuid.UUID | None = None,
+    collection_id: uuid.UUID | None = None,
     category: HighlightCategory | None = None,
     color: HighlightColor | None = None,
     sort: Literal["newest", "document"] = "newest",
@@ -64,6 +65,14 @@ async def list_highlights(
     where = [Highlight.user_id == user.id]
     if document_id:
         where.append(Highlight.document_id == document_id)
+    if collection_id:  # the documents on one shelf (the AI notebook of a collection)
+        where.append(
+            Highlight.document_id.in_(
+                select(Document.id).where(
+                    Document.user_id == user.id, Document.collection_id == collection_id
+                )
+            )
+        )
     if category:
         where.append(Highlight.category == category)
     if color:

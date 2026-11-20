@@ -192,6 +192,12 @@ export default function NotebookDocumentPage() {
             <Icon name="book" size={16} />
             {t("notebook.openDocument")}
           </Link>
+          {highlights.length > 0 && (
+            <Link href={`/notebooks/new?document=${id}&from=notebook`} className="btn-outline">
+              <Icon name="spark" size={16} />
+              {t("notebooks.generate")}
+            </Link>
+          )}
           <button type="button" className="btn-outline" onClick={() => void copy()}>
             <Icon name="copy" size={16} />
             {t("notebook.copy")}

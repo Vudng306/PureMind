@@ -415,6 +415,9 @@ class NotebookGenerate(BaseModel):
     language: Literal["vi", "en"] | None = None
     # "document": one section per document instead of one per topic
     layout: Literal["topic", "document"] = "topic"
+    # A notebook is written from one document, or from the documents of one collection: without a
+    # collection, every highlight has to come from the same document.
+    collection_id: uuid.UUID | None = None
 
 
 class NotebookUpdate(BaseModel):

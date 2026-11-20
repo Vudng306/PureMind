@@ -65,6 +65,46 @@ class Source:
     note: str
     document_title: str
     page: int | None
+    # The sentence(s) the passage sits in, when the document's text has it and it says more than the passage.
+    context: str = ""
+    # Highlights with the same key are in the same paragraph of the same document; None: not known.
+    paragraph: str | None = None
+
+
+MAX_CONTEXT_CHARS = 600
+# Only a passage this short needs its sentence: a longer one says what it is about by itself, and the more
+# unmarked text the model is shown, the more of it ends up in the notebook as if the reader had marked it.
+SHORT_PASSAGE_WORDS = 8
+# The end of a sentence, or of a clause before a list or an explanation ("…khác phái: Đàn ông…").
+SENTENCE_END = re.compile(r"[.!?…:;](?:[\"”’»)\]]*)(?=\s)")
+
+
+def sentence_around(paragraph: str, passage: str) -> str:
+    """The sentence (or clause) of `paragraph` that holds a short `passage`, so a highlight such as "chapter
+    two" can be understood. "" when the passage is long enough on its own, is not found, or is the whole
+    sentence already."""
+    text = " ".join(paragraph.split())
+    words = " ".join(passage.split())
+    if not text or not words or len(words.split()) >= SHORT_PASSAGE_WORDS:
+        return ""
+    at = text.find(words)
+    if at < 0:
+        at = text.lower().find(words.lower())
+    if at < 0:
+        return ""
+    end_of_passage = at + len(words)
+    start = 0
+    for m in SENTENCE_END.finditer(text, 0, at):
+        start = m.end()
+    end = len(text)
+    if m := SENTENCE_END.search(text, max(end_of_passage - 1, 0)):
+        end = m.end()
+    sentence = text[start:end].strip()
+    if len(sentence) > MAX_CONTEXT_CHARS:  # a run-on "sentence": keep what is nearest the passage
+        room = max((MAX_CONTEXT_CHARS - len(words)) // 2, 0)
+        a, z = max(at - room, start), min(end_of_passage + room, end)
+        sentence = ("…" if a > start else "") + text[a:z].strip() + ("…" if z < end else "")
+    return "" if sentence.strip(' .!?…"”’') == words.strip(' .!?…"”’') else sentence
 
 
 def system_prompt(
@@ -102,17 +142,35 @@ def system_prompt(
         "highlight should be cited at least once.",
         "The reader's notes are their own thoughts about a highlight; use them to understand it and cite the same "
         "number. Output only the Markdown, without a surrounding code block.",
+        "",
+        "Short or partial highlights:",
+        "- `In sentence:` shows the sentence a highlight was taken from, only so you know what it refers to "
+        '("chapter two", "this book"). Write from the highlighted words and the notes; take nothing from that '
+        "sentence that no highlight or note says.",
+        "- Highlights listed as in the same paragraph were usually marked as pieces of one idea: put them in the "
+        "same bullet or sentence and cite them together, like [4][5], unless they clearly say different things. "
+        "Never give a fragment such as a chapter name its own section or bullet.",
+        "- Do not draw lessons, advice or conclusions that no highlight or note states.",
     ]
     return "\n".join(parts)
 
 
 def user_prompt(sources: list[Source]) -> str:
+    together: dict[str, list[int]] = {}
+    for n, s in enumerate(sources, 1):
+        if s.paragraph is not None:
+            together.setdefault(s.paragraph, []).append(n)
     lines = ["<highlights>"]
     for n, s in enumerate(sources, 1):
         where = f'from "{s.document_title}"' + (f", page {s.page}" if s.page else "")
         kind = f" — marked as {CATEGORY_NAME[s.category]}" if s.category in CATEGORY_NAME else ""
         lines.append(f"[{n}] {where}{kind}")
         lines.append(f"Text: {' '.join(s.text.split())}")
+        if s.context:
+            lines.append(f"In sentence: {s.context}")
+        others = [m for m in together.get(s.paragraph, []) if m != n] if s.paragraph is not None else []
+        if others:
+            lines.append("In the same paragraph as " + ", ".join(f"[{m}]" for m in others))
         if note := s.note.strip():
             if len(note) > MAX_NOTE_CHARS:
                 note = note[:MAX_NOTE_CHARS] + "…"
