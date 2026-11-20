@@ -5,6 +5,8 @@ const withVar = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
 // Colours, radii and shadows follow the PureMind Design System v1 (tokens in src/app/globals.css).
 export default {
   content: ["./src/**/*.{ts,tsx}"],
+  // A tap must not leave a button looking hovered on a touch screen.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       colors: {

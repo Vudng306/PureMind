@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ActionSheet, BottomSheet, type SheetAction } from "@/components/bottom-sheet";
 import { CleanReader, type CleanReaderHandle, type ScrollState, type TextSelection } from "@/components/clean-reader";
 import { FindBar } from "@/components/find-bar";
 import { Icon } from "@/components/icons";
@@ -44,16 +45,11 @@ import {
 } from "@/lib/documents";
 import { currentLang, translate, useLang, useT, type Key } from "@/lib/i18n";
 import { SELECTION_EXPLAIN, SELECTION_TRANSLATE } from "@/lib/features";
-import { parseMarkdown, type Inline } from "@/lib/markdown";
+import { parseMarkdown } from "@/lib/markdown";
 import { MSG, messageFor } from "@/lib/messages";
-import {
-  colorLabel,
-  usePreferences,
-  type ColumnWidth,
-  type FontFamily,
-  type HighlightColor,
-  type LineHeight,
-} from "@/lib/preferences";
+import { BOTTOM_BAR, PhoneReaderBars, ReaderOutline, ReadingOptions, TOP_BAR } from "@/components/reader-controls";
+import { followScroll, useCompact, type BarsState } from "@/lib/mobile";
+import { colorLabel, usePreferences, type HighlightColor } from "@/lib/preferences";
 import { readOn, readOnPages, resumeOf, toPosition, type Resume } from "@/lib/reading";
 import type { DocumentDetail, DocumentListItem, ReadPosition, Theme } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
@@ -69,31 +65,14 @@ const PdfViewer = dynamic(() => import("@/components/pdf-viewer").then((m) => m.
 });
 
 type Mode = "original" | "clean";
-const THEMES: { value: Theme; label: Key; swatch: string }[] = [
-  { value: "light", label: "reader.themeLightLabel", swatch: "#F4EFE4" },
-  { value: "sepia", label: "reader.themeSepiaLabel", swatch: "#EBDDC3" },
-  { value: "dark", label: "reader.themeDarkLabel", swatch: "#1B1A17" },
-];
-const LINE_HEIGHTS: [LineHeight, Key][] = [
-  [1.5, "settings.lhTight"],
-  [1.65, "settings.lhNormal"],
-  [1.8, "settings.lhLoose"],
-];
-const FONTS: [FontFamily, Key][] = [
-  ["serif", "reader.fontSerif"],
-  ["sans", "reader.fontSans"],
-];
-const WIDTHS: [ColumnWidth, Key][] = [
-  [600, "settings.widthNarrow"],
-  [680, "settings.widthMedium"],
-  [780, "settings.widthWide"],
-];
 // Whether each column beside the text was left open, on this device. Until the reader opens one, both are
 // closed: a document opens as text and nothing else (RD-101).
 const SIDE_KEY = "puremind-reader-side";
 const PANEL_KEY = "puremind-reader-panel";
 const WIDE = "(min-width: 1280px)";
-const inlineText = (nodes: Inline[]): string => nodes.map((n) => ("v" in n ? n.v : "c" in n ? inlineText(n.c) : " ")).join("");
+// How long a selection is waited for after a press on the phone's bar, and a scroll is taken as the reader's own.
+const MENU_HOLD_MS = 450;
+const TOUCH_SCROLL_MS = 1500;
 const modeKey = (id: string) => `puremind-reader-mode:${id}`;
 const NO_ISSUES: Record<string, AnchorIssue> = {};
 
@@ -150,7 +129,6 @@ function Reader({ id }: { id: string }) {
     defaultMode,
     colorLabels,
     timeLeft,
-    set: setPrefs,
   } = usePreferences();
   const showToast = useUi((s) => s.showToast);
   const setPageTheme = useUi((s) => s.setPageTheme);
@@ -191,10 +169,6 @@ function Reader({ id }: { id: string }) {
   const [thumbsSlot, setThumbsSlot] = useState<HTMLElement | null>(null);
   // FR-RDR-03: the reading options live behind this gear, so the toolbar stays short.
   const [optsOpen, setOptsOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [chromeHidden, setChromeHidden] = useState(false);
-  const chromeScroll = useRef(0);
-  const chromeEngaged = useRef(false);
   const [activeHl, setActiveHl] = useState<string | null>(null);
   const [flashHl, setFlashHl] = useState<string | null>(null);
   // Highlights not placed in the clean text as it is now, and why (AN-104).
@@ -218,6 +192,9 @@ function Reader({ id }: { id: string }) {
   const [hlTarget, setHlTarget] = useState<Highlight | null>(null);
   const [fraction, setFraction] = useState(0);
   const [page, setPage] = useState<{ current: number; total: number } | null>(null);
+  const compact = useCompact();
+  const [barsShown, setBarsShown] = useState(true);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const readerRef = useRef<CleanReaderHandle>(null);
   const pdfRef = useRef<PdfViewerHandle>(null);
@@ -239,6 +216,12 @@ function Reader({ id }: { id: string }) {
   const linkVisit = useRef<{ hl: string | null; q: string | null } | null>(null);
   // While the columns come and go around the text (Focus), a scroll does not put the selection menu away.
   const focusHold = useRef(false);
+  // Until when an emptied selection is ignored, after a press on the phone's selection bar.
+  const menuHold = useRef(0);
+  const holdTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // The phone's bars: where they stand against the scroll, and when a finger or a wheel last moved the text.
+  const bars = useRef<BarsState>({ shown: true, anchor: 0 });
+  const touchedAt = useRef(-Infinity);
 
   const isPdf = doc?.file_type === "pdf";
   const hasClean = doc?.extraction_status === "done" && Boolean(doc.content_clean);
@@ -283,13 +266,14 @@ function Reader({ id }: { id: string }) {
     setPanelOpen((open) => open || (wide && (readFlag(PANEL_KEY) ?? false)));
   }, []);
 
+  // A phone opens these as sheets over the text, for the moment: nothing to remember.
   function toggleSide() {
-    writeFlag(SIDE_KEY, !sideOpen);
+    if (!compact) writeFlag(SIDE_KEY, !sideOpen);
     setSideOpen(!sideOpen);
   }
 
   function showPanel(open: boolean) {
-    writeFlag(PANEL_KEY, open);
+    if (!compact) writeFlag(PANEL_KEY, open);
     setPanelOpen(open);
   }
 
@@ -353,12 +337,22 @@ function Reader({ id }: { id: string }) {
         showToast(MSG["MSG-22"]);
         return setSelection(null);
       }
-      if (!s && focusHold.current) return;
+      if (!s && (focusHold.current || performance.now() < menuHold.current)) return;
       // Selecting only selects (AN-101): a translation is asked for with the menu's Translate button.
       setSelection(s);
     },
     [showToast],
   );
+
+  // A tap on the phone's selection bar may cost the selection before the tap arrives: the bar waits for it.
+  const holdSelection = useCallback(() => {
+    menuHold.current = performance.now() + MENU_HOLD_MS;
+    clearTimeout(holdTimer.current);
+    holdTimer.current = setTimeout(() => {
+      if (window.getSelection()?.isCollapsed) setSelection(null);
+    }, MENU_HOLD_MS + 20);
+  }, []);
+  useEffect(() => () => clearTimeout(holdTimer.current), []);
 
   function chooseMode(next: Mode) {
     setMode(next);
@@ -379,7 +373,6 @@ function Reader({ id }: { id: string }) {
         setFindOpen(true);
       } else if (e.key === "Escape") {
         setOptsOpen(false);
-        setMoreOpen(false);
         setFocus(false);
       }
     }
@@ -641,8 +634,10 @@ function Reader({ id }: { id: string }) {
           return unplaced(target);
         }
         beginDetour(back);
-        setPanelOpen(true);
-        setPanelTab("highlights");
+        if (!compact) {
+          setPanelOpen(true);
+          setPanelTab("highlights");
+        }
         flash(target.id);
         return;
       }
@@ -671,8 +666,10 @@ function Reader({ id }: { id: string }) {
       const saved = resumeOf({ fraction: doc.read_fraction, position: doc.read_position, page: doc.last_read_page });
       beginDetour(saved, { landPage: pdfPlaces(target)[0]?.page ?? target.page });
     }
-    setPanelOpen(true);
-    setPanelTab("highlights");
+    if (!compact) {
+      setPanelOpen(true);
+      setPanelTab("highlights");
+    }
     setActiveHl(target.id);
     flash(target.id);
     let tries = 0;
@@ -930,7 +927,7 @@ function Reader({ id }: { id: string }) {
   // ---- render
   if (isLoading || mode === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center">
         <Spinner label={t("reader.opening")} />
       </div>
     );
@@ -938,7 +935,7 @@ function Reader({ id }: { id: string }) {
 
   if (isError || !doc || viewerError) {
     return (
-      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-4 px-4">
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-4 px-4">
         <Alert>{isError && error instanceof Error ? error.message : MSG["MSG-21"]}</Alert>
         <div className="flex gap-2">
           {viewerError && (
@@ -1047,33 +1044,119 @@ function Reader({ id }: { id: string }) {
       </span>
     );
 
-  return (
-    <div className="reader-root flex h-dvh bg-bg text-ink" data-chrome-hidden={chromeHidden && !panelOpen && !sideOpen && !optsOpen && !moreOpen && !findOpen}
-      onWheelCapture={() => { chromeEngaged.current = true; }}
-      onTouchStartCapture={() => { chromeEngaged.current = true; }}
-      onScrollCapture={(event) => {
-        const target = event.target as HTMLElement;
-        if (!target.matches("[data-reader-scroll], [role=region]")) return;
-        const top = target.scrollTop;
-        if (!chromeEngaged.current) { chromeScroll.current = top; return; }
-        if (Math.abs(top - chromeScroll.current) > 12) {
-          setChromeHidden(top > chromeScroll.current && top > 80);
-          chromeScroll.current = top;
+  const sideLabel = t(original ? "reader.pagesHeading" : "reader.outline");
+  const sideBody = original ? (
+    <div ref={setThumbsSlot} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" />
+  ) : (
+    <ReaderOutline
+      headings={headings}
+      pageOf={hasPages ? (blockId) => blockPage.get(blockId) : undefined}
+      onGo={(blockId) => {
+        readerRef.current?.scrollToBlock(blockId);
+        // Over a narrow page the column covers the text it just scrolled to.
+        if (!window.matchMedia("(min-width: 1024px)").matches) setSideOpen(false);
+      }}
+    />
+  );
+  const readingOptions = (
+    <ReadingOptions clean={clean} showTimeLeft={clean && !hasPages && Boolean(doc.reading_minutes)} readingTheme={readingTheme} />
+  );
+
+  // On a phone the panel lies over the text: going to a passage from it has to uncover the text first.
+  const thenText = <A,>(go: (a: A) => void) =>
+    compact
+      ? (a: A) => {
+          setPanelOpen(false);
+          go(a);
         }
-      }}
-      onClick={(event) => {
-        if ((event.target as HTMLElement).closest("button, a, input, textarea, select, [data-selection-menu]")) return;
-        if (window.getSelection()?.toString()) return;
-        setChromeHidden(false);
-      }}
-    >
-      <div className="flex min-w-0 flex-1 flex-col">
+      : go;
+  const panel = (
+    <ReaderPanel
+      embedded={compact}
+      docId={id}
+      highlights={highlights}
+      tab={panelTab}
+      onTab={setPanelTab}
+      onClose={() => showPanel(false)}
+      activeId={activeHl}
+      editingId={editingHl}
+      onEditing={setEditingHl}
+      onJump={thenText(openHighlight)}
+      aiQuote={aiQuote}
+      onClearQuote={() => setAiQuote(null)}
+      aiImage={aiImage}
+      onClearImage={() => setAiImage(null)}
+      onKeyword={thenText(findKeyword)}
+      canHighlight={clean || isPdf}
+      issues={clean ? hlIssues : NO_ISSUES}
+      progress={progressText}
+      onSource={isPdf ? thenText(showOnPdf) : undefined}
+    />
+  );
+
+  const neighbour = (to: DocumentListItem | undefined, icon: "up" | "down", label: Key): SheetAction[] =>
+    to ? [{ key: label, label: t(label), icon, href: `/reader/${to.id}` }] : [];
+  const moreActions: SheetAction[] = [
+    // After the sheet has given the focus back, or the field would lose it again.
+    { key: "find", label: t("find.title"), icon: "search", onSelect: () => requestAnimationFrame(() => setFindOpen(true)) },
+    { key: "focus", label: t("reader.focus"), icon: "focus", onSelect: () => toggleFocus(true) },
+    ...(isPdf && (original ? hasClean : true)
+      ? [
+          {
+            key: "mode",
+            label: t(original ? "reader.switchClean" : "reader.viewOriginal"),
+            icon: original ? ("book" as const) : ("file" as const),
+            onSelect: () => chooseMode(original ? "clean" : "original"),
+          },
+        ]
+      : []),
+    {
+      key: "info",
+      label: t("reader.tabInfo"),
+      icon: "note",
+      onSelect: () => {
+        setPanelTab("info");
+        setPanelOpen(true);
+      },
+    },
+    ...neighbour(at > 0 ? shelf?.[at - 1] : undefined, "up", "reader.prevDoc"),
+    ...neighbour(at >= 0 ? shelf?.[at + 1] : undefined, "down", "reader.nextDoc"),
+  ];
+
+  const markTouch = () => {
+    touchedAt.current = performance.now();
+  };
+  // The bars answer the reader's own scrolling; a jump to a passage or a restored place leaves them as they are.
+  function followReader(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.target;
+    if (!compact || !(el instanceof HTMLElement) || el.clientHeight < e.currentTarget.clientHeight / 2) return;
+    const top = el.scrollTop;
+    if (performance.now() - touchedAt.current > TOUCH_SCROLL_MS) {
+      bars.current = { ...bars.current, anchor: top };
+      return;
+    }
+    markTouch(); // the text goes on gliding after the finger has lifted
+    bars.current = followScroll(bars.current, top, el.scrollHeight - el.clientHeight);
+    setBarsShown(bars.current.shown);
+  }
+  // With the bars away, a tap on the text brings them back.
+  function tapReader(e: React.MouseEvent) {
+    if (!compact || barsShown) return;
+    if ((e.target as Element).closest("a, button, input, select, textarea, dialog")) return;
+    if (!window.getSelection()?.isCollapsed) return;
+    bars.current = { ...bars.current, shown: true };
+    setBarsShown(true);
+  }
+
+  return (
+    <div className="flex h-dvh bg-bg text-ink">
+      <div className="flex min-w-0 flex-1 flex-col pt-[env(safe-area-inset-top)] md:pt-0">
         <div aria-hidden className="h-[3px] shrink-0 bg-line">
           <div className="h-[3px] bg-accent transition-[width] duration-200" style={{ width: `${Math.round(pct * 100)}%` }} />
         </div>
 
-        {!focus && (
-          <header className="reader-toolbar flex h-14 shrink-0 items-center gap-1 border-b border-line px-2 sm:px-3">
+        {!focus && !compact && (
+          <header className="flex h-14 shrink-0 items-center gap-1 border-b border-line px-2 sm:px-3">
             <Link href="/library" className={toolIcon} aria-label={t("reader.backToLibrary")} title={t("reader.backToLibrary")}>
               <Icon name="back" size={20} />
             </Link>
@@ -1083,7 +1166,7 @@ function Reader({ id }: { id: string }) {
             </div>
             <button
               type="button"
-              className={`hidden sm:inline-flex ${toolIcon} ${sideOpen ? "bg-soft" : ""}`}
+              className={`${toolIcon} ${sideOpen ? "bg-soft" : ""}`}
               aria-pressed={sideOpen}
               aria-label={t("reader.toggleSide")}
               title={t("reader.toggleSide")}
@@ -1121,13 +1204,13 @@ function Reader({ id }: { id: string }) {
                 ))}
               </div>
             )}
-            {original && <div ref={setZoomSlot} className="reader-zoom ml-1 shrink-0" />}
-            {original && <div ref={setPagerSlot} className="reader-pager ml-1 shrink-0" />}
+            {original && <div ref={setZoomSlot} className="ml-1 hidden shrink-0 lg:block" />}
+            {original && <div ref={setPagerSlot} className="ml-1 shrink-0" />}
             {divider}
 
             <button
               type="button"
-              className={`hidden sm:inline-flex ${toolIcon}`}
+              className={toolIcon}
               aria-label={t("reader.findCtrlF")}
               title={t("reader.findCtrlF")}
               onClick={() => setFindOpen((o) => !o)}
@@ -1147,7 +1230,7 @@ function Reader({ id }: { id: string }) {
             </button>
             <button
               type="button"
-              className={`hidden sm:inline-flex ${toolIcon}`}
+              className={toolIcon}
               aria-label={t("reader.focus")}
               title={t("reader.focus")}
               data-keep-selection
@@ -1161,7 +1244,7 @@ function Reader({ id }: { id: string }) {
 
             <button
               type="button"
-              className={`hidden sm:inline-flex ${tool} ${openGroup === "notes" ? "bg-soft" : ""}`}
+              className={`${tool} ${openGroup === "notes" ? "bg-soft" : ""}`}
               aria-pressed={openGroup === "notes"}
               aria-label={t("reader.notesButton", { n: highlights.length })}
               title={t("reader.notesButton", { n: highlights.length })}
@@ -1173,7 +1256,7 @@ function Reader({ id }: { id: string }) {
             </button>
             <button
               type="button"
-              className={`hidden sm:inline-flex ${tool} ${openGroup === "ai" ? "bg-soft" : ""}`}
+              className={`${tool} ${openGroup === "ai" ? "bg-soft" : ""}`}
               aria-pressed={openGroup === "ai"}
               aria-label={t("reader.aiButton")}
               title={t("reader.aiButton")}
@@ -1182,24 +1265,11 @@ function Reader({ id }: { id: string }) {
               <Icon name="spark" />
               <span>{t("reader.tabAi")}</span>
             </button>
-            <button type="button" className="icon-btn sm:hidden" aria-label={t("library.manage")} aria-expanded={moreOpen} onClick={() => setMoreOpen((value) => !value)}><Icon name="more" /></button>
           </header>
         )}
 
-        {moreOpen && !focus && <div className="reader-more absolute inset-x-3 top-16 z-30 flex flex-col rounded-2xl border border-line bg-surface p-2 shadow-pop sm:hidden" role="menu" aria-label={t("library.manage")}>
-          <button role="menuitem" className="btn-ghost min-h-11 text-left" onClick={() => { setFindOpen(true); setMoreOpen(false); }}>{t("reader.findCtrlF")}</button>
-          <button role="menuitem" className="btn-ghost min-h-11 text-left" onClick={() => { toggleFocus(true); setMoreOpen(false); }}>{t("reader.focus")}</button>
-          {isPdf && <button role="menuitem" disabled={original && !hasClean} className="btn-ghost min-h-11 text-left" onClick={() => { chooseMode(original ? "clean" : "original"); setMoreOpen(false); }}>{t(original ? "reader.switchClean" : "reader.viewOriginal")}</button>}
-          <button role="menuitem" className="btn-ghost min-h-11 text-left" onClick={() => { setPanelTab("info"); showPanel(true); setMoreOpen(false); }}>{t("reader.tabInfo")}</button>
-          <button role="menuitem" className="btn-ghost min-h-11 text-left" onClick={() => setMoreOpen(false)}>{t("common.close")}</button>
-        </div>}
-        {!focus && <nav className="reader-bottom flex shrink-0 items-center justify-around border-t border-line bg-surface sm:hidden" aria-label={t("panel.aria")}>
-          <button className="btn-ghost min-h-11" onClick={toggleSide}><Icon name="toc" size={18} />{t("reader.outline")}</button>
-          <button className="btn-ghost min-h-11" aria-pressed={openGroup === "notes"} onClick={() => togglePanel("notes")}><Icon name="note" size={18} />{t("reader.tabNotes")}</button>
-          <button className="btn-ghost min-h-11" aria-pressed={openGroup === "ai"} onClick={() => togglePanel("ai")}><Icon name="spark" size={18} />{t("reader.tabAi")}</button>
-        </nav>}
         <div className="flex min-h-0 flex-1">
-          {sideOpen && !focus && (
+          {sideOpen && !focus && !compact && (
             <aside
               aria-label={t(original ? "reader.pagesHeading" : "reader.outline")}
               className="fixed inset-y-0 left-0 z-20 flex w-[232px] shrink-0 flex-col border-r border-line bg-surface shadow-pop lg:static lg:z-auto lg:bg-transparent lg:shadow-none"
@@ -1210,50 +1280,23 @@ function Reader({ id }: { id: string }) {
                   <Icon name="x" size={16} />
                 </button>
               </div>
-              {original ? (
-                <div ref={setThumbsSlot} className="min-h-0 flex-1 overflow-y-auto" />
-              ) : (
-                <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pb-4">
-                  {headings.length === 0 ? (
-                    <p className="px-2 py-1 text-[13px] leading-relaxed text-muted">{t("reader.noHeadings")}</p>
-                  ) : (
-                    headings.map((hd) => (
-                      <button
-                        key={hd.id}
-                        type="button"
-                        onClick={() => {
-                          readerRef.current?.scrollToBlock(hd.id);
-                          // Over a narrow page the column covers the text it just scrolled to.
-                          if (!window.matchMedia("(min-width: 1024px)").matches) setSideOpen(false);
-                        }}
-                        className="flex min-h-9 items-start justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] leading-snug text-body hover:bg-soft hover:text-ink"
-                        style={{ paddingLeft: hd.t === "heading" ? 8 + (hd.level - 1) * 12 : 8 }}
-                      >
-                        <span className={`line-clamp-2 ${hd.t === "heading" && hd.level === 1 ? "font-semibold text-ink" : ""}`}>
-                          {hd.t === "heading" && inlineText(hd.c)}
-                        </span>
-                        {hasPages && <span className="shrink-0 text-xs tabular-nums text-muted">{blockPage.get(hd.id)}</span>}
-                      </button>
-                    ))
-                  )}
-                </nav>
-              )}
+              {sideBody}
             </aside>
           )}
 
-          <div className="relative flex min-w-0 flex-1 flex-col">
+          <div
+            className="relative flex min-w-0 flex-1 flex-col max-md:overflow-hidden"
+            onScrollCapture={followReader}
+            onTouchMoveCapture={markTouch}
+            onTouchEndCapture={markTouch}
+            onWheelCapture={markTouch}
+            onClick={tapReader}
+          >
             {original ? (
               <>
                 {doc.extraction_status === "failed" && (
-                  <div className="mx-auto w-full max-w-[640px] px-4 pt-4">
+                  <div className="mx-auto w-full max-w-[640px] px-4 pt-4 max-md:pt-16">
                     <Alert>{messageFor(doc.extraction_error)}</Alert>
-                  </div>
-                )}
-                {isPdf && (
-                  <div className="flex justify-center border-b border-line py-2 md:hidden">
-                    <button type="button" className="chip h-9" onClick={() => chooseMode("clean")} disabled={!hasClean}>
-                      {t("reader.switchClean")}
-                    </button>
                   </div>
                 )}
                 <PdfViewer
@@ -1264,7 +1307,10 @@ function Reader({ id }: { id: string }) {
                   onError={() => setViewerError(true)}
                   reloadKey={reloadKey}
                   search={search}
-                  bottomInset={24}
+                  bottomInset={compact ? BOTTOM_BAR + 48 : 24}
+                  topInset={compact ? TOP_BAR : 0}
+                  compact={compact}
+                  onThumbPick={() => compact && setSideOpen(false)}
                   highlights={highlights}
                   activeHighlightId={activeHl}
                   flashHighlightId={flashHl}
@@ -1277,13 +1323,6 @@ function Reader({ id }: { id: string }) {
               </>
             ) : hasClean ? (
               <>
-                {isPdf && (
-                  <div className="flex justify-center border-b border-line py-2 md:hidden">
-                    <button type="button" className="chip h-9" onClick={() => chooseMode("original")}>
-                      {t("reader.viewOriginal")}
-                    </button>
-                  </div>
-                )}
                 <div className="min-h-0 flex-1">
                   <CleanReader
                     handleRef={readerRef}
@@ -1307,7 +1346,9 @@ function Reader({ id }: { id: string }) {
                     onViewSource={isPdf ? viewSource : undefined}
                     hasSource={hasSource}
                     charts={charts}
-                    bottomPadding={80}
+                    bottomPadding={compact ? BOTTOM_BAR + 64 : 80}
+                    topInset={compact ? TOP_BAR : 0}
+                    compact={compact}
                   />
                 </div>
               </>
@@ -1343,140 +1384,35 @@ function Reader({ id }: { id: string }) {
               />
             )}
 
-            {optsOpen && !focus && (
+            {optsOpen && !focus && !compact && (
               <div
                 role="dialog"
                 aria-label={t("settings.readingOptions")}
-                className="absolute right-3 top-3 z-20 flex w-[min(340px,calc(100%-24px))] flex-col gap-4 rounded-[14px] border border-line bg-surface p-4 shadow-float"
+                className="absolute right-3 top-3 z-20 w-[min(340px,calc(100%-24px))] rounded-[14px] border border-line bg-surface p-4 shadow-float"
               >
-                {clean && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[13px] font-semibold text-muted">{t("reader.textSize")}</span>
-                    <div className="flex items-center">
-                      <button
-                        type="button"
-                        aria-label={t("reader.textSmaller")}
-                        className="icon-btn h-10 w-10 font-serif text-[15px]"
-                        disabled={fontSize <= 14}
-                        onClick={() => setPrefs({ fontSize: fontSize - 1 })}
-                      >
-                        A
-                      </button>
-                      <span className="w-[34px] text-center text-[13px] tabular-nums text-muted" aria-live="polite">
-                        {fontSize}
-                      </span>
-                      <button
-                        type="button"
-                        aria-label={t("reader.textBigger")}
-                        className="icon-btn h-10 w-10 font-serif text-[21px]"
-                        disabled={fontSize >= 28}
-                        onClick={() => setPrefs({ fontSize: fontSize + 1 })}
-                      >
-                        A
-                      </button>
-                    </div>
-                  </div>
-                )}
-                <div className="flex flex-col gap-2">
-                  <span className="text-[13px] font-semibold text-muted">{t("reader.themeAria")}</span>
-                  <div className="flex items-center gap-1" role="radiogroup" aria-label={t("reader.themeAria")}>
-                    {THEMES.map((th) => (
-                      <button
-                        key={th.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={readingTheme === th.value}
-                        title={t(th.label)}
-                        // The app's own theme is "no page of the reader's own", so the reader goes on following it.
-                        onClick={() => setPrefs({ readingTheme: th.value === theme ? null : th.value })}
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-[10px] border border-line text-[13px] text-ink hover:bg-soft"
-                        style={{ borderColor: readingTheme === th.value ? "rgb(var(--accent))" : undefined }}
-                      >
-                        <span className="h-[18px] w-[18px] rounded-full border border-line" style={{ background: th.swatch }} />
-                        {t(th.label)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {clean && (
-                  <>
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[13px] font-semibold text-muted">{t("reader.fontFamily")}</span>
-                      <div className="flex gap-1.5" role="radiogroup" aria-label={t("reader.fontFamily")}>
-                        {FONTS.map(([v, l]) => (
-                          <button
-                            key={v}
-                            type="button"
-                            role="radio"
-                            aria-checked={fontFamily === v}
-                            className={`chip flex-1 ${v === "sans" ? "font-sans" : "font-serif"}`}
-                            onClick={() => setPrefs({ fontFamily: v })}
-                          >
-                            {t(l)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[13px] font-semibold text-muted">{t("settings.lineHeight")}</span>
-                      <div className="flex gap-1.5" role="radiogroup" aria-label={t("settings.lineHeight")}>
-                        {LINE_HEIGHTS.map(([v, l]) => (
-                          <button
-                            key={v}
-                            type="button"
-                            role="radio"
-                            aria-checked={lineHeight === v}
-                            className="chip flex-1"
-                            onClick={() => setPrefs({ lineHeight: v })}
-                          >
-                            {t(l)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[13px] font-semibold text-muted">{t("settings.columnWidth")}</span>
-                      <div className="flex gap-1.5" role="radiogroup" aria-label={t("settings.columnWidth")}>
-                        {WIDTHS.map(([v, l]) => (
-                          <button
-                            key={v}
-                            type="button"
-                            role="radio"
-                            aria-checked={width === v}
-                            className="chip flex-1"
-                            onClick={() => setPrefs({ width: v })}
-                          >
-                            {t(l)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-                {clean && !hasPages && doc.reading_minutes ? (
-                  // RD-112: the estimate is a guide, and it can be turned off.
-                  <label className="flex items-start gap-2.5 text-[13px] text-ink">
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      checked={timeLeft}
-                      onChange={(e) => setPrefs({ timeLeft: e.target.checked })}
-                      className="mt-0.5 h-4 w-4 accent-[rgb(var(--accent))]"
-                    />
-                    <span className="flex flex-col gap-0.5">
-                      <span className="font-semibold">{t("reader.timeLeft")}</span>
-                      <span className="text-muted">{t("reader.timeLeftHint")}</span>
-                    </span>
-                  </label>
-                ) : null}
-                <Link href="/settings" className="flex items-center gap-1.5 text-[13px] text-accent-text hover:underline">
-                  <Icon name="gear" size={14} />
-                  {t("settings.allOptions")}
-                </Link>
+                {readingOptions}
               </div>
             )}
 
             {detour?.landed && resumeWhere && <ResumeChip where={resumeWhere} onBack={goBack} onDismiss={readOnHere} />}
+
+            {compact && !focus && (
+              <PhoneReaderBars
+                topShown={barsShown && !findOpen}
+                bottomShown={barsShown}
+                title={doc.title}
+                progress={progressText}
+                pagerRef={original ? setPagerSlot : undefined}
+                sideIcon={original ? "file" : "toc"}
+                sideLabel={sideLabel}
+                notes={highlights.length}
+                onSide={() => setSideOpen(true)}
+                onNotes={() => togglePanel("notes")}
+                onAi={() => togglePanel("ai")}
+                onOptions={() => setOptsOpen(true)}
+                onMore={() => setMoreOpen(true)}
+              />
+            )}
 
             {focus && (
               <button
@@ -1494,32 +1430,31 @@ function Reader({ id }: { id: string }) {
         </div>
       </div>
 
-      {panelOpen && !focus && (
-        <ReaderPanel
-          docId={id}
-          highlights={highlights}
-          tab={panelTab}
-          onTab={setPanelTab}
-          onClose={() => showPanel(false)}
-          activeId={activeHl}
-          editingId={editingHl}
-          onEditing={setEditingHl}
-          onJump={openHighlight}
-          aiQuote={aiQuote}
-          onClearQuote={() => setAiQuote(null)}
-          aiImage={aiImage}
-          onClearImage={() => setAiImage(null)}
-          onKeyword={findKeyword}
-          canHighlight={clean || isPdf}
-          issues={clean ? hlIssues : NO_ISSUES}
-          progress={progressText}
-          onSource={isPdf ? showOnPdf : undefined}
-        />
+      {panelOpen && !focus && !compact && panel}
+
+      {compact && (
+        <>
+          <BottomSheet open={panelOpen && !focus} onClose={() => setPanelOpen(false)} label={t("panel.aria")} tall flush>
+            {panel}
+          </BottomSheet>
+          <BottomSheet open={sideOpen && !focus} onClose={() => setSideOpen(false)} label={sideLabel} tall flush>
+            <span className="eyebrow shrink-0 px-4 pb-2">{sideLabel.toLocaleUpperCase(lang)}</span>
+            {sideBody}
+          </BottomSheet>
+          <BottomSheet open={optsOpen && !focus} onClose={() => setOptsOpen(false)} label={t("settings.readingOptions")}>
+            <div className="px-1 pt-1">{readingOptions}</div>
+          </BottomSheet>
+          <ActionSheet open={moreOpen} onClose={() => setMoreOpen(false)} label={t("reader.more")} actions={moreActions}>
+            {original && <div ref={setZoomSlot} className="mb-1 flex justify-center border-b border-line pb-2" />}
+          </ActionSheet>
+        </>
       )}
 
       {selection && (clean || "rects" in selection) && (
         <SelectionMenu
           selection={selection}
+          docked={compact}
+          onPress={compact ? holdSelection : undefined}
           onColor={(c) => highlightSelection(c)}
           onNote={noteSelection}
           onCopy={copySelection}

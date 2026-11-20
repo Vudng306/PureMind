@@ -42,7 +42,7 @@ export function ReadTabs({
 }) {
   const t = useT();
   return (
-    <div role="tablist" aria-label={t("library.readStatus")} className="flex min-w-0 gap-4 overflow-x-auto [scrollbar-width:none]">
+    <div role="tablist" aria-label={t("library.readStatus")} className="flex min-w-0 gap-4 overflow-x-auto [scrollbar-width:none] max-md:gap-3">
       {TABS.map(([tab, label]) => {
         const active = value === tab;
         return (
@@ -52,7 +52,7 @@ export function ReadTabs({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab)}
-            className={`-mb-px flex h-11 shrink-0 items-center gap-1.5 border-b-2 text-[13px] font-semibold uppercase tracking-[0.07em] transition-colors ${
+            className={`-mb-px flex h-11 shrink-0 items-center gap-1.5 border-b-2 text-[13px] font-semibold uppercase tracking-[0.07em] transition-colors max-md:normal-case max-md:tracking-normal ${
               active ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
             }`}
           >
@@ -105,7 +105,23 @@ function Status({ doc }: { doc: DocumentListItem }) {
   return <span className={pct > 0 ? "font-medium text-accent-text" : ""}>{progressLabel(doc, pct)}</span>;
 }
 
-/** One document on one row. The whole row opens it; the buttons at its end act on it without opening. */
+/** Which document a phone's action sheet is about. */
+export function DocSummary({ doc }: { doc: DocumentListItem }) {
+  return (
+    <div className="mb-1 flex items-center gap-3 border-b border-line px-2.5 pb-3 pt-1">
+      <Cover doc={doc} className="h-[52px] w-10 rounded-md text-xl" />
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="line-clamp-2 text-[15px] font-semibold leading-snug text-ink">{doc.title}</span>
+        <span className="truncate text-xs text-muted">
+          <Status doc={doc} />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** One document on one row. The whole row opens it; the buttons at its end act on it without opening. On a phone,
+ * with no pointer to hover and no keys to move by, no row is "the chosen one" and "⋯" holds all the actions. */
 export function DocumentRow({
   doc,
   selected,
@@ -125,17 +141,17 @@ export function DocumentRow({
     <li
       data-doc={doc.id}
       onMouseEnter={onSelect}
-      className={`group relative flex scroll-mb-6 scroll-mt-24 items-center gap-3.5 border-b border-line px-3 py-3 transition-colors ${
-        selected ? "bg-surface" : ""
+      className={`group relative flex scroll-mb-6 scroll-mt-24 items-center gap-3.5 border-b border-line px-3 py-3 transition-colors active:bg-soft/60 max-md:gap-3 max-md:px-0 ${
+        selected ? "md:bg-surface" : ""
       }`}
     >
-      {selected && <span aria-hidden className="absolute inset-y-2.5 left-0 w-[3px] rounded-full bg-accent" />}
+      {selected && <span aria-hidden className="absolute inset-y-2.5 left-0 w-[3px] rounded-full bg-accent max-md:hidden" />}
       <Cover doc={doc} className="h-[52px] w-10 rounded-md text-xl" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <Link
           href={`/reader/${doc.id}`}
           onFocus={onSelect}
-          className="truncate text-[15px] font-semibold leading-snug text-ink after:absolute after:inset-0 hover:underline"
+          className="truncate text-[15px] font-semibold leading-snug text-ink after:absolute after:inset-0 hover:underline max-md:line-clamp-2 max-md:whitespace-normal"
         >
           {doc.title}
         </Link>
@@ -144,15 +160,16 @@ export function DocumentRow({
           <span className="shrink-0 rounded bg-soft px-1.5 py-px text-[10px] font-bold tracking-wide text-ink">{KIND_LABEL[doc.file_type]}</span>
           <span className="truncate">
             <Status doc={doc} />
+            <span className="md:hidden"> · {relativeTime(doc.updated_at)}</span>
           </span>
         </span>
       </div>
       {/* Each row's buttons sit in their own z-10 layer; an open menu lifts its row's layer above the rows below. */}
       <div className="relative z-10 flex shrink-0 items-center gap-0.5 has-[[role=menu]]:z-30">
-        <span className={`pr-2 text-xs tabular-nums text-muted ${selected ? "hidden" : "group-hover:hidden"}`}>
+        <span className={`pr-2 text-xs tabular-nums text-muted max-md:hidden ${selected ? "hidden" : "group-hover:hidden"}`}>
           {relativeTime(doc.updated_at)}
         </span>
-        <span className={`items-center gap-0.5 ${selected ? "flex" : "hidden group-hover:flex"}`}>
+        <span className={`items-center gap-0.5 max-md:hidden ${selected ? "flex" : "hidden group-hover:flex"}`}>
           <button
             type="button"
             className="icon-btn h-9 w-9"
@@ -169,21 +186,25 @@ export function DocumentRow({
   );
 }
 
-/** The chosen document, without opening it: what it is, how far it has been read, and what can be done with it. */
+/** The chosen document, without opening it: what it is, how far it has been read, and what can be done with it.
+ * `embedded` in a phone's sheet, where the actions are already in the sheet it was opened from. */
 export function InfoPanel({
   doc,
   shelf,
   highlights,
   actions,
+  embedded = false,
 }: {
   doc: DocumentListItem | null;
   shelf: string | null;
   highlights: number;
   actions: DocActions | null;
+  embedded?: boolean;
 }) {
   const t = useT();
-  const frame =
-    "sticky top-[92px] hidden max-h-[calc(100dvh-112px)] flex-col gap-4 self-start overflow-y-auto rounded-[18px] border border-line bg-surface p-5 shadow-card min-[1400px]:flex";
+  const frame = embedded
+    ? "flex flex-col gap-4 px-1 pt-1"
+    : "sticky top-[92px] hidden max-h-[calc(100dvh-112px)] flex-col gap-4 self-start overflow-y-auto rounded-[18px] border border-line bg-surface p-5 shadow-card min-[1400px]:flex";
 
   if (!doc || !actions) {
     return (
@@ -219,7 +240,7 @@ export function InfoPanel({
 
   return (
     <aside aria-label={t("library.info")} className={frame}>
-      <span className="eyebrow">{t("library.info").toUpperCase()}</span>
+      {!embedded && <span className="eyebrow">{t("library.info").toUpperCase()}</span>}
       <div className="flex items-start gap-3.5">
         <Cover doc={doc} className="h-[84px] w-16 rounded-lg text-[34px]" />
         <h2 className="line-clamp-4 min-w-0 font-display text-lg font-semibold leading-snug text-ink">{doc.title}</h2>
@@ -258,30 +279,34 @@ export function InfoPanel({
         </a>
       )}
 
-      <div className="flex flex-col gap-0.5 border-t border-line pt-3">
-        <button type="button" className={act} onClick={actions.onMove}>
-          <Icon name="file" size={16} />
-          {t("library.moveToCollection")}
-        </button>
-        <button type="button" className={act} onClick={actions.onCite}>
-          <Icon name="quote" size={16} />
-          {t("library.cite")}
-        </button>
-        <button type="button" className={act} onClick={actions.onRename}>
-          <Icon name="pencil" size={16} />
-          {t("common.rename")}
-        </button>
-        <button type="button" className={act} onClick={actions.onToggleRead}>
-          <Icon name={doc.is_read ? "minus" : "check"} size={16} />
-          {t(doc.is_read ? "library.markUnread" : "library.markRead")}
-        </button>
-        <button type="button" className={`${act} text-danger hover:text-danger`} onClick={actions.onDelete}>
-          <Icon name="trash" size={16} />
-          {t("library.removeFromLibrary")}
-        </button>
-      </div>
+      {!embedded && (
+        <>
+          <div className="flex flex-col gap-0.5 border-t border-line pt-3">
+            <button type="button" className={act} onClick={actions.onMove}>
+              <Icon name="file" size={16} />
+              {t("library.moveToCollection")}
+            </button>
+            <button type="button" className={act} onClick={actions.onCite}>
+              <Icon name="quote" size={16} />
+              {t("library.cite")}
+            </button>
+            <button type="button" className={act} onClick={actions.onRename}>
+              <Icon name="pencil" size={16} />
+              {t("common.rename")}
+            </button>
+            <button type="button" className={act} onClick={actions.onToggleRead}>
+              <Icon name={doc.is_read ? "minus" : "check"} size={16} />
+              {t(doc.is_read ? "library.markUnread" : "library.markRead")}
+            </button>
+            <button type="button" className={`${act} text-danger hover:text-danger`} onClick={actions.onDelete}>
+              <Icon name="trash" size={16} />
+              {t("library.removeFromLibrary")}
+            </button>
+          </div>
 
-      <p className="border-t border-line pt-3 text-xs leading-relaxed text-muted">{t("library.keys")}</p>
+          <p className="border-t border-line pt-3 text-xs leading-relaxed text-muted">{t("library.keys")}</p>
+        </>
+      )}
     </aside>
   );
 }

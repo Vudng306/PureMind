@@ -1,6 +1,5 @@
 "use client";
 
-import { useSheet } from "./mobile-surfaces";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -135,14 +134,15 @@ export function HighlightCard({
       ref={ref}
       className={`flex flex-col gap-2.5 rounded-xl border p-3.5 transition-colors ${active ? "border-accent" : "border-line"}`}
     >
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+      <div className="flex items-center gap-2 text-xs text-muted max-md:flex-wrap max-md:gap-x-1 max-md:gap-y-0">
         <span className="flex h-6 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-soft pl-1.5 pr-2 text-xs font-semibold text-ink">
           <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_DOT[h.color] }} />
           {colorLabel(labels, h.color, lang)}
         </span>
         {h.page ? <span className="whitespace-nowrap">{t("panel.pageN", { page: h.page })}</span> : null}
         <span className="flex-1" />
-        <div className="highlight-colors flex items-center max-sm:basis-full max-sm:overflow-x-auto">
+        {/* On a phone the colors take a line of their own, under the label and the delete button. */}
+        <span aria-hidden className="hidden basis-full max-md:order-1 max-md:block" />
         {HIGHLIGHT_COLORS.map((c) => (
           <button
             key={c}
@@ -152,7 +152,7 @@ export function HighlightCard({
             aria-pressed={c === h.color}
             // The color is the category: picking one says what the passage is (FR-HL-04).
             onClick={() => updateHighlight(h.id, { color: c, category: CATEGORY_FOR_COLOR[c] })}
-            className="flex h-9 w-[20px] items-center justify-center"
+            className="flex h-9 w-[20px] items-center justify-center max-md:order-2 max-md:h-11 max-md:w-9"
           >
             <span
               className="h-3 w-3 rounded-full"
@@ -167,13 +167,12 @@ export function HighlightCard({
           type="button"
           aria-label={t("panel.deleteHighlight")}
           onClick={() => void remove()}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-soft hover:text-danger"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-soft hover:text-danger max-md:-my-2 max-md:-mr-2 max-md:h-11 max-md:w-11"
         >
           <Icon name="trash" size={16} />
         </button>
-        </div>
       </div>
-      <button type="button" onClick={onJump} className="text-left font-serif text-base leading-normal text-ink hover:underline">
+      <button type="button" onClick={onJump} className="text-left font-serif text-base leading-normal text-ink hover:underline max-md:min-h-11">
         “{h.text}”
       </button>
       {h.save === "saving" && (
@@ -221,7 +220,7 @@ export function HighlightCard({
         </div>
       )}
       {editing ? (
-        <div className="mobile-note-editor flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <textarea
             aria-label={t("panel.noteAria")}
             autoFocus
@@ -259,7 +258,7 @@ export function HighlightCard({
           {h.note}
         </button>
       ) : (
-        <button type="button" onClick={onEdit} className="h-9 self-start text-sm font-medium text-accent-text hover:underline">
+        <button type="button" onClick={onEdit} className="h-9 self-start text-sm font-medium text-accent-text hover:underline max-md:h-11">
           {t("panel.addNote")}
         </button>
       )}
@@ -316,7 +315,10 @@ export function ReaderPanel({
   issues,
   progress,
   onSource,
+  embedded = false,
 }: {
+  /** Held by a bottom sheet on a phone, rather than standing beside the text. */
+  embedded?: boolean;
   docId: string;
   highlights: Highlight[];
   tab: PanelTab;
@@ -348,7 +350,6 @@ export function ReaderPanel({
   const { data: doc } = useDocument(docId);
   const { data: notes } = useNotes(docId);
   const [filter, setFilter] = useState<HighlightColor | "all">("all");
-  const sheet = useSheet(onClose);
 
   const sorted = [...highlights].sort((a, b) => (a.page ?? 0) - (b.page ?? 0) || a.createdAt.localeCompare(b.createdAt));
   // Filtering by color is filtering by category: the two are the same choice (CATEGORY_FOR_COLOR).
@@ -376,12 +377,12 @@ export function ReaderPanel({
   return (
     <aside
       aria-label={t("panel.aria")}
-      data-expanded={sheet.expanded}
-      className="reader-sheet fixed inset-y-0 right-0 z-20 flex w-full min-h-0 flex-col border-l border-line bg-surface shadow-pop sm:w-[380px] lg:static lg:z-auto lg:shadow-none"
+      className={
+        embedded
+          ? "flex min-h-0 flex-1 flex-col"
+          : "fixed inset-y-0 right-0 z-20 flex w-full min-h-0 flex-col border-l border-line bg-surface shadow-pop sm:w-[380px] lg:static lg:z-auto lg:shadow-none"
+      }
     >
-      <button type="button" {...sheet.handle} aria-label={t("panel.aria")} aria-expanded={sheet.expanded} className="sheet-handle grid h-11 shrink-0 touch-none place-items-center sm:hidden">
-        <span className="h-1 w-12 rounded-full bg-muted/40" />
-      </button>
       <div className="flex h-14 shrink-0 items-center border-b border-line pl-4 pr-2">
         {/* Only the tabs are in the tab list; the close button beside them is not a tab (WCAG 4.1.2). */}
         <div className="flex h-14 items-center gap-5" role="tablist">
@@ -404,12 +405,16 @@ export function ReaderPanel({
         ))}
         </div>
         <span className="flex-1" />
-        <button type="button" aria-label={t("panel.closePanel")} title={t("panel.closePanel")} onClick={onClose} className="icon-btn h-10 w-10 text-muted">
-          <Icon name="panelRight" />
+        <button type="button" aria-label={t("panel.closePanel")} title={t("panel.closePanel")} onClick={onClose} className={`icon-btn text-muted ${embedded ? "" : "h-10 w-10"}`}>
+          <Icon name={embedded ? "x" : "panelRight"} />
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+      <div
+        className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain p-4 ${
+          embedded ? "pb-[calc(12px+env(safe-area-inset-bottom))]" : ""
+        }`}
+      >
         {group === "ai" ? (
           <div className="split shrink-0" role="group" aria-label={t("panel.aiViews")}>
             {views.map(([value, label]) => (
@@ -421,7 +426,7 @@ export function ReaderPanel({
         ) : views.length > 0 && (
           <div className="flex shrink-0 gap-1.5">
             {views.map(([value, label]) => (
-              <button key={value} type="button" aria-pressed={tab === value} onClick={() => onTab(value)} className="chip h-[34px] px-3 text-[13px]">
+              <button key={value} type="button" aria-pressed={tab === value} onClick={() => onTab(value)} className="chip h-[34px] max-md:h-10 px-3 text-[13px]">
                 {label}
               </button>
             ))}
@@ -434,7 +439,7 @@ export function ReaderPanel({
           <>
             {highlights.length > 0 && (
               <div aria-label={t("panel.filterAria")} className="flex flex-wrap gap-1.5">
-                <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")} className="chip h-[34px] px-2.5 text-[13px]">
+                <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")} className="chip h-[34px] max-md:h-10 px-2.5 text-[13px]">
                   {t("panel.allCount", { n: highlights.length })}
                 </button>
                 {HIGHLIGHT_COLORS.map((c) => {
@@ -445,7 +450,7 @@ export function ReaderPanel({
                       type="button"
                       aria-pressed={filter === c}
                       onClick={() => setFilter(filter === c ? "all" : c)}
-                      className="chip h-[34px] gap-1.5 px-2.5 text-[13px]"
+                      className="chip h-[34px] max-md:h-10 gap-1.5 px-2.5 text-[13px]"
                     >
                       <span className="h-2.5 w-2.5 rounded-full" style={{ background: COLOR_DOT[c] }} />
                       {colorLabel(labels, c, lang)} · {count}

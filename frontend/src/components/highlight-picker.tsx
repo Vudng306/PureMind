@@ -192,7 +192,7 @@ export function HighlightPicker({
         <span className="flex-1" />
         <button
           type="button"
-          className="btn-ghost h-9 px-3 text-sm"
+          className="btn-ghost h-9 px-3 text-sm max-md:h-11"
           onClick={() => void selectAll()}
           disabled={selectingAll || total === 0}
         >
@@ -200,7 +200,7 @@ export function HighlightPicker({
         </button>
         <button
           type="button"
-          className="btn-ghost h-9 px-3 text-sm"
+          className="btn-ghost h-9 px-3 text-sm max-md:h-11"
           onClick={() => {
             setLimitHit(false);
             onChange([]);
@@ -245,7 +245,7 @@ export function HighlightPicker({
                     {free.length > 0 && (
                       <button
                         type="button"
-                        className="btn-ghost h-8 px-2.5 text-[13px] font-semibold text-accent-text"
+                        className="btn-ghost h-8 px-2.5 text-[13px] font-semibold text-accent-text max-md:h-11"
                         onClick={() => void (allChosen ? unselectDoc(section.docId) : selectAll(section.docId))}
                         disabled={selectingAll}
                       >

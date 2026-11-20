@@ -41,7 +41,7 @@ export default function NotebookArchivePage() {
 
   return (
     <div className="mx-auto flex max-w-[1040px] flex-col gap-7">
-      <Link href="/notebooks" className="-mb-3 flex items-center gap-1.5 self-start text-sm text-muted hover:text-ink">
+      <Link href="/notebooks" className="-mb-3 flex items-center gap-1.5 self-start text-sm text-muted hover:text-ink max-md:-mt-3 max-md:h-11 max-md:pr-3">
         <Icon name="back" size={16} />
         {t("notebooks.title")}
       </Link>

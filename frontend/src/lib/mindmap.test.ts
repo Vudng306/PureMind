@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { NODE_W, ROW_GAP, edgePath, initiallyCollapsed, layoutMindMap, pathTo, wrapLabel } from "./mindmap";
+import { NODE_W, ROW_GAP, edgePath, initiallyCollapsed, layoutMindMap, pathTo, scrollToShow, wrapLabel } from "./mindmap";
 import type { MapNode } from "./reader-ai";
 
 const node = (id: string, parent: string | null, depth: number, label = id): MapNode => ({
@@ -112,5 +112,22 @@ describe("initiallyCollapsed and pathTo", () => {
   it("gives the ancestors root first, and nothing for an unknown node", () => {
     expect(pathTo(TREE, "b1x").map((n) => n.id)).toEqual(["root", "b", "b1", "b1x"]);
     expect(pathTo(TREE, "nope")).toEqual([]);
+  });
+});
+
+describe("scrollToShow", () => {
+  const view = { left: 100, top: 200, width: 300, height: 400 };
+
+  it("leaves the map alone when the box is in view", () => {
+    expect(scrollToShow(view, { x: 150, y: 300, w: 100, h: 40 })).toEqual({ left: 100, top: 200 });
+  });
+
+  it("moves only the axis on which the box is hidden", () => {
+    expect(scrollToShow(view, { x: 150, y: 900, w: 100, h: 40 })).toEqual({ left: 100, top: 720 });
+    expect(scrollToShow(view, { x: 500, y: 300, w: 100, h: 40 })).toEqual({ left: 488, top: 200 });
+  });
+
+  it("stops at the start of the map", () => {
+    expect(scrollToShow(view, { x: 4, y: 10, w: 100, h: 40 })).toEqual({ left: 0, top: 0 });
   });
 });

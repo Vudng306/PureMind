@@ -178,7 +178,7 @@ export function CommandPalette() {
         close();
       }}
       onClick={(e) => e.target === e.currentTarget && close()}
-      className="dialog mt-[max(16px,11vh)] w-[min(calc(100vw-32px),640px)] overflow-hidden"
+      className="dialog dialog-top mt-[max(16px,11vh)] w-[min(calc(100vw-32px),640px)] overflow-hidden"
     >
       <div className="flex h-16 items-center gap-3 border-b border-line pl-5 pr-2 text-muted">
         <Icon name="search" size={20} />
@@ -203,7 +203,7 @@ export function CommandPalette() {
               run(items[active]);
             }
           }}
-          className="min-w-0 flex-1 bg-transparent text-lg text-ink outline-none"
+          className="field-large min-w-0 flex-1 bg-transparent text-lg text-ink outline-none"
         />
         <button type="button" onClick={close} className="btn-ghost h-11 px-3 text-[13px] text-muted">
           {t("common.close")}

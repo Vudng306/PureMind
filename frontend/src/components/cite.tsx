@@ -41,7 +41,8 @@ export function Cite({
     <button
       type="button"
       onClick={() => onOpen(source)}
-      className={`${cls} bg-accent/15 text-accent-text hover:bg-accent/25`}
+      // On a phone the small number takes a finger: its touch area reaches past it without moving the text.
+      className={`${cls} bg-accent/15 text-accent-text hover:bg-accent/25 max-md:relative max-md:after:absolute max-md:after:-inset-x-1 max-md:after:-inset-y-3`}
       title={`${citationLabel(source, lang)}: “${source.text.slice(0, 120)}”`}
       aria-label={t("chat.sourceN", { n, where: citationLabel(source, lang) })}
     >
@@ -136,7 +137,7 @@ export function SaveToNotes({
         disabled={saved || save.isPending}
         aria-label={label}
         title={label}
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg max-md:h-11 max-md:w-11 ${
           saved ? "text-success" : "text-muted hover:bg-soft hover:text-ink"
         } ${className}`}
       >
@@ -149,7 +150,7 @@ export function SaveToNotes({
       type="button"
       onClick={run}
       disabled={saved || save.isPending}
-      className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium ${
+      className={`flex h-8 items-center gap-1.5 rounded-lg px-2 text-[13px] font-medium max-md:h-11 ${
         saved ? "text-success" : "text-accent-text hover:bg-soft"
       } ${className}`}
     >

@@ -9,7 +9,7 @@ import { useT } from "@/lib/i18n";
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   const t = useT();
   return (
-    <main className="app-backdrop grid min-h-screen lg:grid-cols-2">
+    <main className="app-backdrop grid min-h-dvh lg:grid-cols-2">
       <section className="relative m-3 hidden flex-col justify-between gap-10 overflow-hidden rounded-[28px] bg-ink px-[60px] py-12 text-bg lg:flex">
         <span aria-hidden className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent" />
         <span aria-hidden className="absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-accent/25" />

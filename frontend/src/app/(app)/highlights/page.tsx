@@ -27,7 +27,10 @@ const NOTE_PREVIEW = 200;
 type Sort = "newest" | "document";
 
 const selectCls =
-  "h-10 max-w-full rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-focus";
+  "h-10 max-w-full rounded-full border border-field bg-surface pl-3.5 pr-8 text-sm text-ink outline-none focus:border-focus max-md:h-11 max-md:w-full";
+
+// Two side by side on a phone; on the narrowest ones the label needs the icon's room.
+const HEADER_BTN = "btn-outline max-md:min-w-0 max-md:px-1.5 max-[359px]:text-[13px] max-[359px]:[&>svg]:hidden";
 
 /** FR-HL-05: every highlight across the library, filtered and sorted, 50 at a time. */
 export default function HighlightsPage() {
@@ -87,7 +90,7 @@ export default function HighlightsPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-[880px] flex-col gap-7">
+    <div className="mx-auto flex max-w-[880px] flex-col gap-7 max-md:gap-5">
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex min-w-0 flex-1 basis-60 flex-col gap-2">
           <h1 className="page-title">{t("highlights.title")}</h1>
@@ -98,12 +101,12 @@ export default function HighlightsPage() {
           </p>
         </div>
         {total > 0 && (
-          <div className="flex flex-wrap gap-2.5">
-            <button type="button" className="btn-outline" onClick={() => void exportMarkdown()} disabled={exporting}>
+          <div className="flex flex-wrap gap-2.5 max-md:grid max-md:w-full max-md:grid-cols-2">
+            <button type="button" className={HEADER_BTN} onClick={() => void exportMarkdown()} disabled={exporting}>
               <Icon name="download" size={16} />
               {t(exporting ? "highlights.exporting" : "highlights.export")}
             </button>
-            <Link href={docId ? `/notebooks/doc/${docId}` : "/notebooks"} className="btn-outline">
+            <Link href={docId ? `/notebooks/doc/${docId}` : "/notebooks"} className={HEADER_BTN}>
               <Icon name="note" size={16} />
               {t("highlights.openNotebook")}
             </Link>
@@ -115,9 +118,9 @@ export default function HighlightsPage() {
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2.5">
-          <label className="min-w-0">
+          <label className="min-w-0 max-md:w-full">
             <span className="sr-only">{t("highlights.document")}</span>
-            <select value={docId} onChange={(e) => setDocId(e.target.value)} className={`${selectCls} w-[260px]`}>
+            <select value={docId} onChange={(e) => setDocId(e.target.value)} className={`${selectCls} md:w-[260px]`}>
               <option value="">{t("highlights.allDocuments")}</option>
               {(docs ?? []).map((d) => (
                 <option key={d.id} value={d.id}>
@@ -126,7 +129,7 @@ export default function HighlightsPage() {
               ))}
             </select>
           </label>
-          <label>
+          <label className="min-w-0 max-md:flex-1 max-md:basis-[130px]">
             <span className="sr-only">{t("highlights.category")}</span>
             <select
               value={category}
@@ -141,8 +144,8 @@ export default function HighlightsPage() {
               ))}
             </select>
           </label>
-          <span className="hidden flex-1 sm:block" />
-          <div className="flex h-10 gap-0.5 rounded-full bg-soft p-1" role="group" aria-label={t("highlights.sort")}>
+          <span className="hidden flex-1 md:block" />
+          <div className="flex h-10 shrink-0 gap-0.5 rounded-full bg-soft p-1 max-md:h-11 max-md:p-0 max-[359px]:w-full" role="group" aria-label={t("highlights.sort")}>
             {(
               [
                 ["newest", "highlights.sortNewest"],
@@ -154,22 +157,25 @@ export default function HighlightsPage() {
                 type="button"
                 aria-pressed={sort === value}
                 onClick={() => setSort(value)}
-                className={`rounded-full px-3.5 text-sm ${sort === value ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"}`}
+                className={`whitespace-nowrap rounded-full px-3.5 text-sm max-md:px-3 max-[359px]:flex-1 ${sort === value ? "bg-surface font-semibold text-ink shadow-sm" : "text-muted hover:text-ink"}`}
               >
                 {t(label)}
               </button>
             ))}
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5" aria-label={t("highlights.filterColor")}>
-          <button type="button" className="chip h-9 px-3 text-[13px]" aria-pressed={!color} onClick={() => setColor("")}>
+        <div
+          className="flex flex-wrap gap-1.5 max-md:-mx-4 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-4 max-md:[scrollbar-width:none]"
+          aria-label={t("highlights.filterColor")}
+        >
+          <button type="button" className="chip h-9 px-3 text-[13px] max-md:h-11" aria-pressed={!color} onClick={() => setColor("")}>
             {t("highlights.allColors")}
           </button>
           {HIGHLIGHT_COLORS.map((c) => (
             <button
               key={c}
               type="button"
-              className="chip h-9 gap-1.5 px-3 text-[13px]"
+              className="chip h-9 gap-1.5 px-3 text-[13px] max-md:h-11"
               aria-pressed={color === c}
               onClick={() => setColor(color === c ? "" : c)}
             >

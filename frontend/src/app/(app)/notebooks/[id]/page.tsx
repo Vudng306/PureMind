@@ -119,7 +119,7 @@ function AddSourcesDialog({
       }}
       className="dialog w-[min(calc(100vw-32px),760px)]"
     >
-      <div className="flex max-h-[calc(100vh-32px)] flex-col">
+      <div className="flex max-h-[calc(100dvh-32px)] flex-col">
         <div className="flex items-center gap-3 border-b border-line px-6 py-4">
           <h2 className="flex-1 font-serif text-2xl font-medium">{t("nb.addSources")}</h2>
           <button type="button" className="icon-btn" aria-label={t("common.close")} onClick={onClose} disabled={busy}>
@@ -188,7 +188,7 @@ function VersionsDialog({
       }}
       className="dialog w-[min(calc(100vw-32px),1000px)]"
     >
-      <div className="flex max-h-[calc(100vh-32px)] flex-col">
+      <div className="flex max-h-[calc(100dvh-32px)] flex-col">
         <div className="flex items-center gap-3 border-b border-line px-6 py-4">
           <h2 className="flex-1 font-serif text-2xl font-medium">{t("notebooks.versions")}</h2>
           <button type="button" className="icon-btn" aria-label={t("common.close")} onClick={onClose}>
@@ -439,25 +439,27 @@ function Editor({ notebook }: { notebook: Notebook }) {
   return (
     <>
       <div className="mx-auto flex max-w-[1180px] flex-col gap-5 print:hidden">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Link href="/notebooks/archive" className="flex items-center gap-1 text-sm text-muted hover:text-ink">
+        {/* On a phone: the way back and the actions on one line, what state the notebook is in on the next. */}
+        <div className="flex flex-wrap items-center gap-2.5 max-md:gap-x-1 max-md:gap-y-0.5">
+          <Link href="/notebooks/archive" className="flex items-center gap-1 text-sm text-muted hover:text-ink max-md:order-1 max-md:h-11 max-md:pr-2">
             <Icon name="back" size={16} />
-            {t("notebooks.title")}
+            <span className="max-[359px]:sr-only">{t("notebooks.title")}</span>
           </Link>
           <span
-            className={`flex h-6 items-center rounded-full px-2 text-xs font-semibold ${
+            className={`flex h-6 items-center rounded-full px-2 text-xs font-semibold max-md:order-5 max-md:mr-1.5 ${
               notebook.status === "saved" ? "bg-success-soft text-success" : "bg-soft text-ink"
             }`}
           >
             {t(STATUS_LABEL[notebook.status])}
           </span>
-          <span className={`text-xs ${autoFailed ? "text-danger" : "text-muted"}`} role="status">
+          <span className={`text-xs max-md:order-5 ${autoFailed ? "text-danger" : "text-muted"}`} role="status">
             {status}
           </span>
-          <span className="flex-1" />
+          <span className="flex-1 max-md:order-2" />
+          <span aria-hidden className="hidden basis-full max-md:order-4 max-md:block" />
           <button
             type="button"
-            className="icon-btn h-10 w-10"
+            className="icon-btn h-10 w-10 max-md:order-3 max-md:h-11 max-md:w-11"
             aria-label={t("nb.print")}
             title={t("nb.print")}
             onClick={() => window.print()}
@@ -466,7 +468,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
           </button>
           <button
             type="button"
-            className="icon-btn h-10 w-10"
+            className="icon-btn h-10 w-10 max-md:order-3 max-md:h-11 max-md:w-11"
             aria-label={t("notebooks.versions")}
             title={t("notebooks.versions")}
             onClick={() => setHistory(true)}
@@ -475,21 +477,21 @@ function Editor({ notebook }: { notebook: Notebook }) {
           </button>
           <button
             type="button"
-            className="icon-btn h-10 w-10"
+            className="icon-btn h-10 w-10 max-md:order-3 max-md:h-11 max-md:w-11"
             aria-label={t("nb.deleteNotebook")}
             title={t("nb.deleteNotebook")}
             onClick={() => setConfirmDelete(true)}
           >
             <Icon name="trash" />
           </button>
-          <button type="button" className="btn-primary h-10" onClick={() => void send("save")} disabled={!valid || saving !== null}>
+          <button type="button" className="btn-primary h-10 max-md:order-3 max-md:ml-1 max-md:h-11" onClick={() => void send("save")} disabled={!valid || saving !== null}>
             {t(saving === "save" ? "common.saving" : "common.save")}
           </button>
         </div>
 
         {saveError && <Alert>{saveError}</Alert>}
 
-        <div className={view === "digest" ? "mx-auto w-full max-w-[880px]" : "grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]"}>
+        <div className={view === "digest" ? "mx-auto w-full max-w-[880px]" : "grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_340px]"}>
           <div className="flex min-w-0 flex-col gap-3">
             <div className="rounded-2xl border border-line bg-surface">
               <div className="flex flex-col gap-2 px-4 pt-5 sm:px-9 sm:pt-8">
@@ -499,7 +501,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     maxLength={MAX_NOTEBOOK_TITLE}
-                    className="w-full rounded-lg border border-transparent bg-transparent px-1 py-1 font-serif text-3xl font-medium leading-tight text-ink outline-none hover:border-line focus:border-focus sm:text-4xl"
+                    className="field-large w-full rounded-lg border border-transparent bg-transparent px-1 py-1 font-serif text-3xl font-medium leading-tight text-ink outline-none hover:border-line focus:border-focus sm:text-4xl"
                   />
                   {!titleOk && <span className="px-1 text-sm text-danger">{t("nb.titleRequired")}</span>}
                 </label>
@@ -510,7 +512,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
                     maxLength={MAX_NOTEBOOK_TOPIC}
                     placeholder={t("nb.topicPlaceholder")}
                     onChange={(e) => setTopic(e.target.value)}
-                    className="h-8 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 text-[13px] text-ink outline-none hover:border-line focus:border-focus sm:max-w-[280px]"
+                    className="h-8 min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 text-[13px] text-ink outline-none hover:border-line focus:border-focus max-md:h-11 sm:max-w-[280px]"
                   />
                 </label>
                 <span className="px-1 text-[13px] text-muted">
@@ -519,7 +521,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
                 </span>
               </div>
 
-              <div className="mt-4 flex gap-1 overflow-x-auto border-b border-line px-3 sm:px-8" role="group" aria-label={t("nb.mode")}>
+              <div className="mt-4 flex gap-1 overflow-x-auto border-b border-line px-3 [scrollbar-width:none] sm:px-8" role="group" aria-label={t("nb.mode")}>
                 {VIEWS.map(([value, label]) => (
                   <button
                     key={value}
@@ -550,7 +552,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       spellCheck={false}
-                      className="min-h-[60vh] w-full resize-y rounded-xl border border-field bg-bg/40 p-4 font-mono text-[13.5px] leading-relaxed text-ink outline-none focus:border-focus"
+                      className="min-h-[60vh] w-full resize-y rounded-xl border border-field bg-bg/40 p-4 font-mono text-[13.5px] leading-relaxed text-ink outline-none focus:border-focus max-md:min-h-[40dvh] max-md:p-3"
                     />
                     <span className={`flex flex-wrap gap-x-3 text-xs ${tooLong ? "text-danger" : "text-muted"}`}>
                       <span>
@@ -570,14 +572,14 @@ function Editor({ notebook }: { notebook: Notebook }) {
                         {sources.length > 0 ? t("nb.digestLede", { n: sources.length, docs: groups.length }) : t("nb.noSources")}
                       </p>
                       {sources.length > 0 && (
-                        <button type="button" className="btn-outline h-10 px-3.5 text-sm" onClick={exportDigest}>
+                        <button type="button" className="btn-outline h-10 px-3.5 text-sm max-md:h-11" onClick={exportDigest}>
                           <Icon name="download" size={16} />
                           {t("highlights.export")}
                         </button>
                       )}
                       <button
                         type="button"
-                        className="btn-outline h-10 px-3.5 text-sm"
+                        className="btn-outline h-10 px-3.5 text-sm max-md:h-11"
                         onClick={() => setAdding(true)}
                         disabled={update.isPending}
                       >
@@ -608,7 +610,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
               <NotebookDocuments notebook={notebook} onInsert={insertSummary} />
               <div className="mt-2 flex items-center gap-2">
                 <h2 className="eyebrow flex-1">{t("nb.sourcesCount", { n: sources.length })}</h2>
-                <button type="button" className="btn-ghost h-9 px-3 text-sm" onClick={() => setAdding(true)} disabled={update.isPending}>
+                <button type="button" className="btn-ghost h-9 px-3 text-sm max-md:h-11" onClick={() => setAdding(true)} disabled={update.isPending}>
                   <Icon name="plus" size={16} />
                   {t("nb.addSources")}
                 </button>

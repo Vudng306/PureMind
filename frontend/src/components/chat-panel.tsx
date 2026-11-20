@@ -23,6 +23,7 @@ import { useDocument } from "@/lib/documents";
 import { useLang, useT } from "@/lib/i18n";
 import { parseMarkdown } from "@/lib/markdown";
 import { MSG, messageFor } from "@/lib/messages";
+import { useCoarsePointer } from "@/lib/mobile";
 import { useAccount } from "@/lib/queries";
 import { findSnippet } from "@/lib/reader-ai";
 
@@ -150,6 +151,8 @@ export function ChatPanel({
   const remove = useDeleteConversation(docId);
 
   const [draft, setDraft] = useState("");
+  // A phone's Enter key starts a new line; the question goes with the send button.
+  const coarse = useCoarsePointer();
   const [pending, setPending] = useState<string | null>(null); // the question being answered
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [streamed, setStreamed] = useState("");
@@ -266,7 +269,7 @@ export function ChatPanel({
             value={conversationId ?? ""}
             onChange={(e) => setConversationId(e.target.value || null)}
             disabled={busy}
-            className="h-9 min-w-0 flex-1 rounded-full border border-field bg-surface pl-3 pr-7 text-[13px] text-ink outline-none focus:border-focus"
+            className="h-9 min-w-0 flex-1 rounded-full border border-field bg-surface pl-3 pr-7 text-[13px] text-ink outline-none focus:border-focus max-md:h-11"
           >
             {list?.map((c) => (
               <option key={c.id} value={c.id}>
@@ -330,7 +333,7 @@ export function ChatPanel({
           <span className="min-w-0 flex-1 text-[14px] leading-normal text-muted">
             {image.alt ? t("chat.askingAboutImageNamed", { alt: image.alt }) : t("chat.askingAboutImage")}
           </span>
-          <button type="button" aria-label={t("chat.dropImage")} onClick={onClearImage} className="icon-btn h-7 w-7 text-muted">
+          <button type="button" aria-label={t("chat.dropImage")} onClick={onClearImage} className="icon-btn h-7 w-7 text-muted max-md:h-11 max-md:w-11">
             <Icon name="x" size={14} />
           </button>
         </div>
@@ -341,7 +344,7 @@ export function ChatPanel({
           <span className="min-w-0 flex-1 font-serif text-[14px] leading-normal text-muted">
             {t("chat.askingAbout", { quote: quote.length > 140 ? `${quote.slice(0, 140)}…` : quote })}
           </span>
-          <button type="button" aria-label={t("chat.dropQuote")} onClick={onClearQuote} className="icon-btn h-7 w-7 text-muted">
+          <button type="button" aria-label={t("chat.dropQuote")} onClick={onClearQuote} className="icon-btn h-7 w-7 text-muted max-md:h-11 max-md:w-11">
             <Icon name="x" size={14} />
           </button>
         </div>
@@ -360,27 +363,32 @@ export function ChatPanel({
             placeholder={t("chat.questionPlaceholder")}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia("(min-width: 640px) and (hover: hover) and (pointer: fine)").matches) {
+              if (e.key === "Enter" && !e.shiftKey && !coarse) {
                 e.preventDefault();
                 void send();
               }
             }}
             disabled={busy || quota === 0}
-            className="max-h-40 min-h-[44px] flex-1 resize-none bg-transparent py-1.5 text-base leading-normal text-ink outline-none placeholder:text-muted"
+            className="max-h-40 min-h-[44px] flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-normal text-ink outline-none placeholder:text-muted"
           />
           <button
             type="button"
             aria-label={t("chat.sendQuestion")}
             onClick={() => void send()}
             disabled={busy || !draft.trim() || quota === 0}
-            className="btn-primary mb-0.5 h-9 w-9 shrink-0 justify-center px-0"
+            className="btn-primary mb-0.5 h-9 w-9 shrink-0 justify-center px-0 max-md:h-11 max-md:w-11"
           >
             <Icon name="arrow" size={16} />
           </button>
         </div>
         <span className={`text-xs ${quota === 0 ? "text-danger" : "text-muted"}`}>
-          <span className="hidden sm:inline">{quota === 0 ? MSG["MSG-CHAT-QUOTA"] : quota === undefined ? t("chat.enterHint") : t("chat.quotaHint", { n: quota })}</span>
-          <span className="sm:hidden">{quota === 0 ? MSG["MSG-CHAT-QUOTA"] : quota === undefined ? t("chat.mobileEnterHint") : t("chat.mobileQuotaHint", { n: quota })}</span>
+          {quota === 0
+            ? MSG["MSG-CHAT-QUOTA"]
+            : quota === undefined
+              ? coarse
+                ? ""
+                : t("chat.enterHint")
+              : t(coarse ? "chat.quotaLeft" : "chat.quotaHint", { n: quota })}
         </span>
       </div>
 

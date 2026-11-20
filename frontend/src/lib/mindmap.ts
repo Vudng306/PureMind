@@ -150,3 +150,18 @@ export function pathTo(nodes: MapNode[], id: string): MapNode[] {
   }
   return path;
 }
+
+/** Where a scroller goes to show a box. An axis on which the box is already in view does not move, so what was just
+ * tapped stays under the finger; otherwise the box comes to the leading edge (across) or the middle (down). */
+export function scrollToShow(
+  view: { left: number; top: number; width: number; height: number },
+  box: { x: number; y: number; w: number; h: number },
+  pad = 12,
+): { left: number; top: number } {
+  const seenAcross = box.x >= view.left + pad && box.x + box.w <= view.left + view.width - pad;
+  const seenDown = box.y >= view.top + pad && box.y + box.h <= view.top + view.height - pad;
+  return {
+    left: seenAcross ? view.left : Math.max(0, box.x - pad),
+    top: seenDown ? view.top : Math.max(0, box.y + box.h / 2 - view.height / 2),
+  };
+}

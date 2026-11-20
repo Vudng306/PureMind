@@ -58,11 +58,16 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+/** A setting and its choices; on a phone the choices sit under the label, in even columns. */
+function Row({ label, columns = 2, children }: { label: string; columns?: 2 | 3; children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 max-md:flex-col max-md:items-stretch max-md:gap-2">
       <span className="text-[15px] font-medium">{label}</span>
-      <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label={label}>
+      <div
+        className={`flex flex-wrap items-center gap-1.5 max-md:grid ${columns === 3 ? "max-md:grid-cols-3" : "max-md:grid-cols-2"}`}
+        role="radiogroup"
+        aria-label={label}
+      >
         {children}
       </div>
     </div>
@@ -87,7 +92,7 @@ function Settings() {
     prefs.set({ colorLabels: { ...prefs.colorLabels, [color]: value.slice(0, MAX_COLOR_LABEL) } });
 
   const option = <T extends string | number>(value: T, current: T, label: string, pick: (v: T) => void) => (
-    <button key={String(value)} type="button" role="radio" aria-checked={value === current} className="chip" onClick={() => pick(value)}>
+    <button key={String(value)} type="button" role="radio" aria-checked={value === current} className="chip max-md:h-11 max-md:justify-center max-md:px-2" onClick={() => pick(value)}>
       {label}
     </button>
   );
@@ -104,7 +109,7 @@ function Settings() {
             role="tab"
             aria-selected={tab === id}
             onClick={() => router.replace(id === "account" ? "/settings?tab=account" : "/settings", { scroll: false })}
-            className={`flex h-10 items-center rounded-full px-4 text-[15px] transition-colors ${
+            className={`flex h-10 items-center rounded-full px-4 text-[15px] transition-colors max-md:h-11 ${
               tab === id ? "bg-ink font-semibold text-bg" : "text-ink hover:bg-soft"
             }`}
           >
@@ -117,7 +122,7 @@ function Settings() {
         <AccountSettings />
       ) : (
         <section className="grid gap-6 lg:grid-cols-2">
-          <div className="card flex flex-col gap-[22px] p-6 sm:p-7">
+          <div className="card flex flex-col gap-[22px] p-4 sm:p-7">
             <h2 className="font-serif text-[26px] font-medium">{t("settings.readerDefaults")}</h2>
 
             {/* FR-ACC-04: the interface language, next to the other things kept with the account. */}
@@ -163,10 +168,10 @@ function Settings() {
             <Row label={t("reader.fontFamily")}>
               {FONTS.map(([v, l]) => option(v, prefs.fontFamily, t(l), (fontFamily) => prefs.set({ fontFamily })))}
             </Row>
-            <Row label={t("settings.lineHeight")}>
+            <Row label={t("settings.lineHeight")} columns={3}>
               {LINE_HEIGHTS.map(([v, l]) => option(v, prefs.lineHeight, t(l), (lineHeight) => prefs.set({ lineHeight })))}
             </Row>
-            <Row label={t("settings.columnWidth")}>
+            <Row label={t("settings.columnWidth")} columns={3}>
               {WIDTHS.map(([v, l]) => option(v, prefs.width, t(l), (width) => prefs.set({ width })))}
             </Row>
             <Row label={t("settings.openPdfAs")}>
@@ -206,7 +211,7 @@ function Settings() {
                 </div>
                 <button
                   type="button"
-                  className="self-start py-2 text-[13px] text-accent-text hover:underline"
+                  className="self-start py-2 text-[13px] text-accent-text hover:underline max-md:min-h-11"
                   onClick={() => prefs.set({ colorLabels: { yellow: "", green: "", blue: "", pink: "", purple: "" } })}
                 >
                   {t("settings.restoreDefaults")}
@@ -218,10 +223,10 @@ function Settings() {
           <div
             data-theme={prefs.readingTheme ?? prefs.theme}
             aria-label={t("settings.preview")}
-            className="flex flex-col gap-3.5 overflow-hidden rounded-[14px] border border-line bg-bg px-8 py-9 text-body sm:px-10"
+            className="flex flex-col gap-3.5 overflow-hidden rounded-[14px] border border-line bg-bg px-5 py-6 text-body sm:px-10 sm:py-9"
           >
             <span className="eyebrow">{t("settings.previewEyebrow", { width: prefs.width })}</span>
-            <span className="font-serif text-[34px] font-medium text-ink">{t("settings.previewTitle")}</span>
+            <span className="font-serif text-[26px] font-medium leading-tight text-ink sm:text-[34px]">{t("settings.previewTitle")}</span>
             <p
               className={prefs.fontFamily === "sans" ? "font-sans" : "font-serif"}
               style={{ fontSize: prefs.fontSize, lineHeight: prefs.lineHeight, maxWidth: prefs.width }}

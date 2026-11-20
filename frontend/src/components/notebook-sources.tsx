@@ -31,7 +31,7 @@ function RemoveButton({ source, onRemove, busy }: { source: NotebookSource; onRe
   return (
     <button
       type="button"
-      className="icon-btn -mr-1.5 -mt-1.5 h-8 w-8 text-muted"
+      className="icon-btn -mr-1.5 -mt-1.5 h-8 w-8 text-muted max-md:-mr-2.5 max-md:-mt-2.5 max-md:h-11 max-md:w-11"
       aria-label={t("nb.dropSource", { n: source.position })}
       title={t("nb.dropSourceTitle")}
       onClick={onRemove}
@@ -92,11 +92,11 @@ export function SourceGroups({
                   </span>
                   <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
                     {where(s)}
-                    <Link href={readerLink(s)} className="font-semibold text-accent-text hover:underline">
+                    <Link href={readerLink(s)} className="font-semibold text-accent-text hover:underline max-md:inline-flex max-md:h-11 max-md:items-center">
                       {t("nb.openInDocument")}
                     </Link>
                     {onInsert && (
-                      <button type="button" className="font-semibold text-accent-text hover:underline" onClick={() => onInsert(s)}>
+                      <button type="button" className="font-semibold text-accent-text hover:underline max-md:h-11" onClick={() => onInsert(s)}>
                         {t("nb.quoteIntoNotes")}
                       </button>
                     )}
@@ -136,7 +136,7 @@ export function HighlightDigest({
             <h3 className="min-w-0 flex-1 basis-[220px] font-serif text-xl font-medium leading-snug text-ink">{g.title}</h3>
             <span className="text-[13px] text-muted">{t("nb.groupCount", { n: g.sources.length })}</span>
             {onRemove && (
-              <Link href={`/reader/${g.documentId}`} className="btn-ghost h-9 px-3 text-sm">
+              <Link href={`/reader/${g.documentId}`} className="btn-ghost h-9 px-3 text-sm max-md:h-11">
                 {t("nb.openDocument")}
               </Link>
             )}
@@ -157,7 +157,7 @@ export function HighlightDigest({
                   <span className="flex flex-wrap items-center gap-x-2 text-[13px] text-muted">
                     {where(s)}
                     {onRemove && (
-                      <Link href={readerLink(s)} className="font-semibold text-accent-text hover:underline">
+                      <Link href={readerLink(s)} className="font-semibold text-accent-text hover:underline max-md:inline-flex max-md:h-11 max-md:items-center">
                         {t("nb.openInDocument")}
                       </Link>
                     )}

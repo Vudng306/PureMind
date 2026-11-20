@@ -76,9 +76,9 @@ export function ResumeChip({ where, onBack, onDismiss }: { where: string; onBack
   return (
     <div
       data-resume
-      className="absolute bottom-5 left-1/2 z-10 flex h-10 -translate-x-1/2 items-center rounded-full border border-line bg-surface pl-1 pr-1 font-sans text-[13px] shadow-float"
+      className="absolute bottom-5 left-1/2 z-10 flex h-10 -translate-x-1/2 items-center rounded-full border border-line bg-surface pl-1 pr-1 font-sans text-[13px] shadow-float max-md:bottom-[calc(68px+env(safe-area-inset-bottom))] max-md:h-12"
     >
-      <button type="button" onClick={onBack} className="flex h-8 items-center gap-1.5 rounded-full px-3 font-medium text-ink hover:bg-soft">
+      <button type="button" onClick={onBack} className="flex h-8 items-center gap-1.5 rounded-full px-3 font-medium text-ink hover:bg-soft max-md:h-11">
         <Icon name="history" size={15} className="text-accent-text" />
         <span className="whitespace-nowrap">{t("reader.resume", { where })}</span>
       </button>
@@ -87,7 +87,7 @@ export function ResumeChip({ where, onBack, onDismiss }: { where: string; onBack
         onClick={onDismiss}
         aria-label={t("reader.resumeDismiss")}
         title={t("reader.resumeDismiss")}
-        className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-soft hover:text-ink"
+        className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-soft hover:text-ink max-md:h-11 max-md:w-11"
       >
         <Icon name="x" size={14} />
       </button>

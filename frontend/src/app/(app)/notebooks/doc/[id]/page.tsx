@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { NoteCard, NoteComposer } from "@/components/doc-notes";
 import { Icon } from "@/components/icons";
 import { HighlightCard } from "@/components/reader-panel";
-import { Alert, Spinner, useModal } from "@/components/ui";
+import { Alert, Spinner } from "@/components/ui";
 import { useHighlights } from "@/lib/annotations";
 import { ApiError } from "@/lib/api";
 import type { ChatCitation } from "@/lib/chat";
@@ -65,8 +65,6 @@ export default function NotebookDocumentPage() {
   const labels = usePreferences((s) => s.colorLabels);
   const showToast = useUi((s) => s.showToast);
   const [sort, setSort] = useState<NotebookSort>("document");
-  const [sortOpen, setSortOpen] = useState(false);
-  const sortDialog = useModal(sortOpen);
   const [filter, setFilter] = useState<Filter>("all");
   const [text, setText] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -92,7 +90,7 @@ export default function NotebookDocumentPage() {
   const nothingShown = shownHighlights.length + shownOwn.length + shownAi.length === 0;
 
   const back = (
-    <Link href="/notebooks" className="flex items-center gap-1.5 self-start text-sm text-muted hover:text-ink">
+    <Link href="/notebooks" className="flex items-center gap-1.5 self-start text-sm text-muted hover:text-ink max-md:-my-3 max-md:h-11 max-md:pr-3">
       <Icon name="back" size={16} />
       {t("notebooks.title")}
     </Link>
@@ -187,13 +185,13 @@ export default function NotebookDocumentPage() {
             t("notebook.updated", { when: relativeTime(group.last_activity_at, lang) }),
           ].join(" · ")}
         </p>
-        <div className="flex flex-wrap gap-2.5">
-          <Link href={`/reader/${id}`} className="btn-primary">
+        <div className="flex flex-wrap gap-2.5 max-md:grid max-md:grid-cols-2">
+          <Link href={`/reader/${id}`} className="btn-primary max-md:col-span-2">
             <Icon name="book" size={16} />
             {t("notebook.openDocument")}
           </Link>
           {highlights.length > 0 && (
-            <Link href={`/notebooks/new?document=${id}&from=notebook`} className="btn-outline">
+            <Link href={`/notebooks/new?document=${id}&from=notebook`} className="btn-outline max-md:col-span-2">
               <Icon name="spark" size={16} />
               {t("notebooks.generate")}
             </Link>
@@ -214,15 +212,25 @@ export default function NotebookDocumentPage() {
       </header>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 border-y border-line py-3">
-        <div role="group" aria-label={t("notebook.filterAria")} className="flex max-w-full gap-1.5 overflow-x-auto sm:flex-wrap">
+        <div
+          role="group"
+          aria-label={t("notebook.filterAria")}
+          className="flex flex-wrap gap-1.5 max-md:-mx-4 max-md:w-[calc(100%+32px)] max-md:flex-nowrap max-md:overflow-x-auto max-md:px-4 max-md:[scrollbar-width:none]"
+        >
           {FILTERS.map(([value, label]) => (
-            <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} className="chip h-11 shrink-0 px-3 text-[13px]">
+            <button
+              key={value}
+              type="button"
+              aria-pressed={filter === value}
+              onClick={() => setFilter(value)}
+              className="chip h-9 px-3 text-[13px] max-md:h-11 max-md:px-3.5 max-md:text-sm"
+            >
               {t(label)}
             </button>
           ))}
         </div>
-        <span className="flex-1" />
-        <label className="relative block w-full sm:w-[220px]">
+        <span className="flex-1 max-md:hidden" />
+        <label className="relative block min-w-0 max-md:flex-1 md:w-[220px]">
           <span className="sr-only">{t("notebook.searchInAria")}</span>
           <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
@@ -231,22 +239,15 @@ export default function NotebookDocumentPage() {
             maxLength={200}
             onChange={(e) => setText(e.target.value)}
             placeholder={t("notebook.searchInPlaceholder")}
-            className="input h-9 pl-9 text-sm"
+            className="input h-9 pl-9 text-sm max-md:h-11"
           />
         </label>
-        <button type="button" className="chip sm:hidden" onClick={() => setSortOpen(true)}><Icon name="sort" size={16} />{t("notebook.sortLabel")}</button>
-        <dialog ref={sortDialog} aria-label={t("notebook.sortLabel")} onCancel={() => setSortOpen(false)} className="dialog mobile-collections">
-          <div className="flex flex-col gap-2 p-4">
-            {SORTS.map(([value, label]) => <button type="button" className="chip h-11" aria-pressed={sort === value} key={value} onClick={() => { setSort(value); setSortOpen(false); }}>{t(label)}</button>)}
-            <button type="button" className="btn-outline" onClick={() => setSortOpen(false)}>{t("common.close")}</button>
-          </div>
-        </dialog>
-        <label className="hidden items-center gap-2 text-[13px] text-muted sm:flex">
-          {t("notebook.sortLabel")}
+        <label className="flex items-center gap-2 text-[13px] text-muted max-md:min-w-0 max-md:flex-1">
+          <span className="max-md:sr-only">{t("notebook.sortLabel")}</span>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as NotebookSort)}
-            className="h-9 rounded-full border border-field bg-surface pl-3 pr-7 text-[13px] text-ink outline-none focus:border-focus"
+            className="h-9 rounded-full border border-field bg-surface pl-3 pr-7 text-[13px] text-ink outline-none focus:border-focus max-md:h-11 max-md:w-full max-md:min-w-0"
           >
             {SORTS.map(([value, label]) => (
               <option key={value} value={value}>
@@ -280,7 +281,10 @@ export default function NotebookDocumentPage() {
           title={t("notebook.sectionFree")}
           count={shownOwn.length}
           action={
-            <Link href={`/reader/${id}?panel=notes`} className="text-[13px] font-medium text-accent-text hover:underline">
+            <Link
+              href={`/reader/${id}?panel=notes`}
+              className="text-[13px] font-medium text-accent-text hover:underline max-md:-my-2 max-md:flex max-md:h-11 max-md:items-center"
+            >
               {t("notebook.inDocument")}
             </Link>
           }

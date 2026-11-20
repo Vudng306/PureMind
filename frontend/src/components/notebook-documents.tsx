@@ -58,7 +58,7 @@ function AddDocumentDialog({
       }}
       className="dialog w-[min(calc(100vw-32px),560px)]"
     >
-      <div className="flex max-h-[calc(100vh-32px)] flex-col gap-3 p-[26px]">
+      <div className="flex max-h-[calc(100dvh-32px)] flex-col gap-3 p-[26px]">
         <div className="flex items-center gap-3">
           <h2 className="flex-1 font-serif text-2xl font-medium">{t("nbdoc.add")}</h2>
           <button type="button" className="icon-btn" aria-label={t("common.close")} onClick={onClose} disabled={busy}>
@@ -123,13 +123,13 @@ function DocumentRow({
         <span className={`mt-0.5 flex h-6 w-11 shrink-0 items-center justify-center rounded-[5px] text-[11px] font-bold ${KIND_CLASS[doc.file_type]}`}>
           {KIND_LABEL[doc.file_type]}
         </span>
-        <Link href={`/reader/${doc.id}`} className="min-w-0 flex-1 text-sm font-semibold leading-snug text-ink hover:underline">
+        <Link href={`/reader/${doc.id}`} className="min-w-0 flex-1 text-sm font-semibold leading-snug text-ink hover:underline max-md:min-h-11">
           {doc.title}
         </Link>
         {doc.linked && (
           <button
             type="button"
-            className="icon-btn -mr-1.5 -mt-1.5 h-8 w-8 text-muted"
+            className="icon-btn -mr-1.5 -mt-1.5 h-8 w-8 text-muted max-md:-mr-2.5 max-md:-mt-2.5 max-md:h-11 max-md:w-11"
             aria-label={t("nbdoc.unlink", { title: doc.title })}
             title={t("nbdoc.unlinkHint")}
             disabled={busy}
@@ -146,7 +146,7 @@ function DocumentRow({
             {doc.license}
           </span>
         ) : (
-          <button type="button" className="font-semibold text-accent-text hover:underline" disabled={busy} onClick={onInsertSummary}>
+          <button type="button" className="font-semibold text-accent-text hover:underline max-md:h-11" disabled={busy} onClick={onInsertSummary}>
             {t("nbdoc.insertSummary")}
           </button>
         )}
@@ -193,7 +193,7 @@ export function NotebookDocuments({
         <h2 className="eyebrow flex-1">{t("nbdoc.count", { n: notebook.documents.length })}</h2>
         <button
           type="button"
-          className="btn-ghost h-9 px-3 text-sm"
+          className="btn-ghost h-9 px-3 text-sm max-md:h-11"
           onClick={() => {
             setLinkError(null);
             setAdding(true);

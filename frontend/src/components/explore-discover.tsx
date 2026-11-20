@@ -14,6 +14,7 @@ import {
 import { documentsKey, useSaveUrl } from "@/lib/documents";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import { MSG, messageFor } from "@/lib/messages";
+import { useCoarsePointer } from "@/lib/mobile";
 import { accountKey, useAccount } from "@/lib/queries";
 import type { DocumentDetail, User } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
@@ -26,6 +27,7 @@ const STEPS = ["discover.step1", "discover.step2", "discover.step3"] as const;
  * few results, each with the next step to take. */
 export function ExploreDiscover({ signedIn }: { signedIn: boolean }) {
   const t = useT();
+  const touch = useCoarsePointer();
   const lang = useLang();
   const qc = useQueryClient();
   const { data: user } = useAccount();
@@ -105,7 +107,8 @@ export function ExploreDiscover({ signedIn }: { signedIn: boolean }) {
             placeholder={t("discover.placeholder")}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              // On a phone's keyboard Enter is the only way to a new line; the button sends.
+              if (e.key === "Enter" && !touch && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 void find();
               }
@@ -124,12 +127,12 @@ export function ExploreDiscover({ signedIn }: { signedIn: boolean }) {
                     : t("discover.quotaHint", { n: quota })}
             </span>
             {signedIn ? (
-              <button type="submit" className="btn-primary" disabled={busy || tooShort || quota === 0}>
+              <button type="submit" className="btn-primary max-md:w-full" disabled={busy || tooShort || quota === 0}>
                 <Icon name="spark" size={16} />
                 {busy ? t("discover.searching") : t("discover.cta")}
               </button>
             ) : (
-              <Link href="/login" className="btn-primary">
+              <Link href="/login" className="btn-primary max-md:w-full">
                 {t("discover.signInCta")}
                 <Icon name="arrow" size={16} />
               </Link>
@@ -228,9 +231,9 @@ function Results({ kept, onStartOver }: { kept: Kept; onStartOver: () => void })
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <h2 className="text-[19px] font-semibold leading-snug text-ink">{t("discover.resultsTitle", { n: documents.length })}</h2>
-          <p className="truncate text-sm text-muted">{t("discover.resultsFor", { q: query })}</p>
+          <p className="truncate text-sm text-muted max-md:line-clamp-2 max-md:whitespace-normal max-md:break-words">{t("discover.resultsFor", { q: query })}</p>
         </div>
-        <button type="button" className="btn-ghost h-9 px-3 text-sm" onClick={onStartOver}>
+        <button type="button" className="btn-ghost h-9 px-3 text-sm max-md:h-11" onClick={onStartOver}>
           <Icon name="plus" size={15} />
           {t("discover.another")}
         </button>
@@ -370,12 +373,12 @@ function Result({ found, n }: { found: Found; n: number }) {
   }
 
   return (
-    <article className="card flex flex-col gap-3.5 p-5">
+    <article className="card flex flex-col gap-3.5 p-5 max-md:p-4">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 px-1.5 text-xs font-semibold text-accent-text">{n}</span>
         <div className="flex min-w-0 flex-col gap-1">
           <span className="eyebrow uppercase">{t(`discover.kind.${found.kind}` as Key)}</span>
-          <h3 className="font-serif text-[20px] font-medium leading-snug text-ink">{found.title}</h3>
+          <h3 className="break-words font-serif text-[20px] font-medium leading-snug text-ink">{found.title}</h3>
           <p className="break-words text-[13px] text-muted">{meta.join(" · ")}</p>
         </div>
       </div>
@@ -393,7 +396,7 @@ function Result({ found, n }: { found: Found; n: number }) {
             {detail && ` · ${detail}`}
           </span>
         </p>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 max-md:flex-col max-md:items-stretch">
           {button(primary, true)}
           {more.map((action) => button(action, false))}
         </div>
@@ -403,7 +406,7 @@ function Result({ found, n }: { found: Found; n: number }) {
             {pdfUrl && (
               <p>
                 {t("discover.guide.hasPdf")}{" "}
-                <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text underline underline-offset-2">
+                <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-text underline underline-offset-2 max-md:inline-flex max-md:min-h-11 max-md:items-center">
                   {t("discover.guide.openPdf")}
                 </a>
               </p>
@@ -415,7 +418,7 @@ function Result({ found, n }: { found: Found; n: number }) {
             </ol>
             <p className="text-[13px] text-muted">{t("discover.guide.note")}</p>
             <div>
-              <button type="button" className="btn-outline" onClick={() => setAddOpen(true)}>
+              <button type="button" className="btn-outline max-md:w-full" onClick={() => setAddOpen(true)}>
                 <Icon name="upload" size={16} />
                 {t("discover.guide.upload")}
               </button>

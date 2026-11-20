@@ -148,13 +148,13 @@ export function AccountSettings() {
 
   return (
     <>
-      <section className="card flex flex-col gap-6 p-6 sm:flex-row sm:gap-8 sm:p-7">
+      <section className="card flex flex-col gap-6 p-4 sm:flex-row sm:gap-8 sm:p-7">
         <div className="flex shrink-0 flex-row items-center gap-3 sm:flex-col">
           <Avatar user={user} size={88} />
           <div className="flex flex-col gap-1">
             <button
               type="button"
-              className="btn-ghost h-9 px-3 text-sm text-accent-text"
+              className="btn-ghost h-9 px-3 text-sm text-accent-text max-md:h-11"
               onClick={() => avatarInput.current?.click()}
               disabled={avatar.isPending}
             >
@@ -163,7 +163,7 @@ export function AccountSettings() {
             {user.avatar_url && (
               <button
                 type="button"
-                className="btn-ghost h-9 px-3 text-sm text-muted"
+                className="btn-ghost h-9 px-3 text-sm text-muted max-md:h-11"
                 onClick={() => avatar.mutate(null)}
                 disabled={avatar.isPending}
               >
@@ -190,10 +190,10 @@ export function AccountSettings() {
           </form>
           {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
           <div className="flex flex-wrap items-center gap-3">
-            <button className="btn-dark h-[46px] px-[22px]" form="profile-form" disabled={saveName.isPending}>
+            <button className="btn-dark h-[46px] px-[22px] max-md:w-full" form="profile-form" disabled={saveName.isPending}>
               {t(saveName.isPending ? "common.saving" : "account.saveProfile")}
             </button>
-            <span className="flex-1 text-sm text-muted">
+            <span className="flex-1 text-sm text-muted max-md:basis-full">
               {t("account.stats", {
                 docs: (docs ?? []).length,
                 highlights: hlCount,
@@ -201,7 +201,7 @@ export function AccountSettings() {
                 date: formatDate(user.created_at, lang),
               })}
             </span>
-            <button type="button" onClick={signOut} className="btn-outline h-[46px] text-danger">
+            <button type="button" onClick={signOut} className="btn-outline h-[46px] text-danger max-md:w-full">
               <Icon name="logout" />
               {t("settings.signOut")}
             </button>
@@ -228,13 +228,13 @@ export function AccountSettings() {
         </div>
       </section>
 
-      <section className="card flex flex-col gap-3 p-6 sm:p-7">
+      <section className="card flex flex-col gap-3 p-4 sm:p-7">
         <h2 className="font-serif text-[22px] font-medium">{t("account.aiTitle")}</h2>
         <label className="flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
             role="switch"
-            className="mt-1 h-4 w-4 shrink-0 accent-[rgb(var(--accent))]"
+            className="mt-1 h-4 w-4 shrink-0 accent-[rgb(var(--accent))] max-md:h-5 max-md:w-5"
             checked={Boolean(user.reading_preferences.ai_consent)}
             disabled={aiConsent.isPending}
             onChange={(e) =>
@@ -249,19 +249,19 @@ export function AccountSettings() {
             <span className="text-sm leading-relaxed text-muted">{t("account.aiHint")}</span>
           </span>
         </label>
-        <Link href="/terms" target="_blank" className="self-start text-sm text-accent-text underline underline-offset-2">
+        <Link href="/terms" target="_blank" className="self-start text-sm text-accent-text underline underline-offset-2 max-md:flex max-md:h-11 max-md:items-center">
           {t("account.readTerms")}
         </Link>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-[14px] border border-danger/30 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+      <section className="flex flex-col gap-3 rounded-[14px] border border-danger/30 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-7">
         <div className="flex flex-col gap-1">
           <h2 className="font-medium text-danger">{t("settings.dangerZone")}</h2>
           <p className="text-sm text-muted">{t("account.deleteHint")}</p>
         </div>
         <button
           type="button"
-          className="btn-outline self-start text-danger sm:self-auto"
+          className="btn-outline self-start text-danger max-md:w-full sm:self-auto"
           onClick={() => {
             setConfirmEmail("");
             setDeleteOpen(true);

@@ -5,15 +5,18 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_HIGHLIGHT_NOTE } from "@/lib/annotations";
 import { useLang, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
+import { useCoarsePointer, useCompact } from "@/lib/mobile";
 
+import { BottomSheet } from "./bottom-sheet";
 import { Icon } from "./icons";
 import { selectionMenuBounds } from "./selection-menu";
 
 const CARD_W = 440;
 const CARD_MAX_H = 300;
 
-/** A small card under a selected passage to write its note, placed like the translation card. The passage is
- * highlighted only when the note is saved, so closing it leaves the document as it was. */
+/** A small card under a selected passage to write its note, placed like the translation card; a sheet above the
+ * keyboard on a phone. The passage is highlighted only when the note is saved, so closing it leaves the document
+ * as it was. */
 export function NotePopover({
   text,
   rect,
@@ -33,8 +36,11 @@ export function NotePopover({
   const lang = useLang();
   const ref = useRef<HTMLDivElement>(null);
   const [draft, setDraft] = useState(initial);
+  const compact = useCompact();
+  const coarse = useCoarsePointer();
 
   useEffect(() => {
+    if (compact) return; // the sheet closes itself
     function onDown(e: MouseEvent | TouchEvent) {
       if (ref.current?.contains(e.target as Element)) return;
       onClose();
@@ -50,7 +56,7 @@ export function NotePopover({
       document.removeEventListener("touchstart", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, [onClose, compact]);
 
   function save() {
     if (!draft.trim()) return;
@@ -74,25 +80,23 @@ export function NotePopover({
 
   const full = draft.length >= MAX_HIGHLIGHT_NOTE;
 
-  return (
-    <div
-      ref={ref}
-      role="dialog"
-      aria-label={t("panel.noteAria")}
-      className="mobile-note fixed z-30 flex flex-col gap-2.5 rounded-[14px] border border-line bg-surface p-3.5 font-sans shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
-      style={{ left, width, maxHeight: CARD_MAX_H, ...place }}
-    >
+  const body = (
+    <>
       <div className="flex items-center gap-2">
         <Icon name="note" size={16} className="text-accent-text" />
         <span className="flex-1 text-[13px] font-semibold text-ink">{t("selection.note")}</span>
-        <button type="button" aria-label={t("common.close")} onClick={onClose} className="icon-btn h-8 w-8 text-muted">
+        <button type="button" aria-label={t("common.close")} onClick={onClose} className="icon-btn h-8 w-8 text-muted max-md:hidden">
           <Icon name="x" size={15} />
         </button>
       </div>
       <p className="line-clamp-2 border-l-[3px] border-line pl-2.5 text-[13px] italic text-muted">{text}</p>
       <textarea
         aria-label={t("panel.noteAria")}
-        autoFocus
+        autoFocus={!compact}
+        // In a sheet the field takes the focus from the dialog as it opens, which React's autoFocus comes too early for.
+        ref={(el) => {
+          if (compact) el?.setAttribute("autofocus", "");
+        }}
         rows={3}
         value={draft}
         maxLength={MAX_HIGHLIGHT_NOTE}
@@ -109,16 +113,38 @@ export function NotePopover({
             ? MSG["MSG-24"]
             : draft.length > MAX_HIGHLIGHT_NOTE - 1000
               ? `${draft.length.toLocaleString(lang)}/${MAX_HIGHLIGHT_NOTE.toLocaleString(lang)}`
-              : t("panel.ctrlEnter")}
+              : coarse
+                ? ""
+                : t("panel.ctrlEnter")}
         </span>
         <span className="flex-1" />
-        <button type="button" onClick={onClose} className="btn-ghost h-8 px-3 text-[13px]">
+        <button type="button" onClick={onClose} className="btn-ghost h-8 px-3 text-[13px] max-md:h-11 max-md:px-4">
           {t("common.cancel")}
         </button>
-        <button type="button" onClick={save} disabled={!draft.trim()} className="btn-primary h-8 rounded-lg px-3 text-[13px]">
+        <button type="button" onClick={save} disabled={!draft.trim()} className="btn-primary h-8 rounded-lg px-3 text-[13px] max-md:h-11 max-md:px-5">
           {t("common.save")}
         </button>
       </div>
+    </>
+  );
+
+  if (compact) {
+    return (
+      <BottomSheet open onClose={onClose} label={t("panel.noteAria")}>
+        <div className="flex flex-col gap-2.5 px-1 font-sans">{body}</div>
+      </BottomSheet>
+    );
+  }
+
+  return (
+    <div
+      ref={ref}
+      role="dialog"
+      aria-label={t("panel.noteAria")}
+      className="fixed z-30 flex flex-col gap-2.5 rounded-[14px] border border-line bg-surface p-3.5 font-sans shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
+      style={{ left, width, maxHeight: CARD_MAX_H, ...place }}
+    >
+      {body}
     </div>
   );
 }

@@ -41,7 +41,7 @@ export function TermsGate({ user }: { user: User }) {
   }
 
   return (
-    <main className="app-backdrop flex min-h-screen items-center justify-center px-4 py-12">
+    <main className="app-backdrop flex min-h-dvh items-center justify-center px-4 py-12">
       <form onSubmit={submit} className="card flex w-full max-w-[520px] flex-col gap-5 p-6 sm:p-8" noValidate>
         <div className="flex items-center justify-between">
           <Wordmark />

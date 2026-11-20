@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { ActionSheet, BottomSheet, type SheetAction } from "@/components/bottom-sheet";
 import { CitationDialog } from "@/components/citation-dialog";
 import { Icon } from "@/components/icons";
-import { DocumentRow, InfoPanel, ReadTabs, type DocActions } from "@/components/library-list";
+import { DocSummary, DocumentRow, InfoPanel, ReadTabs, type DocActions } from "@/components/library-list";
 import { Alert, ConfirmDialog, Spinner, useModal } from "@/components/ui";
 import { useHighlights } from "@/lib/annotations";
 import { BIBTEX_MIME, bibFileName, bibtex } from "@/lib/citation";
@@ -31,6 +32,7 @@ import {
   type LibraryFilters,
 } from "@/lib/library";
 import { MSG } from "@/lib/messages";
+import { useCompact } from "@/lib/mobile";
 import type { DocumentListItem } from "@/lib/types";
 import { useUi } from "@/lib/ui-store";
 
@@ -57,8 +59,19 @@ const FILTER_SELECT =
 
 type CardActions = DocActions;
 
-/** F-16: the card's "⋯" menu. Closes on Escape, on a click outside and after a choice. */
-function CardMenu({ doc, actions, row = false }: { doc: DocumentListItem; actions: CardActions; row?: boolean }) {
+/** F-16: the card's "⋯" menu. Closes on Escape, on a click outside and after a choice. With `onSheet` (a phone) the
+ * button opens the page's action sheet instead. */
+function CardMenu({
+  doc,
+  actions,
+  row = false,
+  onSheet,
+}: {
+  doc: DocumentListItem;
+  actions: CardActions;
+  row?: boolean;
+  onSheet?: () => void;
+}) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -97,12 +110,14 @@ function CardMenu({ doc, actions, row = false }: { doc: DocumentListItem; action
       <button
         ref={button}
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => (onSheet ? onSheet() : setOpen(!open))}
         aria-label={t("library.cardMenu", { title: doc.title })}
         aria-haspopup="menu"
         aria-expanded={open}
         className={`flex items-center justify-center rounded-[10px] opacity-70 transition hover:opacity-100 aria-expanded:opacity-100 ${
-          row ? "h-9 w-9 hover:bg-soft aria-expanded:bg-soft" : "h-11 w-11 hover:bg-surface/60 aria-expanded:bg-surface/60"
+          row
+            ? "h-9 w-9 hover:bg-soft aria-expanded:bg-soft max-md:h-11 max-md:w-11"
+            : "h-11 w-11 hover:bg-surface/60 aria-expanded:bg-surface/60"
         }`}
       >
         <Icon name="more" />
@@ -111,7 +126,7 @@ function CardMenu({ doc, actions, row = false }: { doc: DocumentListItem; action
         <div
           role="menu"
           aria-label={doc.title}
-          className={`mobile-action-menu absolute right-0 z-20 flex w-60 flex-col gap-0.5 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-float ${
+          className={`absolute right-0 z-20 flex w-60 flex-col gap-0.5 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-float ${
             row ? "top-10" : "top-12"
           }`}
         >
@@ -371,11 +386,13 @@ function ContinueStrip({ doc }: { doc: DocumentListItem }) {
       href={`/reader/${doc.id}`}
       className="group flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-2.5 shadow-card transition-colors hover:border-accent"
     >
-      <span className="eyebrow shrink-0">{t("library.continue")}</span>
-      <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink">{doc.title}</span>
+      <span className="flex min-w-0 flex-1 items-center gap-3 max-md:flex-col max-md:items-stretch max-md:gap-0.5">
+        <span className="eyebrow shrink-0">{t("library.continue")}</span>
+        <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-ink">{doc.title}</span>
+      </span>
       <span className="hidden shrink-0 text-[13px] text-muted md:inline">{progressLabel(doc, pct)}</span>
       <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-accent-text">
-        {t("library.continueRead")}
+        <span className="max-md:hidden">{t("library.continueRead")}</span>
         <Icon name="arrow" size={16} />
       </span>
     </Link>
@@ -414,10 +431,8 @@ function Sidebar({
       active ? "bg-soft font-semibold text-ink" : "text-body hover:bg-soft/70"
     }`;
   const count = "text-xs text-muted";
-  const [collectionsOpen, setCollectionsOpen] = useState(false);
-  const collectionDialog = useModal(collectionsOpen);
   return (
-    <nav aria-label={t("library.sections")} className="library-categories flex flex-col gap-1 lg:sticky lg:top-[96px] lg:self-start">
+    <nav aria-label={t("library.sections")} className="flex flex-col gap-1 max-lg:hidden lg:sticky lg:top-[96px] lg:self-start">
       <button
         type="button"
         className={row(place.kind === "all" && fileType === "all")}
@@ -444,19 +459,6 @@ function Sidebar({
         <span className="flex-1 truncate">{t("library.highlights")}</span>
         <span className={count}>{highlights}</span>
       </Link>
-      <button type="button" className="chip shrink-0 lg:hidden" onClick={() => setCollectionsOpen(true)}>{t("library.collections")}</button>
-      <dialog ref={collectionDialog} aria-label={t("library.collections")} onCancel={() => setCollectionsOpen(false)} onClick={(e) => { if(e.target === e.currentTarget) setCollectionsOpen(false); }} className="dialog mobile-collections lg:hidden">
-        <div className="flex flex-col gap-2 p-4">
-          <button type="button" className="btn-outline" onClick={() => setCollectionsOpen(false)}>{t("common.close")}</button>
-          {collections.map((c) => <div key={c.id} className="flex items-center gap-1">
-            <button className="btn-ghost min-w-0 flex-1 justify-start truncate" onClick={() => { onPlace({ kind: "collection", id: c.id }); setCollectionsOpen(false); }}>{c.name} · {c.document_count}</button>
-            <button className="icon-btn" aria-label={t("library.renameCollection", { name: c.name })} onClick={() => { setCollectionsOpen(false); onRename(c); }}><Icon name="pencil" size={16} /></button>
-            <button className="icon-btn" aria-label={t("library.deleteCollection", { name: c.name })} onClick={() => { setCollectionsOpen(false); onDelete(c); }}><Icon name="x" size={16} /></button>
-          </div>)}
-          <button className="btn-outline" onClick={() => { setCollectionsOpen(false); onNew(); }}>{t("library.newCollection")}</button>
-        </div>
-      </dialog>
-      <div className="hidden lg:contents">
       <div className="mt-3 flex items-center gap-1 px-2.5">
         <span className="eyebrow flex-1">{t("library.collections")}</span>
         <button type="button" className="icon-btn h-8 w-8" aria-label={t("library.newCollection")} title={t("library.newCollection")} onClick={onNew}>
@@ -483,13 +485,87 @@ function Sidebar({
           );
         })}
       </ul>
-      </div>
+    </nav>
+  );
+}
+
+/** The sidebar's places on a narrow screen: one row of chips, so that the documents stay at the top of the page. */
+function PlaceChips({
+  place,
+  onPlace,
+  fileType,
+  onFileType,
+  types,
+  total,
+  highlights,
+  collections,
+  onNew,
+}: {
+  place: Place;
+  onPlace: (place: Place) => void;
+  fileType: FileType | "all";
+  onFileType: (type: FileType) => void;
+  types: { type: FileType; count: number }[];
+  total: number;
+  highlights: number;
+  collections: Collection[];
+  onNew: () => void;
+}) {
+  const t = useT();
+  const chip = "chip h-11";
+  const count = (n: number) => <span className="text-xs font-normal tabular-nums text-muted">{n}</span>;
+  const all = place.kind === "all" && fileType === "all";
+  return (
+    <nav
+      aria-label={t("library.sections")}
+      className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:-mx-10 sm:px-10 lg:hidden"
+    >
+      <button type="button" className={chip} aria-pressed={all} onClick={() => onPlace({ kind: "all" })}>
+        {t("library.allDocuments")}
+        {count(total)}
+      </button>
+      {types.length > 1 &&
+        types.map(({ type, count: n }) => (
+          <button
+            key={type}
+            type="button"
+            className={chip}
+            aria-pressed={place.kind === "all" && fileType === type}
+            onClick={() => onFileType(type)}
+          >
+            <Icon name={TYPE_ROW[type].icon} size={15} />
+            {t(TYPE_ROW[type].label)}
+            {count(n)}
+          </button>
+        ))}
+      <Link href="/highlights" className={chip}>
+        <Icon name="highlighter" size={15} />
+        {t("library.highlights")}
+        {count(highlights)}
+      </Link>
+      {collections.map((c) => (
+        <button
+          key={c.id}
+          type="button"
+          className={chip}
+          aria-pressed={place.kind === "collection" && place.id === c.id}
+          onClick={() => onPlace({ kind: "collection", id: c.id })}
+        >
+          <span className="max-w-[160px] truncate">{c.name}</span>
+          {count(c.document_count)}
+        </button>
+      ))}
+      <button type="button" className={`${chip} border-dashed border-field text-muted`} onClick={onNew}>
+        <Icon name="plus" size={15} />
+        {t("library.newCollection")}
+      </button>
     </nav>
   );
 }
 
 export default function LibraryPage() {
   const router = useRouter();
+  const compact = useCompact();
   const [sort, setSort] = useState<Sort>("recent");
   const [place, setPlace] = useState<Place>({ kind: "all" });
   const [filters, setFilters] = useState<LibraryFilters>(NO_FILTERS);
@@ -508,6 +584,10 @@ export default function LibraryPage() {
   const [shelfName, setShelfName] = useState<{ collection: Collection | null } | null>(null);
   const [shelfError, setShelfError] = useState<string | null>(null);
   const [shelfToDelete, setShelfToDelete] = useState<Collection | null>(null);
+  // On a phone: the document whose actions are open, the one whose details are, and the shelf's own actions.
+  const [sheetDoc, setSheetDoc] = useState<DocumentListItem | null>(null);
+  const [infoDoc, setInfoDoc] = useState<DocumentListItem | null>(null);
+  const [shelfSheet, setShelfSheet] = useState<Collection | null>(null);
   const { setAddOpen, showToast } = useUi();
   const { data: highlights } = useHighlights();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -675,8 +755,38 @@ export default function LibraryPage() {
     onDelete: () => setToDelete(doc),
   });
 
+  const renameShelf = (c: Collection) => {
+    setShelfError(null);
+    setShelfName({ collection: c });
+  };
+  const newShelf = () => {
+    setShelfError(null);
+    setShelfName({ collection: null });
+  };
+
+  /** The row's menu, as a phone shows it. The details the side panel gives on a wide screen are one more choice. */
+  function sheetActions(doc: DocumentListItem): SheetAction[] {
+    const a = actionsOf(doc);
+    const item = (key: string, label: Key, icon: SheetAction["icon"], onSelect: () => void, danger = false): SheetAction => ({
+      key,
+      label: t(label),
+      icon,
+      onSelect,
+      danger,
+    });
+    return [
+      { key: "read", label: t("library.readAction"), icon: "book", href: `/reader/${doc.id}` },
+      item("info", "library.info", "note", () => setInfoDoc(doc)),
+      item("rename", "common.rename", "pencil", a.onRename),
+      item("move", "library.moveToCollection", "file", a.onMove),
+      item("cite", "library.cite", "quote", a.onCite),
+      item("read-state", doc.is_read ? "library.markUnread" : "library.markRead", doc.is_read ? "minus" : "check", a.onToggleRead),
+      item("remove", "library.removeFromLibrary", "trash", a.onDelete, true),
+    ];
+  }
+
   return (
-    <div className="mx-auto flex max-w-[1440px] flex-col gap-5">
+    <div className="mx-auto flex max-w-[1440px] flex-col gap-5 max-md:gap-4">
       <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
         <h1 className="page-title">{t("nav.library")}</h1>
         {docs.length > 0 && (
@@ -684,9 +794,9 @@ export default function LibraryPage() {
         )}
         <span className="flex-1" />
         {docs.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 max-md:w-full">
             {topics.length > 0 && (
-              <label>
+              <label className="max-md:hidden">
                 <span className="sr-only">{t("library.filterTopic")}</span>
                 <select value={filters.topic} onChange={(e) => patchFilters({ topic: e.target.value })} className={FILTER_SELECT}>
                   <option value="">{t("library.allTopics")}</option>
@@ -698,7 +808,7 @@ export default function LibraryPage() {
                 </select>
               </label>
             )}
-            <label className="flex h-9 w-full items-center gap-2 rounded-full border border-line bg-surface px-3 text-muted focus-within:border-focus sm:w-[260px]">
+            <label className="flex h-9 w-full items-center gap-2 rounded-full border border-line bg-surface px-3 text-muted focus-within:border-focus max-md:h-11 max-md:px-3.5 sm:w-[260px] max-md:sm:w-full">
               <Icon name="search" size={15} />
               <span className="sr-only">{t("library.filterName")}</span>
               <input
@@ -710,8 +820,8 @@ export default function LibraryPage() {
             </label>
           </div>
         )}
-        {/* On a wide screen the menu column already has this button. */}
-        <button type="button" className="btn-primary lg:hidden" onClick={() => setAddOpen(true)}>
+        {/* On a wide screen the menu column already has this button, and on a phone the dock's "+" is this. */}
+        <button type="button" className="btn-primary max-md:hidden lg:hidden" onClick={() => setAddOpen(true)}>
           <Icon name="plus" />
           {t("nav.addDocument")}
         </button>
@@ -719,7 +829,20 @@ export default function LibraryPage() {
 
       {actionError && <Alert>{actionError}</Alert>}
 
-      {continuing.length > 0 && <div className="lg:hidden"><ContinueStrip doc={continuing[0]} /></div>}
+      {docs.length > 0 && (
+        <PlaceChips
+          place={place}
+          onPlace={goTo}
+          fileType={filters.fileType}
+          onFileType={showType}
+          types={types}
+          total={docs.length}
+          highlights={hlCount}
+          collections={shelves}
+          onNew={newShelf}
+        />
+      )}
+
       <div className="grid gap-6 lg:grid-cols-[200px_minmax(0,1fr)] lg:gap-7 min-[1400px]:grid-cols-[200px_minmax(0,1fr)_300px]">
         <Sidebar
           place={place}
@@ -730,14 +853,8 @@ export default function LibraryPage() {
           total={docs.length}
           highlights={hlCount}
           collections={shelves}
-          onNew={() => {
-            setShelfError(null);
-            setShelfName({ collection: null });
-          }}
-          onRename={(c) => {
-            setShelfError(null);
-            setShelfName({ collection: c });
-          }}
+          onNew={newShelf}
+          onRename={renameShelf}
           onDelete={setShelfToDelete}
         />
 
@@ -751,17 +868,43 @@ export default function LibraryPage() {
                   <span className="max-sm:sr-only">{t("notebooks.generate")}</span>
                 </Link>
               )}
-            </div>
-          )}
-          {continuing.length > 0 && <div className="hidden lg:block"><ContinueStrip doc={continuing[0]} /></div>}
-
-          <div className="flex flex-wrap items-end gap-x-4 border-b border-line">
-            <ReadTabs value={filters.readState} counts={tabCounts} onChange={(readState) => patchFilters({ readState })} />
-            <span className="flex-1" />
-            <div className="flex shrink-0 items-center gap-2 py-1.5">
+              {/* Beside the list the sidebar has these; the row of chips has no room for them. */}
               <button
                 type="button"
-                className="chip h-9 px-3 text-[13px]"
+                className="icon-btn lg:hidden"
+                aria-label={t("library.cardMenu", { title: shelf.name })}
+                onClick={() => setShelfSheet(shelf)}
+              >
+                <Icon name="more" />
+              </button>
+            </div>
+          )}
+          {continuing.length > 0 && <ContinueStrip doc={continuing[0]} />}
+
+          <div className="flex items-end gap-x-4 border-b border-line max-md:flex-col-reverse max-md:items-stretch">
+            <ReadTabs value={filters.readState} counts={tabCounts} onChange={(readState) => patchFilters({ readState })} />
+            <span className="flex-1 max-md:hidden" />
+            <div className="flex shrink-0 items-center gap-2 py-1.5 max-md:py-0">
+              {topics.length > 0 && (
+                <label className="min-w-0 flex-1 md:hidden">
+                  <span className="sr-only">{t("library.filterTopic")}</span>
+                  <select
+                    value={filters.topic}
+                    onChange={(e) => patchFilters({ topic: e.target.value })}
+                    className={`${FILTER_SELECT} w-full max-md:h-11`}
+                  >
+                    <option value="">{t("library.allTopics")}</option>
+                    {topics.map((x) => (
+                      <option key={x} value={x}>
+                        {t(`feed.topic.${x}` as Key)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <button
+                type="button"
+                className="chip h-9 px-3 text-[13px] max-md:h-11"
                 onClick={() => setSort(SORT_NEXT[sort])}
                 aria-label={t("library.sortLabel", { sort: t(SORT_LABEL[sort]) })}
                 title={t("library.sortLabel", { sort: t(SORT_LABEL[sort]) })}
@@ -773,7 +916,7 @@ export default function LibraryPage() {
               {view.length > 0 && (
                 <button
                   type="button"
-                  className="icon-btn h-9 w-9 border border-line bg-surface"
+                  className="icon-btn h-9 w-9 border border-line bg-surface max-md:ml-auto max-md:h-11 max-md:w-11"
                   onClick={exportBibtex}
                   aria-label={t("library.exportBib")}
                   title={t("library.exportBibHint", { n: view.length })}
@@ -833,7 +976,7 @@ export default function LibraryPage() {
                     selected={doc.id === selectedId}
                     onSelect={() => pickByPointer(doc.id)}
                     actions={actions}
-                    menu={<CardMenu doc={doc} actions={actions} row />}
+                    menu={<CardMenu doc={doc} actions={actions} row onSheet={compact ? () => setSheetDoc(doc) : undefined} />}
                   />
                 );
               })}
@@ -848,6 +991,41 @@ export default function LibraryPage() {
           actions={selected ? actionsOf(selected) : null}
         />
       </div>
+
+      <ActionSheet
+        open={sheetDoc !== null}
+        onClose={() => setSheetDoc(null)}
+        label={sheetDoc?.title ?? ""}
+        actions={sheetDoc ? sheetActions(sheetDoc) : []}
+      >
+        {sheetDoc && <DocSummary doc={sheetDoc} />}
+      </ActionSheet>
+
+      <BottomSheet open={infoDoc !== null} onClose={() => setInfoDoc(null)} label={t("library.info")} tall>
+        {infoDoc && (
+          <InfoPanel
+            embedded
+            doc={infoDoc}
+            shelf={shelves.find((c) => c.id === infoDoc.collection_id)?.name ?? null}
+            highlights={highlights.filter((h) => h.docId === infoDoc.id).length}
+            actions={actionsOf(infoDoc)}
+          />
+        )}
+      </BottomSheet>
+
+      <ActionSheet
+        open={shelfSheet !== null}
+        onClose={() => setShelfSheet(null)}
+        label={shelfSheet?.name ?? ""}
+        actions={
+          shelfSheet
+            ? [
+                { key: "rename", label: t("common.rename"), icon: "pencil", onSelect: () => renameShelf(shelfSheet) },
+                { key: "delete", label: t("common.delete"), icon: "trash", danger: true, onSelect: () => setShelfToDelete(shelfSheet) },
+              ]
+            : []
+        }
+      />
 
       <NameDialog
         open={toRename !== null}

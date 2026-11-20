@@ -219,7 +219,7 @@ function SearchView() {
             if (e.key === "Enter") go({ q: input });
           }}
           placeholder={t("search.inputPlaceholder")}
-          className="min-w-0 flex-1 bg-transparent text-lg text-ink outline-none"
+          className="field-large min-w-0 flex-1 bg-transparent text-lg text-ink outline-none"
         />
         {input && (
           <button type="button" className="btn-ghost h-10 px-3 text-[13px] text-muted" onClick={() => setInput("")}>

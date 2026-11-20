@@ -35,6 +35,7 @@ import { ChartData } from "@/components/chart-data";
 import { MathBlock } from "@/components/math-block";
 import type { Chart } from "@/lib/documents";
 import { DOC_IMAGE, type Block, type Inline } from "@/lib/markdown";
+import { useSelectionTracking } from "@/lib/mobile";
 
 import { Icon } from "./icons";
 
@@ -312,7 +313,7 @@ const BlockView = memo(function BlockView({ block }: { block: Block }) {
     case "paragraph":
       return (
         // Căn đều hai bên như sách in; ngắt từ để hai lề thẳng mà không để lại khoảng trắng loang lổ.
-        <p {...common} className="mb-[18px] hyphens-auto text-justify">
+        <p {...common} className="mb-[18px] hyphens-auto text-left md:text-justify">
           <Inlines nodes={block.c} />
         </p>
       );
@@ -426,6 +427,8 @@ export function CleanReader({
   hasSource,
   charts,
   bottomPadding,
+  topInset = 0,
+  compact = false,
 }: {
   handleRef: React.Ref<CleanReaderHandle>;
   documentId: string;
@@ -455,6 +458,10 @@ export function CleanReader({
   /** The data of the vector charts (the "Chart data" button on those figures). */
   charts?: Record<string, Chart>;
   bottomPadding: number;
+  /** How much of the top of the text a bar lying over it covers. */
+  topInset?: number;
+  /** A phone: the selection follows the system's handles and stays while the text is scrolled. */
+  compact?: boolean;
 }) {
   const t = useT();
   const lang = useLang();
@@ -527,7 +534,7 @@ export function CleanReader({
     if (!scroller || !article) return null;
     const els = (blockEls.current ??= [...article.querySelectorAll<HTMLElement>(":scope > [data-block-id]")]);
     if (!els.length) return null;
-    const line = scroller.getBoundingClientRect().top + LINE;
+    const line = scroller.getBoundingClientRect().top + LINE + topInset;
     // The last block that starts at or above the line (blocks are in order down the page).
     let lo = 0;
     let hi = els.length - 1;
@@ -539,7 +546,20 @@ export function CleanReader({
     const rect = els[lo].getBoundingClientRect();
     const offset = rect.height > 0 ? Math.max(0, (line - rect.top) / rect.height) : 0;
     return { blockId: els[lo].dataset.blockId ?? "", offset };
-  }, []);
+  }, [topInset]);
+  const goToPlace = useCallback(
+    ({ blockId, offset }: ReadingPlace) => {
+      const el = articleRef.current?.querySelector<HTMLElement>(`:scope > [data-block-id="${CSS.escape(blockId)}"]`);
+      const scroller = scrollerRef.current;
+      if (!el || !scroller) return false;
+      const rect = el.getBoundingClientRect();
+      const top = rect.top - scroller.getBoundingClientRect().top + scroller.scrollTop - LINE - topInset + offset * rect.height;
+      // A place that is already under the line is left alone, so nothing moves by a rounding.
+      if (Math.abs(top - scroller.scrollTop) >= 1) scroller.scrollTop = top;
+      return true;
+    },
+    [topInset],
+  );
 
   // A jump that glides to its passage: where it is heading, until it gets there or the reader takes the scroll.
   const heading = useRef<{ top: number; since: number } | null>(null);
@@ -564,7 +584,7 @@ export function CleanReader({
         const el = articleRef.current?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"]`);
         const scroller = scrollerRef.current;
         if (!el || !scroller) return;
-        const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 24;
+        const top = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 24 - topInset;
         glideTo(scroller, top);
       },
       scrollToHighlight(h) {
@@ -591,20 +611,11 @@ export function CleanReader({
         const scroller = scrollerRef.current;
         if (scroller) scroller.scrollTop = fraction * (scroller.scrollHeight - scroller.clientHeight);
       },
-      scrollToPlace({ blockId, offset }) {
-        const el = articleRef.current?.querySelector<HTMLElement>(`:scope > [data-block-id="${CSS.escape(blockId)}"]`);
-        const scroller = scrollerRef.current;
-        if (!el || !scroller) return false;
-        const rect = el.getBoundingClientRect();
-        const top = rect.top - scroller.getBoundingClientRect().top + scroller.scrollTop - LINE + offset * rect.height;
-        // A place that is already under the line is left alone, so nothing moves by a rounding.
-        if (Math.abs(top - scroller.scrollTop) >= 1) scroller.scrollTop = top;
-        return true;
-      },
+      scrollToPlace: goToPlace,
       place: () => readPlaceRef.current(),
       currentSelection: () => readSelectionRef.current(),
     }),
-    [glideTo],
+    [glideTo, goToPlace, topInset],
   );
 
   // ---- selection → highlight menu; click on a highlight → open it in the panel
@@ -636,27 +647,12 @@ export function CleanReader({
     } satisfies TextSelection;
   }, []);
 
+  useSelectionTracking(compact, readSelection, onSelect);
+
   const readPlaceRef = useRef(readPlace);
   readPlaceRef.current = readPlace;
   const readSelectionRef = useRef(readSelection);
   readSelectionRef.current = readSelection;
-
-  useEffect(() => {
-    let frame = 0;
-    const changed = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        // Toolbar presses must retain the captured range until its action completes.
-        if (document.activeElement?.closest("[data-selection-menu]")) return;
-        onSelect(readSelection());
-      });
-    };
-    document.addEventListener("selectionchange", changed);
-    return () => {
-      cancelAnimationFrame(frame);
-      document.removeEventListener("selectionchange", changed);
-    };
-  }, [readSelection, onSelect]);
 
   const onPointerUp = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
@@ -692,12 +688,33 @@ export function CleanReader({
 
   // ---- progress & current page
   const frame = useRef(0);
+  // Turning the phone or resizing the window rewraps the text under an unchanged scrollTop. What was being read
+  // goes back under the line, before the scroll this causes can be taken, and saved, as the reader's own.
+  const held = useRef<{ width: number; place: ReadingPlace | null }>({ width: 0, place: null });
+  const refit = useCallback(() => {
+    const width = scrollerRef.current?.clientWidth ?? 0;
+    if (!width || width === held.current.width) return false;
+    const { width: before, place } = held.current;
+    held.current.width = width;
+    if (!before || !place || heading.current) return false;
+    goToPlace(place);
+    return true;
+  }, [goToPlace]);
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const watch = new ResizeObserver(() => refit());
+    watch.observe(scroller);
+    return () => watch.disconnect();
+  }, [refit]);
+
   const onScroll = useCallback(() => {
     cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {
       const scroller = scrollerRef.current;
       const article = articleRef.current;
-      if (!scroller || !article) return;
+      if (!scroller || !article || refit()) return;
+      held.current.place = readPlace();
       const max = scroller.scrollHeight - scroller.clientHeight;
       const fraction = max > 0 ? Math.min(1, Math.max(0, scroller.scrollTop / max)) : 1;
       let page: number | null = null;
@@ -710,17 +727,17 @@ export function CleanReader({
           page = Number(b.dataset.pageBreak);
         }
       }
-      onScrollProgress({ fraction, page, place: readPlace(), top: scroller.scrollTop, view: scroller.clientHeight });
-      if (!window.matchMedia("(pointer: coarse)").matches) onSelect(null);
+      onScrollProgress({ fraction, page, place: held.current.place, top: scroller.scrollTop, view: scroller.clientHeight });
+      // On a phone the selection bar is not over the text, and the passage may be scrolled clear of it.
+      if (!compact) onSelect(null);
     });
-  }, [onScrollProgress, onSelect, readPlace]);
+  }, [onScrollProgress, onSelect, readPlace, refit, compact]);
 
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   return (
     <div
       ref={scrollerRef}
-      data-reader-scroll
       onScroll={onScroll}
       onWheel={takeOver}
       onTouchStart={takeOver}
@@ -733,8 +750,8 @@ export function CleanReader({
         onMouseUp={onPointerUp}
         onTouchEnd={onPointerUp}
         onKeyUp={onKeyUp}
-        className={`mx-auto px-6 pt-10 text-body sm:pt-14 ${fontFamily === "sans" ? "font-sans" : "font-serif"}`}
-        style={{ fontSize, lineHeight, maxWidth: width + 48, paddingBottom: bottomPadding }}
+        className={`mx-auto break-words px-6 pt-10 text-body sm:pt-14 ${fontFamily === "sans" ? "font-sans" : "font-serif"}`}
+        style={{ fontSize, lineHeight, maxWidth: width + 48, paddingBottom: bottomPadding, paddingTop: topInset ? 24 + topInset : undefined }}
         lang={lang}
       >
         {header}

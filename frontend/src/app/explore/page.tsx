@@ -14,7 +14,7 @@ export default function ExplorePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center">
         <Spinner />
       </div>
     );
@@ -38,7 +38,7 @@ function SignedInExplore() {
 function PublicExplore() {
   return (
     <PublicShell mainClassName="">
-      <Explore signedIn={false} className="mx-auto max-w-[1200px] px-4 pb-[72px] pt-8 sm:px-10 sm:pt-10" />
+      <Explore signedIn={false} className="mx-auto max-w-[1200px] px-4 pb-[calc(72px+env(safe-area-inset-bottom))] pt-8 sm:px-10 sm:pt-10" />
     </PublicShell>
   );
 }

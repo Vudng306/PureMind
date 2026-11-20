@@ -5,12 +5,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
+import { useCompact } from "@/lib/mobile";
 import { useSaveTranslation } from "@/lib/notes";
 import { useAccount } from "@/lib/queries";
 import { cachedTranslation, looksVietnamese, translateText } from "@/lib/translate";
 import { useUi } from "@/lib/ui-store";
 
 import { AiConsentDialog } from "./ai-consent-dialog";
+import { BottomSheet } from "./bottom-sheet";
 import { AiBadge } from "./cite";
 import { Icon } from "./icons";
 import { selectionMenuBounds } from "./selection-menu";
@@ -47,6 +49,7 @@ export function TranslatePopover({
   const [target, setTarget] = useState<"vi" | "en">(() => (looksVietnamese(text) ? "en" : "vi"));
   const [savedId, setSavedId] = useState<string | null>(null);
   const save = useSaveTranslation(docId);
+  const compact = useCompact();
   // Booleans, not `user`: a refetched account must not start another translation.
   const loaded = Boolean(user);
   const consented = Boolean(user?.reading_preferences.ai_consent);
@@ -84,7 +87,7 @@ export function TranslatePopover({
   }, [loaded, consented, run, text]);
 
   useEffect(() => {
-    if (asking) return; // the consent dialog handles its own clicks and keys
+    if (asking || compact) return; // the consent dialog and the sheet handle their own clicks and keys
     function onDown(e: MouseEvent | TouchEvent) {
       const target = e.target as Element;
       // The selection menu stays usable next to the card: highlighting the passage keeps its translation.
@@ -102,7 +105,7 @@ export function TranslatePopover({
       document.removeEventListener("touchstart", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [asking, onClose]);
+  }, [asking, compact, onClose]);
 
   function keep() {
     if (savedId || save.isPending || !translation) return;
@@ -143,67 +146,74 @@ export function TranslatePopover({
         ? { bottom: vh - upper + 10 }
         : { top: Math.max(12, vh - CARD_MAX_H - 12) };
 
+  const action = "h-8 px-3 text-[13px] max-md:h-11 max-md:px-4";
+  const body = (
+    <>
+      <div className="flex items-center gap-2">
+        <Icon name="translate" size={16} className="text-accent-text" />
+        <span className="flex-1 text-[13px] font-semibold text-ink">
+          {t(target === "en" ? "translate.titleViEn" : "translate.title")}
+        </span>
+        <AiBadge />
+        <button type="button" aria-label={t("common.close")} onClick={onClose} className="icon-btn h-8 w-8 text-muted max-md:hidden">
+          <Icon name="x" size={15} />
+        </button>
+      </div>
+      <p className="line-clamp-2 border-l-[3px] border-line pl-2.5 text-[13px] italic text-muted">{text}</p>
+      <div className="min-h-[44px] overflow-y-auto" aria-live="polite" aria-busy={busy}>
+        {error ? (
+          <p className="text-sm text-danger">{error}</p>
+        ) : translation ? (
+          <p className="whitespace-pre-wrap font-serif text-[16px] leading-relaxed text-ink">{translation}</p>
+        ) : (
+          <p className="text-sm text-muted">{t("translate.working")}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="flex-1" />
+        {error ? (
+          <button type="button" className={`btn-outline ${action}`} onClick={() => void run()}>
+            {t("common.retry")}
+          </button>
+        ) : (
+          <>
+            <button type="button" className={`btn-ghost ${action}`} onClick={() => void copy()} disabled={busy || !translation}>
+              <Icon name="copy" size={14} />
+              {t("selection.copyShort")}
+            </button>
+            <button
+              type="button"
+              className={`btn-ghost ${action} ${savedId ? "text-success" : ""}`}
+              onClick={keep}
+              disabled={busy || !translation || save.isPending || savedId !== null}
+            >
+              <Icon name={savedId ? "check" : "bookmark"} size={14} />
+              {t(savedId ? "translate.saved" : "translate.save")}
+            </button>
+          </>
+        )}
+      </div>
+    </>
+  );
+
   return (
     <>
-      {!asking && (
-        <div
-          ref={ref}
-          role="dialog"
-          aria-label={t("translate.title")}
-          className="mobile-translation fixed z-30 flex flex-col gap-2.5 rounded-[14px] border border-line bg-surface p-3.5 font-sans shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
-          style={{ left, width, maxHeight: CARD_MAX_H, ...place }}
-        >
-          <div className="flex items-center gap-2">
-            <Icon name="translate" size={16} className="text-accent-text" />
-            <span className="flex-1 text-[13px] font-semibold text-ink">
-              {t(target === "en" ? "translate.titleViEn" : "translate.title")}
-            </span>
-            <AiBadge />
-            <button type="button" aria-label={t("common.close")} onClick={onClose} className="icon-btn h-8 w-8 text-muted">
-              <Icon name="x" size={15} />
-            </button>
+      {!asking &&
+        (compact ? (
+          <BottomSheet open onClose={onClose} label={t("translate.title")}>
+            <div className="flex flex-col gap-2.5 px-1 font-sans">{body}</div>
+          </BottomSheet>
+        ) : (
+          <div
+            ref={ref}
+            role="dialog"
+            aria-label={t("translate.title")}
+            className="fixed z-30 flex flex-col gap-2.5 rounded-[14px] border border-line bg-surface p-3.5 font-sans shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
+            style={{ left, width, maxHeight: CARD_MAX_H, ...place }}
+          >
+            {body}
           </div>
-          <p className="line-clamp-2 border-l-[3px] border-line pl-2.5 text-[13px] italic text-muted">{text}</p>
-          <div className="min-h-[44px] overflow-y-auto" aria-live="polite" aria-busy={busy}>
-            {error ? (
-              <p className="text-sm text-danger">{error}</p>
-            ) : translation ? (
-              <p className="whitespace-pre-wrap font-serif text-[16px] leading-relaxed text-ink">{translation}</p>
-            ) : (
-              <p className="text-sm text-muted">{t("translate.working")}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="flex-1" />
-            {error ? (
-              <button type="button" className="btn-outline h-8 px-3 text-[13px]" onClick={() => void run()}>
-                {t("common.retry")}
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className="btn-ghost h-8 px-3 text-[13px]"
-                  onClick={() => void copy()}
-                  disabled={busy || !translation}
-                >
-                  <Icon name="copy" size={14} />
-                  {t("selection.copyShort")}
-                </button>
-                <button
-                  type="button"
-                  className={`btn-ghost h-8 px-3 text-[13px] ${savedId ? "text-success" : ""}`}
-                  onClick={keep}
-                  disabled={busy || !translation || save.isPending || savedId !== null}
-                >
-                  <Icon name={savedId ? "check" : "bookmark"} size={14} />
-                  {t(savedId ? "translate.saved" : "translate.save")}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+        ))}
       <AiConsentDialog
         open={asking}
         what={t("translate.consentWhat")}

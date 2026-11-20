@@ -11,12 +11,12 @@ import { API_URL, authHeader } from "@/lib/api";
 import type { SourceBox } from "@/lib/documents";
 import { clearHighlights, findMatches, findRanges, paintHighlights, scrollRangeIntoView } from "@/lib/find";
 import { useT } from "@/lib/i18n";
+import { useSelectionTracking } from "@/lib/mobile";
 import { hitRects, rangeRects, rectsArea, type PdfRect } from "@/lib/pdf-rects";
 import type { HighlightColor } from "@/lib/preferences";
 
 import type { SearchState } from "./clean-reader";
 import { Icon } from "./icons";
-import { useTouchZoom } from "./mobile-surfaces";
 
 export type ZoomMode = "fit-width" | "fit-page" | number;
 
@@ -25,6 +25,8 @@ const MAX_ZOOM = 3;
 const STEP = 0.1;
 const GAP = 16;
 const PAD = 16;
+const PHONE_SIDE = 4; // a phone gives the width to the page
+const FIT_SNAP = 0.06; // a pinch ending this near the page's fitting width settles on it
 const RENDER_RADIUS = 2; // FR-RDR-01 step 3: only pages within ±2 of the visible one are rendered
 const ZOOM_LEVELS = Array.from({ length: 26 }, (_, i) => Math.round((0.5 + i * 0.1) * 10) / 10);
 const THUMB_WIDTH = 108;
@@ -294,7 +296,10 @@ function Thumbnails({
   }, [current]);
 
   return (
-    <div ref={listRef} className="flex flex-col items-center gap-5 px-3 py-5">
+    <div
+      ref={listRef}
+      className="flex flex-col items-center gap-5 px-3 py-5 max-md:flex-row max-md:flex-wrap max-md:items-start max-md:justify-center max-md:gap-3 max-md:pb-[calc(20px+env(safe-area-inset-bottom))] max-md:pt-1"
+    >
       {sizes.map((size, i) => (
         <Thumb key={i} pdf={pdf} page={i + 1} size={size} active={current === i + 1} near={near.has(i + 1)} onPick={onPick} />
       ))}
@@ -311,6 +316,12 @@ interface Props {
   search: SearchState;
   /** Extra scroll space below the last page (room for the floating reader toolbar). */
   bottomInset?: number;
+  /** How much of the top of the viewer a bar lying over it covers. */
+  topInset?: number;
+  /** A phone: selection follows the system's handles, and pages can be pinched. */
+  compact?: boolean;
+  /** A page was chosen among the thumbnails. */
+  onThumbPick?: () => void;
   handleRef?: React.Ref<PdfViewerHandle>;
   highlights: Highlight[];
   activeHighlightId: string | null;
@@ -336,6 +347,9 @@ export function PdfViewer({
   reloadKey,
   search,
   bottomInset = 0,
+  topInset = 0,
+  compact = false,
+  onThumbPick,
   handleRef,
   highlights,
   activeHighlightId,
@@ -356,7 +370,12 @@ export function PdfViewer({
   const [pageInput, setPageInput] = useState(String(initialPage));
   // Reading position used to restore the view after zoom/resize: top-most page and how far into it.
   const anchor = useRef({ page: initialPage, fraction: 0 });
+  // Where a pinch left the pages sideways, applied once they are laid out at their new size.
+  const pinchLeft = useRef<number | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const total = pdf?.numPages ?? 0;
+  const headroom = PAD + topInset;
+  const side = compact ? PHONE_SIDE : PAD;
 
   // ---- load
   useEffect(() => {
@@ -408,24 +427,24 @@ export function PdfViewer({
   const scale = useMemo(() => {
     const ref = sizes[anchor.current.page - 1] ?? sizes[0];
     if (!ref || !viewport.w) return 1;
-    const availW = Math.max(200, viewport.w - 2 * PAD);
-    const availH = Math.max(200, viewport.h - 2 * PAD);
+    const availW = Math.max(200, viewport.w - 2 * side);
+    const availH = Math.max(200, viewport.h - headroom - PAD);
     if (zoom === "fit-width") return Math.min(MAX_ZOOM, availW / ref.w);
     if (zoom === "fit-page") return Math.min(availW / ref.w, availH / ref.h);
     return zoom;
-  }, [zoom, viewport, sizes]);
+  }, [zoom, viewport, sizes, side, headroom]);
 
   const heights = useMemo(() => sizes.map((s) => Math.floor(s.h * scale)), [sizes, scale]);
   const tops = useMemo(() => {
     const out: number[] = [];
-    let y = PAD;
+    let y = headroom;
     for (const h of heights) {
       out.push(y);
       y += h + GAP;
     }
     out.push(y);
     return out;
-  }, [heights]);
+  }, [heights, headroom]);
 
   const pageAt = useCallback(
     (y: number) => {
@@ -446,21 +465,26 @@ export function PdfViewer({
     const el = scrollerRef.current;
     if (!el || !pdf || !heights.length) return;
     const { page, fraction } = anchor.current;
-    el.scrollTop = Math.max(0, tops[page - 1] - PAD + fraction * (heights[page - 1] + GAP));
-  }, [pdf, tops, heights]);
+    el.scrollTop = Math.max(0, tops[page - 1] - headroom + fraction * (heights[page - 1] + GAP));
+    if (pinchLeft.current !== null) {
+      el.scrollLeft = pinchLeft.current;
+      pinchLeft.current = null;
+    }
+  }, [pdf, tops, heights, headroom]);
 
   const onScroll = useCallback(() => {
     const el = scrollerRef.current;
     if (!el || !heights.length) return;
-    const top = pageAt(el.scrollTop + PAD);
+    const top = pageAt(el.scrollTop + headroom);
     anchor.current = {
       page: top,
-      fraction: Math.min(1, Math.max(0, (el.scrollTop + PAD - tops[top - 1]) / (heights[top - 1] + GAP))),
+      fraction: Math.min(1, Math.max(0, (el.scrollTop + headroom - tops[top - 1]) / (heights[top - 1] + GAP))),
     };
     const visible = pageAt(el.scrollTop + el.clientHeight * 0.35);
     setCurrent((c) => (c === visible ? c : visible));
-    onSelect(null);
-  }, [pageAt, heights, tops, onSelect]);
+    // On a phone the selection bar is not over the text, and the passage may be scrolled clear of it.
+    if (!compact) onSelect(null);
+  }, [pageAt, heights, tops, onSelect, headroom, compact]);
 
   useEffect(() => {
     setPageInput(String(current));
@@ -474,13 +498,11 @@ export function PdfViewer({
       if (!el || !total) return;
       const page = Math.min(Math.max(1, n), total);
       anchor.current = { page, fraction: 0 };
-      el.scrollTop = tops[page - 1] - PAD;
+      el.scrollTop = tops[page - 1] - headroom;
       setCurrent(page);
     },
-    [tops, total],
+    [tops, total, headroom],
   );
-
-  useTouchZoom(scrollerRef, scale, (value) => setZoom(clampZoom(value)), MIN_ZOOM, MAX_ZOOM);
 
   const zoomBy = useCallback((delta: number) => setZoom(clampZoom(scale + delta)), [scale]);
 
@@ -518,6 +540,79 @@ export function PdfViewer({
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, [zoomBy]);
+
+  // ---- pinch (phones): the pages are stretched under the fingers and drawn anew at their size when they lift,
+  // with the point between the fingers staying where it is.
+  const fitRef = sizes[anchor.current.page - 1] ?? sizes[0];
+  const layout = useRef({ scale, tops, heights, pageAt, headroom, fit: 0 });
+  layout.current = { scale, tops, heights, pageAt, headroom, fit: fitRef ? (viewport.w - 2 * side) / fitRef.w : 0 };
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || !compact) return;
+    const el = scroller;
+    let start: { dist: number; x: number; y: number; ox: number; oy: number } | null = null;
+    let now = { x: 0, y: 0, ratio: 1 };
+
+    function measure(e: TouchEvent) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      const box = el.getBoundingClientRect();
+      return {
+        dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+        x: (a.clientX + b.clientX) / 2 - box.left,
+        y: (a.clientY + b.clientY) / 2 - box.top,
+      };
+    }
+    function onStart(e: TouchEvent) {
+      if (e.touches.length !== 2) return;
+      const m = measure(e);
+      start = { ...m, ox: el.scrollLeft + m.x, oy: el.scrollTop + m.y };
+      now = { x: m.x, y: m.y, ratio: 1 };
+    }
+    function onMove(e: TouchEvent) {
+      const content = contentRef.current;
+      if (!start || !content || e.touches.length < 2) return;
+      e.preventDefault();
+      const m = measure(e);
+      const { scale } = layout.current;
+      const ratio = Math.min(MAX_ZOOM / scale, Math.max(MIN_ZOOM / scale, m.dist / start.dist));
+      now = { x: m.x, y: m.y, ratio };
+      content.style.transformOrigin = `${start.ox}px ${start.oy}px`;
+      content.style.transform = `translate(${m.x - start.x}px, ${m.y - start.y}px) scale(${ratio})`;
+    }
+    function onEnd(e: TouchEvent) {
+      if (!start || e.touches.length >= 2) return;
+      const { ox, oy } = start;
+      start = null;
+      const content = contentRef.current;
+      if (content) {
+        content.style.transform = "";
+        content.style.transformOrigin = "";
+      }
+      const { scale, tops, heights, pageAt, headroom, fit } = layout.current;
+      const wanted = scale * now.ratio;
+      const snapped = Math.abs(wanted - fit) < FIT_SNAP;
+      const next = snapped ? fit : clampZoom(wanted);
+      if (Math.abs(next - scale) < 0.001) return;
+      // What is now at the reading line stays there once the pages have their new size.
+      const y = oy + (headroom - now.y) / now.ratio;
+      const page = pageAt(y);
+      anchor.current = { page, fraction: Math.min(1, Math.max(0, (y - tops[page - 1]) / (heights[page - 1] + GAP))) };
+      pinchLeft.current = Math.max(0, ox * (next / scale) - now.x);
+      setZoom(snapped ? "fit-width" : next);
+    }
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, [compact]);
 
   // ---- find (FR-RDR-04)
   const { query, index, onResult } = search;
@@ -644,14 +739,14 @@ export function PdfViewer({
       if (!el || !page || !total || page > total) return false;
       const top = Math.max(0, tops[page - 1] + y * heights[page - 1] - el.clientHeight / 3);
       // Remember the position so it survives page sizes changing while nearby pages render.
-      const first = pageAt(top + PAD);
-      const fraction = (top + PAD - tops[first - 1]) / (heights[first - 1] + GAP);
+      const first = pageAt(top + headroom);
+      const fraction = (top + headroom - tops[first - 1]) / (heights[first - 1] + GAP);
       anchor.current = { page: first, fraction: Math.min(1, Math.max(0, fraction)) };
       el.scrollTop = top;
       setCurrent(page);
       return true;
     },
-    [pageAt, tops, heights, total],
+    [pageAt, tops, heights, total, headroom],
   );
 
   useImperativeHandle(
@@ -698,23 +793,7 @@ export function PdfViewer({
     if (!rects.length) return null;
     return { page, rects, text, rect: range.getBoundingClientRect() };
   }, []);
-
-  useEffect(() => {
-    let frame = 0;
-    const changed = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        // Toolbar presses must retain the captured range until its action completes.
-        if (document.activeElement?.closest("[data-selection-menu]")) return;
-        onSelect(readSelection());
-      });
-    };
-    document.addEventListener("selectionchange", changed);
-    return () => {
-      cancelAnimationFrame(frame);
-      document.removeEventListener("selectionchange", changed);
-    };
-  }, [readSelection, onSelect]);
+  useSelectionTracking(compact, readSelection, onSelect);
 
   const onPointerUp = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
@@ -752,11 +831,14 @@ export function PdfViewer({
   const zoomValue = typeof zoom === "number" ? String(zoom) : zoom;
 
   const inSlots = pagerSlot !== undefined || zoomSlot !== undefined;
-  const step = inSlots ? "icon-btn h-11 w-11" : "icon-btn h-10 w-10";
+  const step = inSlots ? "icon-btn hidden h-9 w-9 sm:inline-flex" : "icon-btn h-10 w-10";
+  // On a phone pages are reached by scrolling or by their number; the zoom has a sheet with room for real buttons.
+  const pageStep = compact ? "hidden" : step;
+  const zoomStep = compact ? "icon-btn h-11 w-11" : step;
 
   const pager = (
     <div className="flex items-center gap-1 text-sm">
-      <button type="button" className={step} onClick={() => goTo(current - 1)} disabled={current <= 1} aria-label={t("pdf.previousPage")}>
+      <button type="button" className={pageStep} onClick={() => goTo(current - 1)} disabled={current <= 1} aria-label={t("pdf.previousPage")}>
         <Icon name="back" />
       </button>
       <form
@@ -765,6 +847,7 @@ export function PdfViewer({
           const n = parseInt(pageInput, 10);
           if (Number.isNaN(n)) setPageInput(String(current));
           else goTo(n);
+          if (compact) e.currentTarget.querySelector("input")?.blur();
         }}
         className="flex items-center gap-1.5"
       >
@@ -773,17 +856,31 @@ export function PdfViewer({
         </label>
         <input
           id="page-input"
-          className={inSlots ? "input h-8 w-12 px-1 text-center text-[13px] tabular-nums" : "input h-9 w-14 px-2 text-center text-sm"}
+          className={
+            compact
+              ? "input h-9 w-14 px-1 text-center tabular-nums"
+              : inSlots
+                ? "input h-8 w-12 px-1 text-center text-[13px] tabular-nums"
+                : "input h-9 w-14 px-2 text-center text-sm"
+          }
           inputMode="numeric"
+          enterKeyHint="go"
           value={pageInput}
           onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ""))}
-          onBlur={() => setPageInput(String(current))}
+          onFocus={(e) => compact && e.target.select()}
+          onBlur={() => {
+            // A phone's number pad may have no Enter: leaving the field goes to the page typed.
+            const n = parseInt(pageInput, 10);
+            const page = compact && n && total ? Math.min(Math.max(1, n), total) : current;
+            if (page !== current) goTo(page);
+            setPageInput(String(page));
+          }}
         />
         <span className="whitespace-nowrap tabular-nums text-muted" aria-live="polite">
           / {total || "…"}
         </span>
       </form>
-      <button type="button" className={step} onClick={() => goTo(current + 1)} disabled={!total || current >= total} aria-label={t("pdf.nextPage")}>
+      <button type="button" className={pageStep} onClick={() => goTo(current + 1)} disabled={!total || current >= total} aria-label={t("pdf.nextPage")}>
         <Icon name="next" />
       </button>
     </div>
@@ -791,11 +888,17 @@ export function PdfViewer({
 
   const zoomer = (
     <div className="flex items-center gap-1 text-sm">
-      <button type="button" className={step} onClick={() => zoomBy(-STEP)} disabled={scale <= MIN_ZOOM} aria-label={t("pdf.zoomOut")}>
+      <button type="button" className={zoomStep} onClick={() => zoomBy(-STEP)} disabled={scale <= MIN_ZOOM} aria-label={t("pdf.zoomOut")}>
         <Icon name="minus" />
       </button>
       <select
-        className={inSlots ? "input h-8 w-auto py-0 pl-2 pr-7 text-[13px]" : "input h-9 w-auto px-2 text-sm"}
+        className={
+          compact
+            ? "input h-11 w-auto py-0 pl-3 pr-8"
+            : inSlots
+              ? "input h-8 w-auto py-0 pl-2 pr-7 text-[13px]"
+              : "input h-9 w-auto px-2 text-sm"
+        }
         aria-label={t("pdf.zoomLevel")}
         value={zoomValue}
         onChange={(e) => {
@@ -812,7 +915,7 @@ export function PdfViewer({
           </option>
         ))}
       </select>
-      <button type="button" className={step} onClick={() => zoomBy(STEP)} disabled={scale >= MAX_ZOOM} aria-label={t("pdf.zoomIn")}>
+      <button type="button" className={zoomStep} onClick={() => zoomBy(STEP)} disabled={scale >= MAX_ZOOM} aria-label={t("pdf.zoomIn")}>
         <Icon name="plus" />
       </button>
     </div>
@@ -832,7 +935,20 @@ export function PdfViewer({
           {zoomer}
         </div>
       )}
-      {pdf && thumbsSlot && createPortal(<Thumbnails pdf={pdf} sizes={sizes} current={current} onPick={goTo} />, thumbsSlot)}
+      {pdf &&
+        thumbsSlot &&
+        createPortal(
+          <Thumbnails
+            pdf={pdf}
+            sizes={sizes}
+            current={current}
+            onPick={(page) => {
+              goTo(page);
+              onThumbPick?.();
+            }}
+          />,
+          thumbsSlot,
+        )}
 
       {/* Focusable, so the pages scroll with the arrow keys and Page Up/Down as well (WCAG 2.1.1). */}
       <div
@@ -844,14 +960,14 @@ export function PdfViewer({
         onMouseUp={onPointerUp}
         onTouchEnd={onPointerUp}
         onKeyUp={onKeyUp}
-        className="relative min-h-0 flex-1 overflow-auto bg-bg"
+        className={`relative min-h-0 flex-1 overflow-auto bg-bg ${compact ? "touch-pan-x touch-pan-y" : ""}`}
       >
         {!pdf ? (
           <div className="p-6 text-sm text-muted" role="status">
             {t("pdf.loading")}
           </div>
         ) : (
-          <div className="relative" style={{ height: tops[tops.length - 1] + bottomInset }}>
+          <div ref={contentRef} className="relative" style={{ height: tops[tops.length - 1] + bottomInset }}>
             {sizes.map((size, i) => {
               const page = i + 1;
               const width = Math.floor(size.w * scale);
@@ -859,7 +975,7 @@ export function PdfViewer({
                 <div
                   key={page}
                   className="absolute flex justify-center"
-                  style={{ top: tops[i], left: 0, minWidth: "100%", width: width + 2 * PAD }}
+                  style={{ top: tops[i], left: 0, minWidth: "100%", width: width + 2 * side }}
                 >
                   {page >= first && page <= last ? (
                     <PageView

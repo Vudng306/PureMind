@@ -8,6 +8,7 @@ import { relativeTime } from "@/lib/doc-view";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import { parseMarkdown } from "@/lib/markdown";
 import { MSG } from "@/lib/messages";
+import { useCoarsePointer } from "@/lib/mobile";
 import { MAX_NOTE_BODY, newId, splitNotes, useNoteActions, useNotes, type AiSource, type Note } from "@/lib/notes";
 import { useUi } from "@/lib/ui-store";
 
@@ -112,10 +113,22 @@ export function NoteCard({ note, onOpen }: { note: Note; onOpen: (c: ChatCitatio
         </span>
         {draft === null && (
           <>
-            <button type="button" aria-label={t("notes.edit")} title={t("notes.edit")} onClick={() => setDraft(note.body)} className="icon-btn h-8 w-8 text-muted">
+            <button
+              type="button"
+              aria-label={t("notes.edit")}
+              title={t("notes.edit")}
+              onClick={() => setDraft(note.body)}
+              className="icon-btn h-8 w-8 text-muted max-md:-my-1.5 max-md:h-11 max-md:w-11"
+            >
               <Icon name="pencil" size={15} />
             </button>
-            <button type="button" aria-label={t("notes.delete")} title={t("notes.delete")} onClick={() => setConfirm(true)} className="icon-btn h-8 w-8 text-muted hover:text-danger">
+            <button
+              type="button"
+              aria-label={t("notes.delete")}
+              title={t("notes.delete")}
+              onClick={() => setConfirm(true)}
+              className="icon-btn h-8 w-8 text-muted hover:text-danger max-md:-my-1.5 max-md:-mr-2 max-md:h-11 max-md:w-11"
+            >
               <Icon name="trash" size={15} />
             </button>
           </>
@@ -125,7 +138,7 @@ export function NoteCard({ note, onOpen }: { note: Note; onOpen: (c: ChatCitatio
       {draft === null ? (
         <NoteBody note={note} onOpen={onOpen} />
       ) : (
-        <div className="mobile-note-editor flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <textarea
             aria-label={t("notes.editAria")}
             autoFocus
@@ -142,10 +155,10 @@ export function NoteCard({ note, onOpen }: { note: Note; onOpen: (c: ChatCitatio
           <div className="flex items-center gap-2">
             <Counter length={draft.length} />
             <span className="flex-1" />
-            <button type="button" onClick={() => setDraft(null)} className="h-[38px] px-2 text-sm text-muted hover:text-ink">
+            <button type="button" onClick={() => setDraft(null)} className="h-[38px] px-2 text-sm text-muted hover:text-ink max-md:h-11 max-md:px-3">
               {t("common.cancel")}
             </button>
-            <button type="button" onClick={save} disabled={update.isPending} className="btn-primary h-[38px] rounded-lg px-4 text-sm">
+            <button type="button" onClick={save} disabled={update.isPending} className="btn-primary h-[38px] rounded-lg px-4 text-sm max-md:h-11">
               {t("common.save")}
             </button>
           </div>
@@ -177,8 +190,8 @@ export function NoteComposer({ docId }: { docId: string }) {
   const t = useT();
   const showToast = useUi((s) => s.showToast);
   const { add } = useNoteActions(docId);
+  const touch = useCoarsePointer();
   const [draft, setDraft] = useState("");
-  const [writing, setWriting] = useState(false);
   // One id per draft: a second press after a failure cannot make the note twice.
   const draftId = useRef<string | null>(null);
 
@@ -190,7 +203,6 @@ export function NoteComposer({ docId }: { docId: string }) {
       onSuccess: () => {
         draftId.current = null;
         setDraft("");
-        setWriting(false);
         showToast(t("panel.savedNote"));
       },
       onError: (e) => showToast(e instanceof ApiError ? e.message : MSG["MSG-23"]),
@@ -198,14 +210,12 @@ export function NoteComposer({ docId }: { docId: string }) {
   }
 
   return (
-    <div className={`${writing ? "mobile-note-editor" : ""} flex flex-col gap-2`}>
-      {writing && <button type="button" className="btn-outline shrink-0 sm:hidden" onClick={() => setWriting(false)}>{t("common.close")}</button>}
+    <div className="flex flex-col gap-2">
       <label className="sr-only" htmlFor={`note-new-${docId}`}>
         {t("notes.newAria")}
       </label>
       <textarea
         id={`note-new-${docId}`}
-        onFocus={() => setWriting(true)}
         rows={3}
         value={draft}
         maxLength={MAX_NOTE_BODY}
@@ -217,10 +227,10 @@ export function NoteComposer({ docId }: { docId: string }) {
         className="resize-y rounded-[10px] border border-line bg-bg px-3.5 py-3 font-serif text-base leading-relaxed text-ink outline-none focus:border-focus"
       />
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted">{draft.trim() ? t("panel.ctrlEnter") : ""}</span>
+        <span className="text-xs text-muted">{draft.trim() && !touch ? t("panel.ctrlEnter") : ""}</span>
         <Counter length={draft.length} />
         <span className="flex-1" />
-        <button type="button" onClick={save} disabled={!draft.trim() || add.isPending} className="btn-primary h-[38px] rounded-lg px-4 text-sm">
+        <button type="button" onClick={save} disabled={!draft.trim() || add.isPending} className="btn-primary h-[38px] rounded-lg px-4 text-sm max-md:h-11">
           <Icon name="plus" size={15} />
           {t("notes.add")}
         </button>

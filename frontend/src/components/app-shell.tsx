@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { AddDocumentDialog } from "@/components/add-document-dialog";
 import { CommandPalette } from "@/components/command-palette";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
 import { LanguageToggle } from "@/components/language-toggle";
 import { LocalDataImport } from "@/components/local-data-import";
 import { PreferencesSync } from "@/components/preferences-sync";
 import { Logo } from "@/components/ui";
-import { UserMenu } from "@/components/user-menu";
+import { AccountSheet, UserMenu } from "@/components/user-menu";
 import { ApiError } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { useAccount } from "@/lib/queries";
@@ -29,7 +29,7 @@ const PAGES = [
 ] as const;
 const NAV = PAGES;
 // On a phone the dock holds all of them, around the add button.
-const DOCK = [...NAV, { href: "/settings/account", label: "nav.account", icon: "gear" }] as const;
+const DOCK = NAV;
 // What a visitor can see or be drawn to: the rest is the reader's own.
 export const PUBLIC_NAV = NAV.filter((page) => page.href === "/explore");
 
@@ -96,19 +96,26 @@ export function useLockedOut() {
   }, [error, router]);
 }
 
-function DockLink({ item, active, label }: { item: (typeof DOCK)[number]; active: boolean; label: string }) {
+const dockItem = (active: boolean) =>
+  `flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-full py-1.5 text-[11px] transition-colors ${
+    active ? "font-semibold text-ink" : "text-muted hover:text-ink"
+  }`;
+
+function DockFace({ icon, active, label }: { icon: IconName; active: boolean; label: string }) {
   return (
-    <Link
-      href={item.href}
-      aria-current={active ? "page" : undefined}
-      className={`flex min-w-0 flex-col items-center gap-0.5 rounded-full py-1.5 text-[10px] transition-colors ${
-        active ? "font-semibold text-ink" : "text-muted hover:text-ink"
-      }`}
-    >
+    <>
       <span className={`grid h-8 w-11 place-items-center rounded-full ${active ? "bg-ink text-bg" : ""}`}>
-        <Icon name={item.icon} size={19} />
+        <Icon name={icon} size={19} />
       </span>
       <span className="max-w-full truncate">{label}</span>
+    </>
+  );
+}
+
+function DockLink({ item, active, label }: { item: (typeof NAV)[number]; active: boolean; label: string }) {
+  return (
+    <Link href={item.href} aria-current={active ? "page" : undefined} className={dockItem(active)}>
+      <DockFace icon={item.icon} active={active} label={label} />
     </Link>
   );
 }
@@ -151,7 +158,7 @@ export function PublicShell({ children, mainClassName = "px-4 pb-[72px] pt-6 sm:
   const pathname = usePathname();
   const t = useT();
   return (
-    <div className="app-backdrop min-h-screen">
+    <div className="app-backdrop min-h-dvh">
       <header className="glass sticky top-0 z-20 border-b print:hidden">
         <div className="flex h-[68px] items-center gap-2 px-4 sm:gap-4 sm:px-10 xl:gap-6">
           {/* On a narrow phone the two pages and signing in come first; the sign-in page has the language too. */}
@@ -178,9 +185,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { data: user } = useAccount();
   const { setAddOpen, setPaletteOpen } = useUi();
   const t = useT();
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountActive = accountOpen || isActive(pathname, "/settings");
 
   return (
-    <div className="app-backdrop min-h-screen lg:pl-[232px] print:pl-0">
+    <div className="app-backdrop min-h-dvh lg:pl-[232px] print:pl-0">
       <AppOverlays />
       <aside className="glass fixed inset-y-0 left-0 z-30 hidden w-[232px] flex-col gap-5 overflow-y-auto border-r px-4 pb-5 lg:flex print:hidden">
         <div className="flex h-[68px] shrink-0 items-center px-1">
@@ -208,33 +217,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button type="button" className="glass icon-btn border xl:hidden" aria-label={t("nav.quickSearch")} onClick={() => setPaletteOpen(true)}>
             <Icon name="search" />
           </button>
-          <LanguageToggle className="glass rounded-full" />
-          <UserMenu user={user} />
+          {/* Below lg these two live in the dock's account sheet. */}
+          <div className="hidden items-center gap-4 lg:flex xl:gap-6">
+            <LanguageToggle className="glass rounded-full" />
+            <UserMenu user={user} />
+          </div>
         </div>
       </header>
 
-      <main className="px-4 pb-[120px] pt-6 sm:px-10 sm:pt-10 lg:pb-[72px] print:p-0">{children}</main>
+      <main className="px-4 pb-[calc(120px+env(safe-area-inset-bottom))] pt-6 sm:px-10 sm:pt-10 lg:pb-[72px] print:p-0">{children}</main>
 
-      {/* The phone's dock: the pages within reach of a thumb, and adding a document in the middle. */}
+      {/* The phone's dock: the pages within reach of a thumb, adding a document in the middle, the account last. */}
       <nav
         aria-label={t("nav.ariaMobile")}
-        className="glass fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 mx-auto grid max-w-[440px] grid-cols-5 items-center rounded-full border px-2 py-1.5 shadow-pop lg:hidden print:hidden"
+        className="glass fixed inset-x-3 bottom-[calc(12px+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-[440px] items-center justify-around rounded-full border px-2 py-1.5 shadow-pop max-[359px]:inset-x-2 max-[359px]:px-1 lg:hidden print:hidden"
       >
         {DOCK.slice(0, 2).map((item) => (
-          <DockLink key={item.href} item={item} active={isActive(pathname, item.href)} label={t(item.href === "/settings/account" ? "nav.accountMobile" : item.href === "/notebooks" ? "nav.notebooksMobile" : item.label)} />
+          <DockLink key={item.href} item={item} active={isActive(pathname, item.href)} label={t(item.label)} />
         ))}
         <button
           type="button"
           onClick={() => setAddOpen(true)}
           aria-label={t("nav.addDocument")}
-          className="-my-4 grid h-12 w-12 justify-self-center place-items-center rounded-full bg-accent text-on-accent shadow-pop ring-4 ring-bg"
+          className="-my-4 mx-1 grid h-14 w-14 shrink-0 place-items-center rounded-full bg-accent text-on-accent shadow-pop ring-4 ring-bg max-[359px]:mx-0 max-[359px]:h-12 max-[359px]:w-12"
         >
           <Icon name="plus" size={24} />
         </button>
         {DOCK.slice(2).map((item) => (
-          <DockLink key={item.href} item={item} active={isActive(pathname, item.href)} label={t(item.href === "/settings/account" ? "nav.accountMobile" : item.href === "/notebooks" ? "nav.notebooksMobile" : item.label)} />
+          <DockLink key={item.href} item={item} active={isActive(pathname, item.href)} label={t(item.label)} />
         ))}
+        <button
+          type="button"
+          aria-label={t("nav.account")}
+          aria-haspopup="dialog"
+          aria-expanded={accountOpen}
+          className={dockItem(accountActive)}
+          onClick={() => setAccountOpen(true)}
+        >
+          <DockFace icon="user" active={accountActive} label={t("settings.tabAccount")} />
+        </button>
       </nav>
+      <AccountSheet user={user} open={accountOpen} onClose={() => setAccountOpen(false)} />
     </div>
   );
 }
