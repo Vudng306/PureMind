@@ -92,6 +92,7 @@ const PURPOSES = [
   "translate_article",
   "translate_short",
   "explore_search",
+  "explore_intent",
   "explore_choose",
   "explore_chat",
   "explore_index",

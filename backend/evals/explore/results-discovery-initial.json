@@ -1,0 +1,156 @@
+{
+  "attempted": 3,
+  "expected": 3,
+  "intent_accuracy": 1.0,
+  "manual_source_review_complete": false,
+  "results": [
+    {
+      "query": "Tìm hiểu cách dự báo thời tiết",
+      "language": "vi",
+      "intent": "DISCOVERY",
+      "predicted": "DISCOVERY",
+      "correct": true,
+      "guidance": "",
+      "documents": [
+        {
+          "url": "https://iwrp.gov.vn/d1045/tin-hoat-dong.html",
+          "title": "Dự báo Khí tượng thủy văn: Việt Nam đang ở đâu?",
+          "source": "iwrp.gov.vn",
+          "authors": "PV: Thưa Giáo sư, công nghệ dự báo của Việt Nam hiện nay như thế nào, khi đặt trong bức tranh...",
+          "year": null,
+          "kind": "article",
+          "summary": "Bài viết phân tích các phương pháp dự báo thời tiết hiện nay như phương pháp thống kê, phương pháp Sy-nốp, và phương pháp mô hình toán số trị, nhấn mạnh vai trò của mô hình số trị và những khó khăn dự báo thời tiết ở khu vực nhiệt đới gió mùa như Việt Nam. Cũng đề cập đến việc ứng dụng trí thông minh nhân tạo trong dự báo thời tiết, các hạn chế và thực trạng công nghệ dự báo ở Việt Nam.",
+          "reason": "Bài viết cung cấp thông tin chi tiết về cách dự báo thời tiết hiện đại và thách thức riêng tại Việt Nam, phù hợp để tìm hiểu cách dự báo thời tiết.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/Weather_forecasting",
+          "title": "Weather forecasting",
+          "source": "en.wikipedia.org",
+          "authors": "",
+          "year": null,
+          "kind": "article",
+          "summary": "Bài viết này trình bày tổng quan về dự báo thời tiết, lịch sử phát triển từ thời cổ đại đến hiện đại, các phương pháp dự báo bao gồm dự báo dựa trên mô hình số trị, cũng như các yếu tố ảnh hưởng đến độ chính xác và ứng dụng dự báo thời tiết.",
+          "reason": "Bài viết cung cấp kiến thức nền tảng và tổng quan toàn diện về dự báo thời tiết, rất hữu ích cho việc tìm hiểu cách dự báo thời tiết.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://nap.nationalacademies.org/resource/other/deps/illustrating-math/interactive/mathematics-and-statistics-of-weather-forecasting.html",
+          "title": "The National Academies Press | Mathematics and Statistics of Weather Forecasting",
+          "source": "nap.nationalacademies.org",
+          "authors": "",
+          "year": null,
+          "kind": "article",
+          "summary": "Tài liệu mô tả các phương pháp toán học và thống kê trong dự báo thời tiết, nhấn mạnh vai trò của các mô hình dự báo số trị, kỹ thuật phân rã không gian (discretization), và các kỹ thuật xử lý dữ liệu đầu vào nhằm nâng cao độ chính xác dự báo.",
+          "reason": "Tài liệu giải thích chi tiết về cơ sở toán học và công nghệ mô hình số trị trong dự báo thời tiết, thích hợp để hiểu sâu về cách thức dự báo thời tiết vận hành.",
+          "access": "FULLTEXT_AVAILABLE"
+        }
+      ],
+      "manual_review": {
+        "relevant": null,
+        "metadata_verified": null,
+        "unsupported_claims": null,
+        "import_attempts": null,
+        "import_successes": null
+      },
+      "seconds": 27.48,
+      "intent_prompt_tokens": 302,
+      "intent_completion_tokens": 25
+    },
+    {
+      "query": "Tại sao con người hay trì hoãn?",
+      "language": "vi",
+      "intent": "DISCOVERY",
+      "predicted": "DISCOVERY",
+      "correct": true,
+      "guidance": "",
+      "documents": [
+        {
+          "url": "https://www.nature.com/articles/s41467-022-33119-w?error=cookies_not_supported&code=36aabe77-3fa7-4409-9ce5-a3a4df24f759",
+          "title": "A neuro-computational account of procrastination behavior",
+          "source": "Nature Communications",
+          "authors": "Le Bouc, Raphaël",
+          "year": null,
+          "kind": "article",
+          "summary": "Bài báo trình bày một mô hình thần kinh-tính toán giải thích hành vi trì hoãn của con người, tập trung vào các cơ chế não bộ và hành vi ảnh hưởng đến trì hoãn. Tác giả giải thích tại sao trì hoãn phổ biến mặc dù người ta biết về các hậu quả tiêu cực và đánh giá các yếu tố tâm lý và kinh tế liên quan.",
+          "reason": "Tài liệu này phù hợp vì cung cấp cái nhìn sâu sắc về cơ chế sinh học và mô hình hành vi giải thích lý do tại sao con người hay trì hoãn.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5891720/",
+          "title": "Examining Procrastination Across Multiple Goal Stages: A Longitudinal Study of Temporal Motivation Theory",
+          "source": "Frontiers in Psychology",
+          "authors": "Piers Steel",
+          "year": null,
+          "kind": "article",
+          "summary": "Nghiên cứu trình bày lý thuyết động lực học theo thời gian (temporal motivation theory) để giải thích hành vi trì hoãn qua các giai đoạn mục tiêu, với dữ liệu thực nghiệm dài hạn và phân tích yếu tố ảnh hưởng. Tài liệu chỉ ra các yếu tố tự điều chỉnh và sự cám dỗ gần kề làm tăng sự trì hoãn.",
+          "reason": "Tài liệu này cung cấp lý thuyết động lực học và chứng cứ thực nghiệm giúp hiểu tại sao con người có xu hướng trì hoãn trong nhiều bước của quá trình đạt mục tiêu.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://www.nature.com/articles/s41598-024-65110-4?error=cookies_not_supported&code=72192133-e54f-42e1-ae64-d58619af47d9",
+          "title": "Temporal discounting predicts procrastination in the real world",
+          "source": "Scientific Reports",
+          "authors": "Zhang, Pei Yuan",
+          "year": null,
+          "kind": "article",
+          "summary": "Bài báo kiểm tra mối quan hệ giữa chiết khấu thời gian (temporal discounting) và trì hoãn trong các nhiệm vụ thực tế. Kết quả cho thấy những người có xu hướng giảm giá trị phần thưởng tương lai cao thì cũng có mức độ trì hoãn lớn hơn, hỗ trợ giả thuyết chiết khấu thời gian là nguyên nhân chính dẫn đến trì hoãn.",
+          "reason": "Tài liệu phù hợp vì đưa ra bằng chứng thực nghiệm về cơ chế nhận thức chiết khấu thời gian làm cơ sở giải thích tại sao con người trì hoãn.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2021.769928/full",
+          "title": "Basic Behavioral Processes Involved in Procrastination",
+          "source": "Frontiers in Psychology",
+          "authors": "Zentall, Thomas R.",
+          "year": null,
+          "kind": "article",
+          "summary": "Bài báo đề xuất sự hiểu biết về trì hoãn thông qua các quá trình hành vi cơ bản đã được nghiên cứu ở người và động vật, như chiết khấu thời gian, tránh né theo thời gian, và củng cố tiêu cực. Tài liệu liên kết các cơ chế hành vi cơ bản này với hành vi trì hoãn của con người.",
+          "reason": "Tài liệu này phù hợp vì nó phân tích các quá trình hành vi cơ bản liên quan đến trì hoãn, cung cấp cái nhìn đa chiều về nguyên nhân của hành vi trì hoãn.",
+          "access": "FULLTEXT_AVAILABLE"
+        }
+      ],
+      "manual_review": {
+        "relevant": null,
+        "metadata_verified": null,
+        "unsupported_claims": null,
+        "import_attempts": null,
+        "import_successes": null
+      },
+      "seconds": 49.42,
+      "intent_prompt_tokens": 303,
+      "intent_completion_tokens": 29
+    },
+    {
+      "query": "Tôi muốn tìm bài nghiên cứu về thói quen đọc sách",
+      "language": "vi",
+      "intent": "DISCOVERY",
+      "predicted": "DISCOVERY",
+      "correct": true,
+      "guidance": "",
+      "documents": [
+        {
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9037757/",
+          "title": "Reading Attitudes in Vietnam: Initial Study of the Early School Years",
+          "source": "Reading and writing",
+          "authors": "Tien Thuy Ho",
+          "year": null,
+          "kind": "article",
+          "summary": "Bài nghiên cứu này khảo sát thái độ đọc sách của trẻ em Việt Nam trong những năm đầu tiểu học, bao gồm mối quan hệ giữa thái độ đọc và hiệu quả đọc hiểu. Nghiên cứu cũng thảo luận những ảnh hưởng của các yếu tố văn hóa và giáo dục đến thói quen đọc sách của trẻ.",
+          "reason": "Tài liệu này phù hợp với chủ đề về thói quen đọc sách vì nó trực tiếp nghiên cứu thái độ và thói quen đọc sách của trẻ em tại Việt Nam.",
+          "access": "FULLTEXT_AVAILABLE"
+        }
+      ],
+      "manual_review": {
+        "relevant": null,
+        "metadata_verified": null,
+        "unsupported_claims": null,
+        "import_attempts": null,
+        "import_successes": null
+      },
+      "seconds": 20.42,
+      "intent_prompt_tokens": 307,
+      "intent_completion_tokens": 24
+    }
+  ]
+}

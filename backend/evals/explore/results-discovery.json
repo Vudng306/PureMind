@@ -1,0 +1,466 @@
+{
+  "attempted": 3,
+  "expected": 3,
+  "intent_accuracy": 1.0,
+  "manual_source_review_complete": false,
+  "results": [
+    {
+      "query": "Tìm hiểu cách dự báo thời tiết",
+      "language": "vi",
+      "intent": "DISCOVERY",
+      "predicted": "DISCOVERY",
+      "correct": true,
+      "guidance": "",
+      "documents": [
+        {
+          "url": "https://iwrp.gov.vn/d1045/tin-hoat-dong.html",
+          "title": "Dự báo Khí tượng thủy văn: Việt Nam đang ở đâu?",
+          "source": "iwrp.gov.vn",
+          "authors": "",
+          "year": null,
+          "kind": "article",
+          "summary": "Bài viết phỏng vấn Giáo sư Trần Thục về công nghệ dự báo thời tiết ở Việt Nam, bao gồm các phương pháp chính như thống kê, Sy-nốp và mô hình số trị. Bài viết cũng đề cập đến thách thức vùng nhiệt đới gió mùa và việc áp dụng trí tuệ nhân tạo trong dự báo.",
+          "reason": "Tài liệu này cung cấp cái nhìn chi tiết về các phương pháp dự báo thời tiết, phù hợp với yêu cầu tìm hiểu cách dự báo thời tiết, và có nội dung liên quan đến tình hình thực tế ở Việt Nam.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://lawplayer.com/vn/act/vn-vbpl-177804/section/chapter-2",
+          "title": "Chương II — QUY TRÌNH KỸ THUẬT DỰ BÁO, CẢNH BÁO · Thông tư Quy định về Quy trình… (Điều 5–Điều 24)",
+          "source": "LawPlayer",
+          "authors": "",
+          "year": null,
+          "kind": "article",
+          "summary": "Bài viết trình bày quy trình kỹ thuật dự báo và cảnh báo khí tượng thủy văn, bao gồm các bước thu thập dữ liệu, phân tích, dự báo, thảo luận và cung cấp bản tin. Nội dung rất cụ thể về quy trình thực hiện dự báo và cảnh báo thời tiết.",
+          "reason": "Tài liệu này trình bày quy trình kỹ thuật dự báo thời tiết rất chi tiết, giúp người đọc hiểu rõ các bước trong công tác dự báo thời tiết.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://www.sciencenewstoday.org/how-does-weather-forecasting-work-from-observations-to-predictions",
+          "title": "How Does Weather Forecasting Work? From Observations to Predictions",
+          "source": "Science News Today",
+          "authors": "Science News Today",
+          "year": 2026,
+          "kind": "article",
+          "summary": "Bài viết giải thích cách hoạt động của dự báo thời tiết, bao gồm việc thu thập các quan sát khí tượng, sử dụng mô hình toán học và mô phỏng máy tính để dự báo thay đổi thời tiết. Nội dung giải thích kỹ về các thiết bị quan sát và cách các dữ liệu được sử dụng trong dự báo.",
+          "reason": "Tài liệu cung cấp kiến thức tổng quan và chi tiết về cách dự báo thời tiết, từ quan sát đến mô hình toán học, rất phù hợp với mục đích tìm hiểu cách dự báo thời tiết.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://hoyoopin.com/en/learn/how-weather-forecasting-works/",
+          "title": "How Weather Forecasting Works: From Balloon to App",
+          "source": "hoyoopin",
+          "authors": "",
+          "year": null,
+          "kind": "article",
+          "summary": "Hướng dẫn chi tiết về quy trình dự báo thời tiết bắt đầu từ đo đạc khí quyển với nhiều thiết bị, sau đó xử lý dữ liệu, chạy mô hình và cuối cùng là cung cấp dự báo qua ứng dụng. Bao gồm cả giải thích về các loại vệ tinh, khinh khí cầu, trạm đo bề mặt và mô hình toán.",
+          "reason": "Tài liệu trình bày quy trình dự báo thời tiết từ bước đo đạc đến xử lý và chạy mô hình rất chi tiết và dễ hiểu, phù hợp với yêu cầu tìm hiểu cách dự báo thời tiết.",
+          "access": "FULLTEXT_AVAILABLE"
+        }
+      ],
+      "evidence": [
+        {
+          "url": "https://imh.ac.vn/files/doc/QT.08%20QT%20Du%20baoTT%20bang%20mh%20MM5.pdf",
+          "title": "VKTTV",
+          "source": "imh.ac.vn",
+          "authors": "Phong TNMT-TTNCMT",
+          "year": null,
+          "access": "PARTIAL_CONTENT",
+          "text": " \nVIỆN KHOA HỌC \n KHÍ TƯỢNG THỦY VĂN VÀ BIẾN ĐỔI KHÍ HẬU \nKý hiệu:             QT.08 \nNgày ban hành: \n10.11.2014 \nQUY TRÌNH DỰ BÁO THỜI TIẾT \nBẰNG MÔ HÌNH MM5 \nLần ban hành:        02 \nSố trang/tổng:        1/6    \n \nBẢNG THEO DÕI SỬA ĐỔI \nTT \nNội dung/mục sửa đổi \nTrang \nLần sửa \nđổi \nNgày sửa \nđổi \nGhi chú \n1 \n2 \n3 \n4 \n5 \n \n \n \n \n \n \n \n \n \n \n \n \nLogo của Viện \nNgười phê duyệt \nChức vụ người soát xét \nChức vụ người biên soạn \nTên của Viện \n1 \n1 \n1 \n1 \n1 \n1 \n1 \n1 \n1 \n1 \n25/10 \n25/10 \n25/10 \n25/10 \n25/10 \n \n \n \nBiên soạn \nSoát xét \nPhê duyệt \nHọ và tên \nNguyễn Văn Hiệp \nMai Văn Khiêm \nNguyễn văn Thắng \nChức vụ \nPhó Giám đốc \nGiám đốc \nViện trưởng \n \n \nKý tên \n \n \n \n \n \n \n\n \nVIỆN KHOA HỌC \n KHÍ TƯỢNG THỦY VĂN VÀ BIẾN ĐỔI KHÍ HẬU \nKý hiệu:             QT.08 \nNgày ban hành: \n10.11.2014 \nQUY TRÌNH DỰ BÁO THỜI TIẾT \nBẰNG MÔ HÌNH MM5 \nLần ban hành:        02 \nSố trang/tổng:        2/6    \n \n1. \nMỤC ĐÍCH \nQuy định thống nhất cách thức triển khai công tác dự báo thời tiết hàng ngày, \nbão, áp thấp nhiệt đới và mưa lớn bằng mô hình MM5 nhằm đảm bảo công tác dự \nbáo kịp thời, khoa học và nâng cao tính tin cậy và chính xác. \n2. \nPHẠM VI ÁP DỤNG \nQuy trình này áp dụng cho quá trình dự báo thời tiết bằng mô hình MM5: \n- Dự báo thời tiết hàng ngày \n- Dự báo bão, áp thấp nhiệt đới và mưa lớn \n3. \nTÀI LIỆU THAM CHIẾU \n- Sổ tay chất lượng \n- TCVN ISO 9001:2008 \n- Các quy phạm pháp luật liên quan đến công tác dự báo thời tiết \n- Tài liệu hướng dẫn sử dụng mô hình MM5 \n4. \nTRÁCH NHIỆM \nTrung tâm Nghiên cứu Khí tượng khí hậu có trách nhiệm chính thực hiện \ncông tác dự báo thời tiết bằng mô hình MM5, đảm bảo các kết quả dự báo kịp thời \nvà phù hợp với yêu cầu công tác dự báo. \n5. \nTHUẬT NGỮ VÀ GIẢI THÍCH \nKhông \n6. \nNỘI DUNG \n6.1 Quy trình dự báo thời tiết hàng ngày:  \n1. Bước 1: 10h30 phút Download số liệu 72h (13 file số liệu) tại địa chỉ: \nftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod \n2. Bước 2: Chuyển số liệu download được từ PC sang máy tính song song của \nViện. (Thư mục: vào nối PC chọn home/mm5/thoitiet/solieu).  \n3. Bước 3: Chạy mô hình MM5 (*thoitiet.sh). \n4. Bước 4: Chuẩn bị bản tin thời tiết (Sửa, ngày, tháng, năm) và lưu vào thành \nFOLDER mới. \n5. Bước 5: Kiểm tra lại kết quả dự báo và làm bản tin dự báo. \n\n \nVIỆN KHOA HỌC \n KHÍ TƯỢNG THỦY VĂN VÀ BIẾN ĐỔI KHÍ HẬU \nKý hiệu:             QT.08 \nNgày ban hành: \n10.11.2014 \nQUY TRÌNH DỰ BÁO THỜI TIẾT \nBẰNG MÔ HÌNH MM5 \nLần ban hành:        02 \nSố trang/tổng:        3/6    \n \n6. Bước 6: Gửi bản tin: Gmail – DubaoMM5 theo địa chỉ đã lưu trên máy tính. \nPassword: “nhietdoi” \n7. Bước 7: Đưa bản tin lên trang web của Viện Khoa học Khí tượng Thủy văn và \nMôi trường. \n6.2 Quy trình dự báo cường độ và quỹ đạo bão bằng mô hình MM5 \n6.2.1 Thực hiện dự báo cho thời điểm 7h (00 UTC): \n1. Bước 1:  Trước 10h30 khai thác thông tin phân tích dự báo của Trung tâm Dự \nbáo KTTV Trung ương (tại đia chỉ: http://www.nchmf.gov.vn/web/vi-\nVN/43/Default.aspx) để lưu vào máy trong thời gian 24h trước và trong thời \nđiểm thực hiện dự báo. \n2. Bước 2: Mở http://www.typhoon2000.ph/multi/ để lưu thông tin phân tích dự \nbáo của Mỹ, Nhật Bản, Hồng Kông,… \n3. Bước 3: Thay đổi các giá trị  tọa độ (nếu cần) theo đường đi của cơn bão vào \nthư mục: Xtnd/72h (48h)/bogus param/ *lat-long/F4 để sửa – ESC chọn Yes \n4. Bước 4: Từ 10h30 Download số liệu GFS cho dự báo 72h (hoặc 48h) tại địa \nchỉ: ftp://ftpprd.ncep.noaa.gov/pub/data/nccf/com/gfs/prod. \n5. Bước 5: Chuyển số liệu download được từ PC sang máy tính song song của \nViện. (Thư mục: vào nối PC chọn home/mm5/xtnd/solieu). \n6. Bước 6: Chạy mô hình MM5 với hạn dự báo đã xác định. (Enter file \nnobogus.sh trong thư mục: /home/mm5/xtnd/solieu). \n7. Bước \n7: \nKhai \nthác \nbản \ntin \ndự \nbáo \nXTNĐ: \nVào \nhttp://192.168.101.7/mm5/xtnd/ chọn ngày giờ của thời điểm dự báo. \n8. Bước 8: Đọc kinh vĩ độ trong mục esn1 (00h, 12h, 24h, 36h, 48h, 60h, 72h) \n9. Bước 9: Đọc tốc độ gió trong mục: WIND ENS1 00.gif, 12h, 24h, 36, 48h, \n60h, 72h. \n10. Bước 10: Vẽ đường đi của XTNĐ: Vào biểu tư"
+        },
+        {
+          "url": "https://iwrp.gov.vn/d1045/tin-hoat-dong.html",
+          "title": "Dự báo Khí tượng thủy văn: Việt Nam đang ở đâu?",
+          "source": "iwrp.gov.vn",
+          "authors": "",
+          "year": null,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "***PV: Thưa Giáo sư, công nghệ dự báo của Việt Nam hiện nay như thế nào, khi đặt trong bức tranh chung của thế giới?***\n\n**GS. TS Trần Thục:**Hiện nay, thế giới nói chung và Việt Nam đều áp dụng 3 phương pháp chính để dự báo thời tiết, như: Phương pháp thống kê; Phương pháp Sy-nốp, phân tích các hình thái thời tiết, từ đó, dự báo cho tương lai và Phương pháp mô hình toán, thường được gọi là phương pháp dự báo số trị. Trong đó, phương pháp dự báo số trị được đặc biệt quan tâm trong vài thập kỷ gần đây do có khả năng dự báo định lượng các yếu tố khí tượng chi tiết theo không gian và thời gian. Phương pháp số trị giúp tăng thời hạn dự báo và cả về chất lượng dự báo. Các mô hình dự báo có thể cho kết quả ở các quy mô khác nhau, từ quy mô toàn cầu với độ phân giải 150 - 50 km, quy mô khu vực (nhỏ hơn 15 km) và quy mô nhỏ (nhỏ hơn 2 km), tùy thuộc vào năng lực của máy tính.\n\nMô hình số trị đã có những bước tiến đáng kể, nhưng kết quả vẫn chứa đựng nhiều sai số, đặc biệt, đối với khu vực nhiệt đới gió mùa như ở Việt Nam. Ở khu vực nhiệt đới gió mùa, hệ thống khí quyển bị chi phối bởi các nhiễu động có quy mô không gian và thời gian nhỏ, vì thế, một nhiễu động đối lưu nhỏ hoặc sai lệch về tâm hội tụ ẩm cũng có thể dẫn đến sai số lớn trong kết quả dự báo. Dự báo số trị, vì thế, sẽ gặp khó khăn lớn đối với khu vực bị ảnh hưởng địa hình và gió mùa phức tạp.\n\nMô hình số trị có thể cho kết quả dự báo khá tốt khi bão hoạt động trên biển. Tuy vậy, khi bão gần bờ và sắp đổ bộ, do ảnh hưởng của địa hình làm cấu trúc bão bị biến dạng nên các mô hình toàn cầu khó có thể xác định được cường độ và tâm bão gần bờ. Vì thế, phải dùng số liệu quan trắc mặt đất, radar, thám không, hoặc mô hình khu vực có độ phân giải cao vài km, mới có thể xác định được vị trí, cường độ bão. Bởi vậy, các nước không sử dụng trực tiếp sản phẩm mô hình số trị để đưa ra bản tin dự báo cho người dân, mà phải hiệu chỉnh, bổ sung bằng các số liệu quan trắc và phương pháp thống kê.\n\nMột trong những hướng nghiên cứu mới trong dự báo thời tiết mà tôi cho là nổi bật là áp dụng trí thông minh nhân tạo với cơ sở dữ liệu lớn và các thuật toán giúp máy tính “học sâu” các tri thức, kinh nghiệm và điều kiện trong quá khứ để áp dụng vào dự báo. Đã có nhiều bước tiến quan trọng trên thế giới theo hướng tiếp cận này. Việt Nam cũng đang nghiên cứu thử nghiệm. Tuy vậy, thách thức lớn đối với việc áp dụng trí thông minh nhân tạo trong dự báo thời tiết là biến đổi khí hậu. Biến đổi khí hậu có thể làm thay đổi các quy luật vốn có, các mối quan hệ, ràng buộc của các biến khí tượng, vì thế, máy tính khó áp dụng những kinh nghiệm trong quá khứ để áp dụng cho tương lai.\n\n***PV: Có ý kiến cho rằng, ngành KTTV của Việt Nam đã áp dụng nhiều phương pháp, công nghệ tiên tiến của thế giới nhưng còn những hạn chế. Quan điểm của Giáo sư về vấn đề này?***\n\n**GS. TS Trần Thục:**Nhìn nhận tổng quan về công nghệ dự báo, có thể thấy, thông qua các hoạt động hợp tác quốc tế, Việt Nam đã tiếp nhận và áp dụng một số mô hình dự báo thời tiết hiện đại của thế giới.\n\nViệc dự báo thời tiết ở Việt Nam là kết hợp giữa mô hình số trị và phân tích Sy-nốp, sử dụng số liệu thực đo tại các trạm quan trắc KTTV, số liệu radar thời tiết, thám không, cộng với các phương pháp thống kê để đưa ra bản tin dự báo thời tiết, đặc biệt, đối với các điều kiện thời tiết nguy hiểm.\n\nTôi tin tưởng rằng, dự báo của Việt Nam cho Việt Nam tốt hơn dự báo của thế giới cho Việt Nam. Như đã phân tích, khi một cơn bão đến gần bờ, điều kiện địa hình và mặt đệm làm thay đổi cấu trúc của bão. Vì thế, nếu chỉ dựa vào kết quả tính toán từ mô hình là hoàn toàn không đủ, cần phải phân tích sâu, dựa trên số liệu quan trắc tại các trạm, số liệu radar, thám không và phương pháp thống kê để hiệu chỉnh kết quả từ mô hình số trị. Vậy, có thể khẳng định rằng: Dự báo của Việt Nam cho Việt Nam sẽ tốt hơn dự báo của thế giới cho Việt Nam.\n\n![](http://www.monre.gov.vn/Portal/PublishingImages/2019/8/13082019%20Anh%204.jpg)\n\nCác quan trắc viên Đài Khí tượng Cao không"
+        },
+        {
+          "url": "https://lawplayer.com/vn/act/vn-vbpl-177804/section/chapter-2",
+          "title": "Chương II — QUY TRÌNH KỸ THUẬT DỰ BÁO, CẢNH BÁO · Thông tư Quy định về Quy trình… (Điều 5–Điều 24) | LawPlayer",
+          "source": "LawPlayer",
+          "authors": "",
+          "year": null,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "Các bước cơ bản thực hiện dự báo, cảnh báo khí tượng thủy văn trong điều kiện bình thường\n\n### Điều 5\n\nTab mới ↗\n\nĐiều 5. Các bước cơ bản thực hiện dự báo, cảnh báo khí tượng thủy văn trong điều kiện bình thường 1. Các bước cơ bản thực hiện dự báo, cảnh báo khí tượng thủy văn trong điều kiện bình thường bao gồm: a) Thu thập, xử lý các loại thông tin, dữ liệu; b) Phân tích, đánh giá hiện trạng; c) Thực hiện các phương án dự báo, cảnh báo; d) Thảo luận dự báo, cảnh báo; đ) Xây dựng bản tin dự báo, cảnh báo; e) Cung cấp bản tin dự báo, cảnh báo; g) Bổ sung bản tin dự báo, cảnh báo; h) Đánh giá chất lượng dự báo, cảnh báo. 2. Hệ thống dự báo, cảnh báo khí tượng thủy văn quốc gia và tổ chức, cá nhân không thuộc hệ thống dự báo, cảnh báo khí tượng thủy văn quốc gia tuân thủ các bước thực hiện dự báo, cảnh báo khí tượng thủy văn trong điều kiện bình thường quy định tại khoản 1 Điều này và các nội dung quy định từ Điều 6 đến Điều 24 của Thông tư này, thường xuyên cập nhật quy trình chuyên môn, quy định về dự báo, cảnh báo khí tượng thủy văn.\n\nQuy trình kỹ thuật dự báo, cảnh báo thời tiết thời hạn cực ngắn, thời hạn ngắn\n\n### Điều 6\n\nTab mới ↗\n\nĐiều 6. Quy trình kỹ thuật dự báo, cảnh báo thời tiết thời hạn cực ngắn, thời hạn ngắn 1. Thu thập, xử lý các loại thông tin, dữ liệu a) Số liệu quan trắc khí tượng khu vực dự báo và lân cận (khí tượng bề mặt, thám không vô tuyến, pilot, đo mưa tự động, quan trắc trên tàu biển, quan trắc tăng cường); b) Số liệu mô phỏng, dự báo của các mô hình toàn cầu, khu vực; c) Số liệu viễn thám trong khu vực (vệ tinh khí tượng, ra đa thời tiết, định vị sét); d) Thu thập số liệu, dữ liệu về môi trường, điều kiện sống, cơ sở hạ tầng, các hoạt động kinh tế - xã hội (nếu có); đ) Đánh giá tính đầy đủ, chính xác của các loại dữ liệu đã thu thập và bổ sung, chỉnh lý, chuẩn hóa số liệu, tính sai số của các sản phẩm tham khảo dự báo hiện có đến thời điểm làm dự báo. 2. Phân tích, đánh giá hiện trạng a) Phân tích các dữ liệu quan trắc khí tượng, bản đồ synốp tại các mực khí áp chuẩn để xác định hình thế thời tiết đã qua và hiện tại; b) Phân tích dữ liệu thám không trên các giản đồ thiên khí ở thời điểm quan trắc gần nhất của các trạm thám không vô tuyến và pilot trên cả nước; c) Phân tích dữ liệu viễn thám (vệ tinh khí tượng, ra đa thời tiết, định vị sét...); d) Phân tích dữ liệu quan trắc bề mặt của tất cả các hiện tượng, yếu tố quan trắc tại các trạm đo trên cả nước; đ) Phân tích các giá trị trung bình và cực trị trong lịch sử của các yếu tố khí tượng để xác định khả năng có lặp lại hay không của các yếu tố khí tượng, đặc biệt là các giá trị cực trị; e) Phân tích diễn biến của các hệ thống thời tiết sắp tới trên cơ sở các bản đồ synốp và khai thác sản phẩm của các mô hình số trị hiện có tại đơn vị dự báo; g) Phân tích số liệu, dữ liệu về môi trường, điều kiện sống, cơ sở hạ tầng, các hoạt động kinh tế - xã hội (nếu có); h) Trong quá trình phân tích dữ liệu, nếu phát hiện có khả năng xuất hiện các hiện tượng thời tiết nguy hiểm thì thực hiện thêm quy trình kỹ thuật dự báo, cảnh báo hiện tượng khí tượng thủy văn nguy hiểm tương ứng; i) Đối với dự báo thời hạn cực ngắn, để đảm bảo thời gian phát tin cần tập trung phân tích các sản phẩm sơ cấp và thứ cấp của vệ tinh, ra đa, định vị sét, sản phẩm mô hình khu vực độ phân giải cao, sản phẩm ước lượng mưa và các sản phẩm tham khảo dự báo cực ngắn tự động, các nhận định trong các bản tin thời hạn ngắn gần nhất cho khu vực dự báo. 3. Thực hiện các phương án dự báo, cảnh báo Thực hiện tối thiểu một trong các phương án dự báo, cảnh báo thời tiết thời hạn cực ngắn, thời hạn ngắn: Phương án dựa trên cơ sở phương pháp phân tích synốp, kinh nghiệm; phương án dựa trên cơ sở phương pháp thống kê; phương án dựa trên cơ sở phương pháp mô hình số trị (dự báo tất định và tổ hợp); phương án dựa trên cơ sở phương pháp nội suy, ngoại suy, quán tính. 4. Thảo luận dự báo, cảnh báo Thảo luận dự báo, cảnh báo thời tiết thời hạn ngắn trước khi ban hành bản tin ít nhất 30 phút; thảo luận dự báo,"
+        },
+        {
+          "url": "https://www.sciencenewstoday.org/how-does-weather-forecasting-work-from-observations-to-predictions",
+          "title": "How Does Weather Forecasting Work? From Observations to Predictions",
+          "source": "Science News Today",
+          "authors": "Science News Today",
+          "year": 2026,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "Weather forecasting works by combining observations of the atmosphere, mathematical models of how air behaves, and computer simulations that estimate how weather conditions will change over time. Meteorologists collect measurements from weather stations, satellites, radar systems, weather balloons, ocean buoys, and aircraft. Powerful computers use these observations to calculate the atmosphere’s evolving state and predict what conditions are likely to develop. Forecasters then interpret the results, compare different predictions, and communicate the most useful information to the public.\n\nThe process is more complicated than identifying patterns in clouds or extending today’s weather into tomorrow. The atmosphere is a constantly moving system in which temperature, air pressure, moisture, wind, and sunlight interact. Small differences in its initial state can eventually produce substantially different outcomes. Understanding how forecasting works means understanding how scientists measure this changing system, represent it mathematically, and account for the uncertainty that grows as predictions extend further into the future.\n\n## How meteorologists observe the atmosphere\n\nA weather forecast begins with observations. Before a computer can predict what the atmosphere will do, scientists need to estimate what it is doing now. Because weather systems extend across continents and oceans and reach from the surface into the upper atmosphere, no single instrument can provide all the information needed.\n\nWeather stations measure conditions near Earth’s surface, including air temperature, humidity, atmospheric pressure, wind speed, wind direction, and precipitation. These stations are located at airports, research facilities, government observation sites, and other locations. Their measurements help reveal local conditions and the larger patterns associated with passing weather systems.\n\nWeather balloons provide information from higher in the atmosphere. Instruments carried by these balloons measure temperature, humidity, pressure, and wind as they rise through different layers of air. This vertical information is essential because surface observations alone cannot reveal the full structure of the atmosphere. Two locations with similar temperatures at ground level, for example, may have very different conditions several miles above them, leading to different weather outcomes.\n\nSatellites provide broad coverage, especially over oceans and remote regions where ground-based measurements are sparse. Some instruments detect visible light, allowing scientists to observe cloud patterns during daylight. Others measure infrared radiation, which helps estimate temperatures at cloud tops and the surface. Additional instruments detect microwave radiation and other signals that reveal information about atmospheric moisture, temperature, and precipitation.\n\nWeather radar supplies another important piece of the picture. By transmitting radio waves and measuring the signals reflected by raindrops, snowflakes, hail, and other particles, radar helps meteorologists locate precipitation and track its movement. Doppler radar can also measure motion toward or away from the radar, providing information about winds within storms. These measurements are particularly valuable for identifying thunderstorms, monitoring heavy rainfall, and detecting patterns associated with rotating storms.\n\nAircraft, ships, ocean buoys, and specialized research instruments contribute additional observations. Aircraft routinely collect atmospheric data along their flight paths, while ocean buoys measure conditions over water, where many weather systems develop. Each source fills gaps left by the others.\n\nThe challenge is that observations are unevenly distributed. Land areas generally have more surface stations than oceans, and instruments differ in their accuracy, coverage, and sampling frequency. Meteorologists must combine these incomplete measurements into a consistent estimate"
+        },
+        {
+          "url": "https://publications.gc.ca/site/archivee-archived.html?url=https%3A%2F%2Fpublications.gc.ca%2Fcollections%2Fcollection_2023%2Feccc%2FEn57-54-1991-eng.pdf",
+          "title": "Information archivée dans le Web | Information Archived on the Web",
+          "source": "publications.gc.ca",
+          "authors": "",
+          "year": null,
+          "access": "PARTIAL_CONTENT",
+          "text": "## Publications du gouvernement du Canada\n\n[Continuer vers la publication](https://publications.gc.ca/collections/collection_2023/eccc/En57-54-1991-eng.pdf)\n\nPour demander une publication dans un format alternatif, remplissez le formulaire électronique des publications du gouvernement du Canada. Utilisez le champ du formulaire «question ou commentaire» pour spécifier la publication demandée.\n\nParcourir les publications du gouvernement du Canada\n\n## Government of Canada Publications\n\n[Continue to publication](https://publications.gc.ca/collections/collection_2023/eccc/En57-54-1991-eng.pdf)\n\nTo request an alternate format of a publication, complete the Government of Canada Publications email form. Use the form’s “question or comment” field to specify the requested publication.\n\nBrowse Government of Canada publications"
+        },
+        {
+          "url": "https://www.bcs.org/articles-opinion-and-research/calculating-and-computing-the-weather",
+          "title": "Calculating and computing the weather",
+          "source": "www.bcs.org",
+          "authors": "",
+          "year": null,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "In today's world, the impact of accurate weather forecasting and climate change has become increasingly important. Advanced computer systems play a crucial role in analysing vast amounts of data and performing complex calculations to help us understand climate trends and predict weather conditions. This article provides a brief background to weather modelling, explaining how computers are currently employed in the fields of climate science and meteorology and discussing the adoption of machine learning in climate science and weather operations.\n\n## Weather and climate modelling\n\nIn 1922 mathematician and physicist Lewis Fry Richardson proposed modelling weather with an amphitheatre full of mathematicians and scientists. They were arranged on a map basis, working to solve the equations of fluid motion for different parts of the atmosphere to provide forecasts and passing this data on to their next region. This physics-based approach to weather forecasting formed the foundation for much of the progress made in the field in the following 100 years.\n\nAs electronic computers developed, replacing Richardson’s team of slide rule wielding mathematicians, meteorology leapt forward as a science. The UK Met Office produced its first operational weather forecast using a computer in 1965, and weather and climate forecasting are now one of the leading uses of supercomputing technology around the globe.\n\n## How weather modelling works\n\nWhat is the difference between weather and climate modelling? It’s really only a matter of time! Weather is short term, and climate long term. So, weather models forecast the conditions of the atmosphere over a short period of time – some only a few hours, and others up to 2 weeks ahead. Sub-seasonal and seasonal weather models cover from 2 weeks to a year ahead. Climate forecast models run 10s of years ahead, often exploring different future scenarios. Many scientists define climate as the average weather for a region, taken over 30 years.\n\nWeather/climate models divide the model region (globe or smaller region) from surface to top of atmosphere into a three-dimensional grid. To give an idea of the grid size, the model from the European Centre for Medium Range Weather Forecast (ECMWF) has a 9km global grid with 137 vertical layers up to 64km at the top of the atmosphere. An estimate of the state of the atmosphere at each of these billions of 3D grid points initialises the model with data such as temperature, pressure, humidity, and wind observations. The model then uses mathematical equations to represent the physical processes governing the behaviour of the atmosphere changing with time. This data is then fed into the grid for the next time-step, and the equations run again to gradually step forward and forecast the weather or climate.\n\n> For you\n> Be part of something bigger, join BCS, The Chartered Institute for IT.\n\n## Data assimilation\n\nWeather forecasting relies on the assimilation of real-time data into numerical models. Computers collect data from satellites, weather stations, radar and other sources, combining them with historical observations. This process, known as data assimilation, helps refine the initial conditions for weather models, increasing the accuracy of short-term forecasts. Because of the quantity of data being processed and the advanced statistical methods used to optimise and process it, this is one area where machine learning is giving some improvements to traditional methods.\n\nParametrisation is a way to replace and supplement physical processes which are too small scale to represent in the model. We can think of them as models within the model, to represent weather like convective shower development, raindrop descent and radiative transfer. These parameterisation schemes allow the inclusion of wider specialised meteorological scientific research into the overall model code-base.\n\n## Ensemble, probabilistic weather modelling\n\nThis is where multiple instances (ensembles) of the mode"
+        },
+        {
+          "url": "https://hoyoopin.com/en/learn/how-weather-forecasting-works/",
+          "title": "How Weather Forecasting Works: From Balloon to App",
+          "source": "hoyoopin",
+          "authors": "",
+          "year": null,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "Every forecast on your phone starts the same way: thousands of instruments measure the atmosphere at roughly the same moment, a computer blends those measurements into a picture of the whole planet, and a model built on the laws of physics calculates how that picture will change. Then statistics and human forecasters turn the raw output into the numbers you read. This guide follows one forecast cycle from start to finish.\n\n![Timeline of six numbered steps: observe, assimilate, run the model, run the ensemble, post-process, your app, each with a short description](https://hoyoopin.com/assets/learn/how-weather-forecasting-works/a-forecast-cycle.svg)\n\nDiagram: the main steps of one forecast cycle at a global forecasting centre.\n\n## Step 1: Measuring the atmosphere\n\nA forecast can only be as good as its starting point, so weather services share observations worldwide through the World Meteorological Organization. The main sources are:\n\n| Source | What it measures | Key facts |\n|---|---|---|\n| Geostationary satellites | Clouds, water vapour, storms, surface temperature | About 35,800 km up, each watching the same part of the globe. The US pair is GOES-19 (GOES-East, operational since 7 April 2025) and GOES-18 (GOES-West, since January 2023); Europe flies Meteosat and Japan Himawari. |\n| Polar-orbiting satellites | Temperature and humidity profiles | Lower orbits that cross near the poles; each satellite sees most places about twice a day. |\n| Weather balloons | Temperature, humidity, pressure and wind with height | Almost 900 stations launch radiosondes, timed for 00 and 12 UTC. Balloons usually climb above 100,000 ft (about 30 km) during flights that can last over two hours. |\n| Surface stations, ships and buoys | Pressure, temperature, wind, rain, visibility | Airports and automatic stations report hourly or more often. |\n| Aircraft | Temperature and wind along flight paths | Airliners report automatically through the AMDAR programme. |\n\nGOES-16, the satellite that served as GOES-East from 2017, is now an on-orbit backup. Older guides that still name it as the operational satellite are out of date.\n\n## Step 2: Data assimilation\n\nObservations are uneven. They cluster over land and along flight routes, and they leave large gaps over the oceans and the poles. They also measure different things at different heights and times. Data assimilation solves this by starting from the model's own short-range forecast for the same moment (the \"first guess\") and nudging it towards the observations, giving each one weight according to how accurate it is known to be. The result, called the analysis, is a complete three-dimensional picture of the atmosphere at the start time.\n\nThe scale is large. ECMWF, the European Centre for Medium-Range Weather Forecasts, says that hundreds of millions of observations must be filtered and combined with recent short-range forecasts every day.\n\n## Step 3: Running the model\n\nA numerical weather prediction model divides the atmosphere into a three-dimensional grid. In each grid box it solves the equations of motion, thermodynamics and moisture to work out how wind, temperature, pressure and humidity will change over a short time step. It then repeats the calculation, step after step, until it reaches the end of the forecast. Processes smaller than a grid box, such as individual clouds or showers, cannot be resolved directly, so the model represents their average effect with simplified schemes called parametrisations.\n\nECMWF's Integrated Forecasting System has run at a grid spacing of about 9 km since an upgrade on 27 June 2023 (Cycle 48r1), with 137 vertical levels. Regional models run over smaller areas at a few kilometres or less, which lets them show individual thunderstorms and the effect of hills and coastlines.\n\n### Worked example: how big is a 9 km global model?\n\n1. ECMWF describes its 9 km grid as 1,280 latitude lines between each pole and the equator, with 20 points on the line nearest the pole rising by 4"
+        },
+        {
+          "url": "https://en.wikipedia.org/wiki/Weather_forecasting",
+          "title": "Weather forecasting - Wikipedia",
+          "source": "en.wikipedia.org",
+          "authors": "",
+          "year": null,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "![](https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ac/Day5pressureforecast.png/500px-Day5pressureforecast.png?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail)\n\nForecast of surface pressures five days into the future for the North Pacific, North America, and the [North Atlantic Ocean](https://en.wikipedia.org/wiki/North_Atlantic_Ocean)\n\n**Weather forecasting** or **weather prediction** is the application of science and technology [to predict](https://en.wikipedia.org/wiki/Forecasting) the conditions of the [atmosphere](https://en.wikipedia.org/wiki/Earth's_atmosphere) for a given location and time. People have attempted to predict the weather informally for thousands of years and formally since the 19th century.\n\nWeather forecasts are made by collecting quantitative data about the current state of the atmosphere, land, and ocean and using [meteorology](https://en.wikipedia.org/wiki/Meteorology) to project how the atmosphere will change at a given place. Once calculated manually based mainly upon changes in [barometric pressure](https://en.wikipedia.org/wiki/Atmospheric_pressure), current weather conditions, and sky conditions or cloud cover, weather forecasting now relies on [computer-based models](https://en.wikipedia.org/wiki/Numerical_weather_prediction) that take many atmospheric factors into account. Human input is still required to pick the best possible model to base the forecast upon, which involves pattern recognition skills, [teleconnections](https://en.wikipedia.org/wiki/Teleconnection), knowledge of model performance, and knowledge of model biases.\n\nThe inaccuracy of forecasting is due to the [chaotic](https://en.wikipedia.org/wiki/Chaos_theory) nature of the atmosphere; the massive computational power required to solve the equations that describe the atmosphere, the land, and the ocean, the error involved in measuring the initial conditions, and an incomplete understanding of atmospheric and related processes. Hence, forecasts become less accurate as the difference between the current time and the time for which the forecast is being made (the *range* of the forecast) increases. The use of ensembles and model consensus helps narrow the error and provide confidence in the forecast.\n\nThere is a wide variety of end uses for weather forecasts. [Weather warnings](https://en.wikipedia.org/wiki/Weather_warning) are important because they are used to protect lives and property. Forecasts based on temperature and [precipitation](https://en.wikipedia.org/wiki/Precipitation_(meteorology%29) are important to agriculture, and therefore to traders within commodity markets. Temperature forecasts are used by utility companies to estimate demand over the coming days. On an everyday basis, many people use weather forecasts to determine what to wear on a given day. Since outdoor activities are severely curtailed by heavy rain, snow and [wind chill](https://en.wikipedia.org/wiki/Wind_chill), forecasts can be used to plan activities around these events, and to plan ahead and survive them.\n\nWeather forecasting is a part of the economy. For example, in 2009, the US spent approximately $5.8 billion on it, producing benefits estimated at six times as much.\n\n## History\n\n### Ancient forecasting\n\nIn 650 BC, the [Babylonians](https://en.wikipedia.org/wiki/Babylonia) predicted the weather from cloud patterns as well as [astrology](https://en.wikipedia.org/wiki/Astrology). In about 350 BC, [Aristotle](https://en.wikipedia.org/wiki/Aristotle) described weather patterns in *[Meteorologica](https://en.wikipedia.org/wiki/Meteorology_(Aristotle%29)*. Later, [Theophrastus](https://en.wikipedia.org/wiki/Theophrastus) compiled a book on weather forecasting, called the *Book of Signs*. Chinese weather prediction lore extends at least as far back as 300 BC, which was also around the same time ancient [Indian astronomers](https://en.wikipedia.org/wiki/Indian_astronomy) developed weather-prediction methods. In the [New Testament"
+        }
+      ],
+      "manual_review": {
+        "relevant": null,
+        "metadata_verified": null,
+        "unsupported_claims": null,
+        "import_attempts": null,
+        "import_successes": null
+      },
+      "seconds": 28.78,
+      "intent_prompt_tokens": 302,
+      "intent_completion_tokens": 25,
+      "ai_calls": [
+        {
+          "purpose": "explore_intent",
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 302,
+          "cached_tokens": 0,
+          "completion_tokens": 25,
+          "web_searches": 0,
+          "cost_usd": 0.0001608,
+          "ok": true,
+          "duration_ms": 1875
+        },
+        {
+          "purpose": "explore_intent",
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 302,
+          "cached_tokens": 0,
+          "completion_tokens": 25,
+          "web_searches": 0,
+          "cost_usd": 0.0001608,
+          "ok": true,
+          "duration_ms": 1890
+        },
+        {
+          "purpose": "explore_search",
+          "model": "gpt-4.1",
+          "prompt_tokens": 17459,
+          "cached_tokens": 2432,
+          "completion_tokens": 1523,
+          "web_searches": 1,
+          "cost_usd": 0.053454,
+          "ok": true,
+          "duration_ms": 12469
+        },
+        {
+          "purpose": "explore_choose",
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 8862,
+          "cached_tokens": 0,
+          "completion_tokens": 562,
+          "web_searches": 0,
+          "cost_usd": 0.004444,
+          "ok": true,
+          "duration_ms": 6405
+        }
+      ]
+    },
+    {
+      "query": "Tại sao con người hay trì hoãn?",
+      "language": "vi",
+      "intent": "DISCOVERY",
+      "predicted": "DISCOVERY",
+      "correct": true,
+      "guidance": "",
+      "documents": [
+        {
+          "url": "https://www.nature.com/articles/s41467-022-33119-w",
+          "title": "A neuro-computational account of procrastination behavior",
+          "source": "Nature Communications",
+          "authors": "Le Bouc, Raphaël",
+          "year": 2022,
+          "kind": "article",
+          "summary": "Bài viết này trình bày một lý giải thần kinh tính toán về hành vi trì hoãn, phân tích các nguyên nhân bên trong và mô hình hóa sự trì hoãn dựa trên các chi phí và lợi ích trong tương lai. Nó cho thấy trì hoãn có thể được giải thích qua sự thiên vị hiện tại khi chi phí hiện tại được cảm nhận cao hơn so với chi phí trong tương lai.",
+          "reason": "Bài viết cung cấp cái nhìn sâu sắc về những nguyên nhân thần kinh và cơ chế tính toán dẫn đến hành vi trì hoãn, phù hợp với câu hỏi của độc giả về việc tại sao con người hay trì hoãn.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5891720/",
+          "title": "Examining Procrastination Across Multiple Goal Stages: A Longitudinal Study of Temporal Motivation Theory",
+          "source": "Frontiers in Psychology",
+          "authors": "Piers Steel",
+          "year": null,
+          "kind": "article",
+          "summary": "Nghiên cứu sử dụng lý thuyết động lực học thời gian để phân tích sự trì hoãn qua các giai đoạn mục tiêu khác nhau, chỉ ra rằng trì hoãn được ảnh hưởng bởi khoảng cách thời gian tới thực hiện và khả năng tự quản lý. Nghiên cứu cũng đề cập đến các kỹ năng tự điều chỉnh quan trọng ảnh hưởng tới sự trì hoãn như kiểm soát sự chú ý và quản lý năng lượng.",
+          "reason": "Nghiên cứu này giải thích về các yếu tố tâm lý và động lực học góp phần vào hành vi trì hoãn, giúp trả lời câu hỏi tại sao con người trì hoãn.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2021.769928/full",
+          "title": "Basic Behavioral Processes Involved in Procrastination",
+          "source": "Frontiers in Psychology",
+          "authors": "Zentall, Thomas R.",
+          "year": 2021,
+          "kind": "article",
+          "summary": "Bài viết phân tích các quá trình hành vi cơ bản liên quan đến trì hoãn, bằng việc so sánh hành vi trì hoãn với các hiện tượng hành vi trong động vật như giảm giá trị phần thưởng theo thời gian và tránh né có điều kiện. Nó gợi ý rằng các cơ chế cơ bản gây trì hoãn ở con người có thể tương đồng với các hành vi đã được nghiên cứu ở động vật.",
+          "reason": "Bài viết cung cấp góc nhìn về các nền tảng hành vi cơ bản của trì hoãn, mở rộng hiểu biết của độc giả về nguyên nhân sinh học và hành vi đằng sau trì hoãn.",
+          "access": "FULLTEXT_AVAILABLE"
+        }
+      ],
+      "evidence": [
+        {
+          "url": "https://www.nature.com/articles/s41467-022-33119-w",
+          "title": "A neuro-computational account of procrastination behavior",
+          "source": "Nature Communications",
+          "authors": "Le Bouc, Raphaël",
+          "year": 2022,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "## Introduction\n\nAlmost all humans procrastinate to some extent, either on filling tax returns, paying bills, saving for retirement, or quitting addictive behaviors like smoking or gambling. People do so although knowing about potential adverse consequences, such as financial difficulty1,2 or health damage3. Despite its high prevalence, affecting ~70% of students4 and up to 20% of adults5, and its major economic or health consequences, the mechanisms leading to procrastination remain poorly understood.\n\nProcrastination is considered a stable trait-like behavior6, with significant heritability demonstrated by twin studies7. However, the causal pathways through which genes could shape the brain architecture so as to produce procrastination behavior are not elucidated. Neuroimaging studies have not gone beyond correlations between procrastination scores on self-report questionnaires and brain anatomy, resting-state activity8,9,10,11, or task-related activity12,13,14. This questionnaire-based approach offers no mechanistic insight into the emergence of procrastination, which would require an operational definition at the cognitive level.\n\nAs suggested by its etymology (crastinus is a Latin word for tomorrow), the common meaning of procrastination is to postpone duties from one day to the next. This definition has been refined by psychologists as the unnecessary but voluntary delaying of task completion (either requested or intended) despite potential harmful outcomes4,6,15,16. For ancient philosophers such as Aristotle, procrastination is a prototypical case of akrasia, which designates a lack of self-control leading to act against one’s best judgment. This perspective is still present in the psychological literature on procrastination, which may be considered as resulting from self-regulation failure or ‘weakness of the will’6,17,18.\n\nIn the framework of neoclassical economic theory, procrastination would be considered irrational, because it prevents maximizing utility in the long run, even when the right course of action is clearly identified. This seemingly irrational behavior has given rise to the development of alternative economic models that would preserve the principle of utility maximization.\n\nAn early economic account of procrastination1 emphasized the importance of costs, meaning the effort and time associated with task completion, which should be traded against the remote benefits associated with the outcome of task completion. Procrastination would stem from present costs (if the task is done now) being perceived in a much more vivid manner than distant costs (if the task is done later)1. Thus, in this model, the present bias leading to procrastination is captured by a vividness parameter that amplifies the cost of immediate actions1. A variant of this model focuses on the opportunity cost of time, defined as the value of what is forgone when implementing a particular action6. In this variant, procrastination would result from the distant benefit of task completion being surpassed by the opportunity cost, i.e. the lost benefit of what could be enjoyed now. Thus, in both cases, a present bias would explain procrastination, either because completing the task now would be perceived as particularly aversive, or because enjoying now an alternative activity would seem particularly attractive.\n\nTo be complete, the model should explain not only why people procrastinate (why they postpone a task) but also why they stop procrastinating at some point (why they finally do it). Further variants of the procrastination model benefited from the development of economic decision theory in which expected utility is progressively discounted with the passage of time19,20,21, as opposed to a mere present bias. The core idea was to apply the same temporal discounting function to both costs and benefits. Functions that would diminish expected utility by some percentage every day would not account for procrastination, since they predict stabl"
+        },
+        {
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5891720/",
+          "title": "Examining Procrastination Across Multiple Goal Stages: A Longitudinal Study of Temporal Motivation Theory",
+          "source": "Frontiers in Psychology",
+          "authors": "Piers Steel",
+          "year": null,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "## Abstract\n\nProcrastination is among the most common of motivational failures, putting off despite expecting to be worse off. We examine this dynamic phenomenon in a detailed and realistic longitudinal design (Study 1) as well as in a large correlational data set (*N* = 7400; Study 2). The results are largely consistent with temporal motivation theory. People’s pacing style reflects a hyperbolic curve, with the steepness of the curve predicted by self-reported procrastination. Procrastination is related to intention-action gaps, but not intentions. Procrastinators are susceptible to proximity of temptation and to the temporal separation between their intention and the planned act; the more distal, the greater the gap. Critical self-regulatory skills in explaining procrastination are attention control, energy regulation and automaticity, accounting for 74% of the variance. Future research using this design is recommended, as it provides an almost ideal blend of realism and detailed longitudinal assessment.\n\n**Keywords:** procrastination, temporal trajectories, motivation, self-regulation, longitudinal, pacing style\n\n## Introduction\n\nProcrastination is inherently dysfunctional, having been linked to a variety of major problems, from national and consumer debt (Steel, 2011; Sunstein, 2011) to unemployment and job search (Lay and Brokenshire, 1997; Van Hooft et al., 2013) to workplace cyberslacking and presenteeism (O’Neill et al., 2014; Wan et al., 2014). Given the importance and prevalence to so many outcomes, there has been disproportionately little motivational research on procrastination, almost to the point of neglect (Van Eerde, 2000; Steel, 2007). This is consistent, however, with the neglect of time in the motivational field (e.g., Fried and Slowik, 2004; Locke and Latham, 2004; Sonnentag, 2012) and the study of procrastination requires making choices over time (i.e., putting off despite being worse off). Looking forward, we argue that to develop an understanding of motivational failures, it is important to address these gaps in research on procrastination (e.g., Steel, 2007) and time (e.g., Fried and Slowik, 2004; Lord et al., 2010). In this study, we examine how procrastination manifests over time, employing the lens of temporal motivation theory (Steel and König, 2006).\n\n### Temporal Motivation Theory\n\nDescribed as one of the more comprehensive and promising theories equipped to further our understanding of procrastination is Steel and König’s (2006) temporal motivation theory (Lord et al., 2010; Schmidt et al., 2013). Temporal motivation theory is a meta-theory of motivation that integrates expectancy theory and hyperbolic discounting (from behavioral decision theory) with need theory and prospect theory (Hodgkinson and Healey, 2008). A simplified formulation of temporal motivation theory is:\n\n| Motivation =Expec⁢tan⁡cy×Value1+Im⁡pulsiveness×Delay |\n|---|\n\nAs per expectancy theory, motivation increases when people are confident of acquiring (i.e., expectancy) a desired reward or outcome (i.e., value). However, per behavioral decision theory and need theory, motivation is reduced when there is a large amount of time before the reward is realized (i.e., delay) and when we are sensitive to delays (i.e., impulsiveness). The constant “1” is added to prevent the equation approaching infinity when delay becomes effectively zero.\n\nTemporal motivation theory, being a meta-theory, is explicitly designed to incorporate the empirically validated aspects of other formulations (Anderson, 2007; Schmidt et al., 2009; Lord et al., 2010). By incorporating expectancy theory, for example, it is inextricably linked to key motivational variables that include self-efficacy and achievement motivation (Klingsieck, 2013). Goal setting theory itself is largely derivable from temporal motivation theory (Gröpel and Steel, 2008), effectively connecting the inductive or descriptive approach of goal setting to other disciplines and lines of researc"
+        },
+        {
+          "url": "https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2021.769928/full",
+          "title": "Basic Behavioral Processes Involved in Procrastination",
+          "source": "Frontiers in Psychology",
+          "authors": "Zentall, Thomas R.",
+          "year": 2021,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "## Abstract\n\nProcrastination involves an irrational putting off of engaging in a course of action, in spite of expecting to be worse off for the delay. I suggest that to understand the processes underlying procrastination one should examine its relation to several behavioral procedures that have been studied in humans and other animals. For example, in delay discounting, smaller rewards that come sooner are often preferred over larger rewards that come later. In the context of delay discounting, procrastination can be viewed as the preference for an immediate competing activity over the delay to work on a required task. Another process similar to procrastination can be seen in free operant, temporal avoidance (or Sidman avoidance) in which an animal will receive a shock (a deadline not met) if an interval passes without a specified response (task completion). Once animals learn about the interval, they often procrastinate by waiting until the interval has almost passed before responding. Finally, research with animals suggests that the persistence of procrastination may involve a form of negative reinforcement associated with the sudden decline in anxiety or fear (relief) when the task is completed prior to the deadline. Research with animals suggests that the mechanisms responsible for human procrastination may involve systems that derive from several procedures known to produce similar behavior animals.\n\n## Introduction\n\nComparativepsychology has a longhistory of providing models relevant to human behavior. For example, there is considerable evidence that Pavlovian conditioning procedures are relevant to the conditioning of human emotional response (fear conditioning, taste and odor conditioning, phobias). Similarly, procedures derived from behavior analysis have been found to be relevant to the training of special needs children to care for themselves. They can respond to alternatives in direct proportion to the distribution of reinforcements (the matching law; Herrnstein, 1961; Baum, 1974). Even in the context of complex human decision making, comparative research has demonstrated the relevance of how animals make decisions (Zentall and Wasserman, 2012). Comparative research can provide us with hypotheses concerning the evolution and biological basis of human behavior. Comparative research can often contribute to our understanding of behavior because the learning processes are often simpler in animals than in humans, and we can better control the prior learning experiences. Research with animals does have the drawback that we cannot use their self-report to explain the basis for their choice, so that has to be inferred.\n\nThe purpose of the present article is to examine the comparative psychological research for phenomena that might clarify the mechanisms responsible for the tendency for humans to procrastinate. I will start with a brief description of the mechanisms thought to be responsible for human procrastination. Although procrastination is typically viewed as a uniquely human phenomenon, the results of several, well-studied procedures with animals suggest that the mechanisms involved in procrastination may be closely related to the behavior that one sees in other animals (see Zentall, 2020). With this in mind, I will identify three lines of animal research that suggest they are related to human procrastination. The first, delay discounting is the idea that small immediate rewards are often preferred over larger delayed rewards. Steel and König (2006) have proposed that temporal motivation theory, based on delay discounting, to be the mechanism responsible for human procrastination (see also Steel, 2007). According to this theory, completion of the required task represents the larger delayed reward and competing activities represent the smaller more immediate rewards.\n\nThe second line of research is free operant, temporal avoidance, a procedure in which an aversive event is signaled only by the passage of time (Sidman"
+        },
+        {
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC13322781/",
+          "title": "Design, Development and Validation of a Training Package for Treating Procrastination in Students Based on Grounded Theory: A Mixed‐Methods Approach",
+          "source": "PsyCh Journal",
+          "authors": "Sadegh Hekmatiyan Fard",
+          "year": null,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "## ABSTRACT\n\nThe present study aimed to design, develop, and validate a training package for treating student procrastination based on grounded theory. In the first phase, a qualitative grounded theory study was conducted to develop this intervention. The study population consisted of students enrolled at the Persian Gulf University in the academic year 2023–2024. In the quantitative phase of this study, a quasi‐experimental pre‐test‐post‐test control group design was employed. A multi‐stage random sampling technique was used to select participants. The procrastination questionnaire was randomly distributed to 1000 students from the Persian Gulf University, stratified by faculty, major, and year of entry. The findings indicated that the procrastination treatment package was effective in reducing procrastination among students.\n\n**Keywords:** academic procrastination, mixed‐methods research, procrastination treatment package, university students\n\n## 1. Introduction\n\nCollege life involves a seemingly endless series of challenging tasks, providing students little respite. However, it is not the great number of tasks that troubles students, but their tendency to delay the tasks, in comparison to their goals (Sun and Kim 2023). Henceforth, the challenges arise from the student's inability to self‐regulate, stay dedicated, and finish the tasks. Procrastination refers to the delaying of tasks (Zhang et al. 2023). In other words, procrastination is the postponement of work without a specific cause (Turner and Hodis 2023).\n\nApproximately a quarter of students report that procrastination causes tension for them and disrupts their academic performance. This hinders their ability to utilize their full potential in their learning process, leading to eventual failure (Ren et al. 2023). Research shows that procrastination harms health and well‐being, and life satisfaction among different populations (Narci 2022). Intrapsychic outcomes of procrastination include psychological distress, self‐criticism, hopelessness, and regret. External outcomes of procrastination can be significant and detrimental to the student's academic performance. For example, it can cause individuals to miss opportunities and harm their relationships. It can also negatively predict academic grade averages and, consequently, academic probation (Caratiquit and Caratiquit 2023), causing a financial burden on the student.\n\nResearch points to various antecedents of procrastination. A common belief about the nature of procrastination is that it stems from high standards (Kurtovic et al. 2019). A tendency to attain perfect and unattainable standards is characteristic of perfectionist beliefs (Stoeber et al. 2020). Delaying a task can be due to a tendency to strive for perfection, which can make completing tasks tedious or unpleasant. Therefore, in the face of perfectionist standards, procrastinators may deem it too early to address a task and consequently evade completing it. Procrastination might be the consequence of factors such as low self‐efficacy and irrational beliefs (Ma et al. 2023). Moreover, procrastination can be a detrimental habit with consequences such as stress, worry, fear of failure (Cho and Lee 2022), constant anxiety, and depression (Kınık and Odacı 2020).\n\nAs noted, procrastination can affect various aspects of individual and social life, education and academic performance, finances and subsequently mental and physical health. It can also manifest in a person's career, affecting organizations (Barabanshchikova et al. 2018). Research in this field can help design measures and interventions to reduce or eliminate procrastination. Academic procrastination is prevalent among students, is on the rise, and has unpleasant consequences. It is related to multiple factors, and research findings vary among students of different majors, genders, and ages. Considering the mental health implications, preventing academic procrastination, and empowering students are essen"
+        },
+        {
+          "url": "https://bpb-us-w2.wpmucdn.com/u.osu.edu/dist/7/127016/files/2024/10/Why-People-Procrastinate-and-How-to-Overcome-It-_-Scientific-American.pdf",
+          "title": "Why People Procrastinate, and How to Overcome It _ Scientific American",
+          "source": "bpb-us-w2.wpmucdn.com",
+          "authors": "russ",
+          "year": null,
+          "access": "PARTIAL_CONTENT",
+          "text": "\u0000\u0001\u0002\u0003\u0002\u0000\u0003\n\u0004\u0005\u0006\u0005\u0007\b\n\n\u000b\f\n\r\u000e\r\u000f\n\u000b\n\u0010\u0002\u0003\n\u0011\u0012\u0004\u0013\n\u0014\u0015\u0016\n\u0001\u0017\u0018\u0019\u001a\u0017\n\u0001\u001b\u0018\u001c\u001b\u001d\u001e\u001f !\u001d\u001f\u0017\f\n\u001d!\"\n#\u0018$\n\u001f\u0018\n\u0000%\u0017\u001b\u001c\u0018&\u0017\n\u0002\u001f\n'(\n*+(,\n,-++./0\n(1\n+2*3*4\n+5./3\n26(-+\n+57\n,(*.+.87\n9:\n<=>?@A\nBA=C=DEF\nF=G=:E=\nH\nAIFF@JJ\nK=L?E\nMNOMMOPQR\nMMTUU\nVW\nXYZ\n[\\]^_\\\n[`]a`bcdefbd\\R\nbfg\nh]i\nd]\njk\\`a]l\\\nmd\nn\noae\\fdepea\nVl\\`eabf\nYdd^cTOOiiiqcae\\fdepeabl\\`eabfqa]lOb`dea_\\OiYZr^\\]^_\\r^`]a`bcdefbd\\rbfgrY]ird]r]k\\`a]l\\redO\nMOs\n\n\u0000\u0001\u0002\u0001\u0004\u0004\u0005\u0006\u0007\n\b\t\u0004\u000b\f\r\u000e\u000f\u0004\u0010\u0011\u0012\u0004\u0011\u0013\u0011\u0014\u0015\u0016\u0017\r\u0018\u0018\u0004\u0019\u001a\t\u001b\u0004\u001c\u0018\u001d\u001e\r\u0018\u0004\u0016\u0017\u0018\u0004\u0019\u0018\u001a\u0019\u000f\u000e\u001f\u0018\u0004\u001d\u001e\r\u0004 \u000f\u000e\u001f!\u0004\u0016\u001a\"\u0004\r\u0018\u0016#\r\u001f\u001b\u0004\u000e\u001f\u0004\u0016\u0017\u0018\n$%&%\u0015'\u001e\r\u0018\u0004\u0016\u0017\u001a\u001f\u0004\u001a\u0004(#\u001a\r\u0016\u0018\r\u0004\u001e\u001d\u0004\u000b'\u0018\r\u000e)\u001a\u001f\u0004\u0016\u001a\"\f\u001a\t\u0018\r\u001b\u0004\u0017\u001a\u0019\u0004\t\u0018\u0016\u0004\u0016\u001e\u0004\u0019\u001e\u0004\u001b\u001e%\n*+,-./0/1,\n23454/5\n6786689:;\u000466=>>\u0004?@\nABC\u0004DEFGHE\u0004DIFJIKLMNOKME;\u0004KOP\u0004QFR\u0004MF\u0004STEIJFUE\u0004VM\u0004W\u0004XJNEOMNYNJ\u0004?UEINJKO\nBMMGL=88RRRZLJNEOMNYNJKUEINJKOZJFU8KIMNJHE8RBC[GEFGHE[GIFJIKLMNOKME[KOP[BFR[MF[FTEIJFUE[NM8\n98\\\n\n\u0000\u0001\u0002\u0003\u0001\u0004\u0005\u0006\u0007\b\u0004\u0006\u0007\u0002\b\t\n\u000b\f\u0004\r\u0007\b\u000e\u0010\u0005\u0002\u0010\u000b\u0006\u0011\u0007\b\u000e\u0010\n\u000b\u0005\u0012\u0007\u0006\u000b\u0010\u0004\b\u0010\u0004\u0013\u0004\u0001\u000b\b\u000b\u0005\u0005\u0010\u0002\u0014\u0010\u0004\u0005\u0005\u0002\u0003\u0007\u0004\u0006\u000b\n\b\u000b\u000e\u0004\u0006\u0007\u0015\u000b\u0010\u0003\u0002\b\u0005\u000b\u0016\u0017\u000b\b\u0003\u000b\u0005\u0018\u0010\f\u000b\u0004\n\u0007\b\u000e\u0010\u0006\u0002\u0010\n\u0007\u0005\u0003\u0002\u0010\u0014\u0002\u0001\u0006\t\u0007\u0005\u0010\u0004\u0010\u0003\u0002\u0010\u0010\u0002\b\u0010\u000b\u0019\u0012\u000b\u0001\u0007\u000b\b\u0003\u000b\u0010\u0014\u0002\u0001\n\u0010\u0004\b\r\u001a\n\u0010\u001b\b\u0014\u0002\u0001\u0006\u0017\b\u0004\u0006\u000b\f\r\u0018\u0010\u0012\u0001\u0002\u0003\u0001\u0004\u0005\u0006\u0007\b\u0004\u0006\u0007\u0002\b\u0010\u0006\u000b\b\n\u0005\u0010\u0006\u0002\u0010\u0003\u0004\u0001\u0001\r\u0010\u0005\u0007\u000e\b\u0007\u001c\u0003\u0004\b\u0006\u0010\u0003\u0002\u0005\u0006\u0005\u001d\u0010\u001e\u0002\u0001\n\u0007\b\u0005\u0006\u0004\b\u0003\u000b\u0018\u0010\u0003\u0002\u0010\u0012\f\u000b\u0006\u0007\b\u000e\u0010\u0004\u0010\u0006\u0004\u0005\u001f\u0010\u0013\u0011\u000b\b\u0010\u0001\u0017\u0005\u0011\u0007\b\u000e\u0010\u0006\u0002\u0010\u001c\b\u0007\u0005\u0011\u0010\u0003\u0004\b\u0010\u0004 \u000b\u0003\u0006\u0010\u0006\u0011\u000b\u0010\u0016\u0017\u0004\f\u0007\u0006\r\u0010\u0002\u0014\n\u0002\b\u000b!\n\u0005\u0010\u0013\u0002\u0001\u001f\u001d\u0010\"\u0002\u0001\u000b\u0002\u0015\u000b\u0001\u0018\u0010\u0012\u0001\u0002\u0003\u0001\u0004\u0005\u0006\u0007\b\u0004\u0006\u0007\u0002\b\u0010\u0007\u0005\u0010#\r\u0010\u0007\u0006\u0005\u0010\u0015\u000b\u0001\r\u0010\n\u000b\u001c\b\u0007\u0006\u0007\u0002\b\u0010\u0005\u0006\u0001\u000b\u0005\u0005\u0014\u0017\f\u0018\u0010\u0004\b\n\b\u0004\u0006\u0017\u0001\u0004\f\f\r\u0010\u0005\u0017\u0003\u0011\u0010\u0005\u0006\u0001\u000b\u0005\u0005\u0010\u0003\u0004\b\u0010\u0006\u0004\u001f\u000b\u0010\u0007\u0006\u0005\u0010\u0006\u0002\f\f\u001d\u0010$\u0011\u0001\u0002\b\u0007\u0003\u0010\u0012\u0001\u0002\u0003\u0001\u0004\u0005\u0006\u0007\b\u0004\u0006\u0002\u0001\u0005\u0010\u0006\u000b\b\n\u0010\u0006\u0002\u0010\u0001\u000b\u0012\u0002\u0001\u0006\n\u0010\u0002\u0001\u000b\u0010\u0005\r\u0010\u0012\u0006\u0002\u0010\u0005\u0010\u0002\u0014\u0010\u0007\f\f\b\u000b\u0005\u0005\u0018\u0010\u0010\u0002\u0001\u000b\u0010\u0015\u0007\u0005\u0007\u0006\u0005\u0010\u0006\u0002\u0010\u0006\u0011\u000b\u0010\n\u0002\u0003\u0006\u0002\u0001\u0018\u0010\f\u0002\u0013\u000b\u0001\u0010\u0002\u0015\u000b\u0001\u0004\f\f\u0010\u0013\u000b\f\f%#\u000b\u0007\b\u000e\n\u0004\b\n\u0010\u000b\u0015\u000b\b\u0010\u000e\u0001\u000b\u0004\u0006\u000b\u0001\u0010\u001c\b\u0004\b\u0003\u0007\u0004\f\u0010\u0005\u0006\u0001\u0017\u000e\u000e\f\u000b\u0005\u001d\n&\u0002\u0010\u0007\u0014\u0010\u0012\u0001\u0002\u0003\u0001\u0004\u0005\u0006\u0007\b\u0004\u0006\u0007\u0002\b\u0010\u0007\u0005\u0010\u0005\u0002\u0010\u0003\u0002\u0005\u0006\f\r\u0018\u0010\u0013\u0011\r\u0010\n\u0002\u0010\u0005\u0002\u0010\u0010\u0004\b\r\u0010\u0012\u000b\u0002\u0012\f\u000b\u0010\u0001\u000b\u000e\u0017\f\u0004\u0001\f\r\u0010\n\u0002\u0010\u0007\u0006'\u0010(\u000b\u0004\u0001\u0005\n\u0002\u0014\u0010\u0001\u000b\u0005\u000b\u0004\u0001\u0003\u0011\u0010\u0011\u0004\u0015\u000b\u0010\u0012\u0001\u0002\u0015\u0007\n\u000b\n\u0010\u0004\u0010\u0001\u000b\u0004\u0005\u0002\b\u0004#\f\r\u0010\u0003\u0002\u0010\u0012\u0001\u000b\u0011\u000b\b\u0005\u0007\u0015\u000b\u0010\f\u0007\u0005\u0006\u0010\u0002\u0014\u0010\u0012\u0005\r\u0003\u0011\u0002\f\u0002\u000e\u0007\u0003\u0004\f\n\u0014\u0004\u0003\u0006\u0002\u0001\u0005\u0010\u0006\u0011\u0004\u0006\u0010\u0001\u000b\f\u0004\u0006\u000b\u0010\u0006\u0002\u0010\u0012\u0001\u0002\u0003\u0001\u0004\u0005\u0010\n\u0006\u0007\b\u0004\u0006\u0007\u0002\b\u001d\u0010)\u0017\u0006\u0010\u0007\u0006!\n\u0005\u0010#\u000b\u000b\b\u0010\u0017\b\u0003\f\u000b\u0004\u0001\u0010\u0013\u0011\u0004\u0006\u0010\u0010\u000b\b\u0006\u0004\f\n\u0012\u0001\u0002\u0003\u000b\u0005\u0005\u000b\u0005\u0010\u0017\b\u0010\n\n\u000b\u0001\u0010\n\f\u0007\u000b\u0010\u0006\u0011\u000b\u0010\n\u000b\u0003\u0007\u0005\u0007\u0002\b\u0010\u0006\u0002\u0010\u0005\u0006\u0004\u0001\u0006\u0010\u0002\u0001\u0010\u0012\u0002\u0005\u0006\u0012\u0002\b\u000b\u0010\u0004\u0010\u0006\u0004\u0005\u001f\u001d\u0010*\u0011\u000b\b\u0010\u0014\u0004\u0003\u000b\n\u0010\u0013\u0007\u0006\u0011\u0010\u0004\b\n\u0017\u0012\u0003\u0002\u0010\u0007\b\u000e\u0010\n\u000b\u0004\n\f\u0007\b\u000b\u0018\u0010\u0011\u0002\u0013\u0010\n\u0002\u0010\u0012\u000b\u0002\u0012\f\u000b\u0010\n\u000b\u0003\u0007\n\u000b\u0010\u0006\u0002\u0010\u0007\b\u0007\u0006\u0007\u0004\u0006\u000b\u0010\u0004\u0010\u0003\u0011\u0002\u0001\u000b\u0010\u0002\u0001\u0010\u0012\u0001\u0002+\u000b\u0003\u0006'\n,\u0002\u0010\u000b\u0019\u0012\f\u0002\u0001\u000b\u0010\u0006\u0011\u0007\u0005\u0010\u0016\u0017\u000b\u0005\u0006\u0007\u0002\b\u0018\u0010\u0013\u000b\u0010\u0003\u0002\b\n\u0017\u0003\u0006\u000b\n\u0010\u0004\u0010\u0005\u000b\u0001\u0007\u000b\u0005\u0010\u0002\u0014\u0010\u0005\u0006\u0017\n\u0007\u000b\u0005\u0010\u000b\u0019\u0004\u0010\u0007\b\u0007\b\u000e\u0010\u0006\u0004\u0005\u001f\n\n\u000b\f\u0004\r\u0018\u0010\u0006\u0011\u000b\u0010#\u000b\u0011\u0004\u0015\u0007\u0002\u0001\u0004\f\u0010\u0003\u0002\u0010\u0012\u0002\b\u000b\b\u0006\u0010\u0002\u0014\u0010\u0012\u0001\u0002\u0003\u0001\u0004\u0005\u0006\u0007\b\u0004\u0006\u0007\u0002\b\u0010\u0007\b\u0010\u0013\u0011\u0007\u0003\u0011\u0010\u0012\u000b\u0002\u0012\f\u000b\u0010\u0012\u0017\u0006\u0010\u0002 \n\u0003\u0002\u0010\u0012\f\u000b\u0006\u0007\b\u000e\u0010\u0005\u0002\u0010\u000b\u0006\u0011\u0007\b\u000e\u0010\n\u000b\u0005\u0012\u0007\u0006\u000b\u0010\f\u0004\u0003\u001f\u0007\b\u000e\u0010\u0004\b\r\u0010\u0002#+\u000b\u0003\u0006\u0007\u0015\u000b\f\r\u0010\u0005\u0006\u0001\u0004\u0006\u000b\u000e\u0007\u0003\u0010\u0001\u000b\u0004\u0005\u0002\b\u0010\u0006\u0002\u0010\n\u0002\u0010\u0005\u0002\u001d\n*\u000b\u0010\u0014\u0002\u0017\b\n\u0010\u0006\u0011\u0004\u0006\u0010\u0012\u000b\u0002\u0012\f\u000b\u0010\u0013\u0007\u0006\u0011\u0010\u0004\u0010\b\u000b\u000e\u0004\u0006\u0007\u0015\u0007\u0006\r\u0010#\u0007\u0004\u0005\u0010\u0006\u000b\b\n\u0010\u0006\u0002\u0010\n\u000b\f\u0004\r\u0010\u0006\u0004\u0005\u001f\u0005\u0010\u0010\u0002\u0001\u000b\u0018\n\u000b\u0005\u0012\u000b\u0003\u0007\u0004\f\f\r\u0010\u0007\u0014\u0010\u0006\u0011\u000b\r\u0010\u0006\u000b\b\n\u0010\u0006\u0002\u0010#\u000b\u0010\u0012\u0002\u0002\u0001\u0010\u0004\u0006\u0010\u0005\u000b\f\u0014%\u0003\u0002\b\u0006\u0001\u0002\f\u001d\n,\u0011\u000b\u0010\u0003\u000b\b\u0006\u0001\u0004\f\u0010\u0007\n\u000b\u0004\u0010\u000e\u0017\u0007\n\u0007\b\u000e\u0010\u0002\u0017\u0001\u0010\u0013\u0002\u0001\u001f\u0010\u0013\u0004\u0005\u0010\u0006\u0011\u0004\u0006\u0010\u0004\u0005\u0010\u0012\u000b\u0002\u0012\f\u000b\u0010\u0012\u0017\u0001\u0005\u0017\u000b\u0010\u0006\u0011\u000b\u0007\u0001\u0010\u000e\u0002\u0004\f\u0005\u0018\u0010\u0006\u0011\u000b\n\u000b\b\u0015\u0007\u0001\u0002\b\u0010\u000b\b\u0006\u0010\b\u0017\n\u000e\u000b\u0005\u0010\u0006\u0011\u000b\u0010\u0010\u0006\u0002\u0010\u0010\u0004\u001f\u000b\u0010\u0005\u0012\u000b\u0003\u0007\u001c\u0003\u0010\u0004\u0005\u0005\u000b\u0005\u0005\u0010\u000b\b\u0006\u0005\u0010\u0006\u0011\u0004\u0006\u0010\u0003\u0004\b\u0010\u0005\u0011\u0004\u0012\u000b\u0010\u0006\u0011\u000b\u0007\u0001\n#\u000b\u0010\n\u0011\u0004\u0015\u0010\n\u0007\u0002\u0001\u001d\u0010\u001e\u0002\u0001\u0010\u000b\u0019\u0004\u0010\u0012\f\u000b\u0018\u0010\u0002\b\u0003\u000b\u0010\u0004\u0010\u0006\u0004\u0019\u0012\u0004\r\u000b\u0001\u0010\u0011\u0004\u0005\u0010\u0001\u000b\u0010\n\u0003\u000b\u0007\u0015\u000b\n\u0010\u0004\f\f\u0010\u0006\u0011\u000b\u0010\b\u000b\u0003\u000b\u0005\u0005\u0004\u0001\r\n\n\u0002\u0003\u0017\u0010\u000b\b\u0006\u0004\u0006\u0007\u0002\b\t\u0006\r\u0012\u0007\u0003\u0004\f\f\r\u0010\u0013\u000b\f\f\u0010#\u000b\u0014\u0002\u0001\u000b\u0010\u0006\u0011\u000b\u0010\u001c\f\u0007\b\u000e\u0010\n\u000b\u0004\n\u0010\n\f\u0007\b\u000b\t\u0010\n\u0006\u0011\u000b\r\u0010\u0010\u0004\r\u0010\u0004\u0005\u001f\n\u0006\u0011\u000b\u0010\u0005\u000b\f\u0015\u000b\u0005\u0018\u0010-.\u0002\u0010/\u0010\u0013\u0004\b\u0006\u0010\u0006\u0002\u0010\n\u0002\u0010\u0006\u0011\u0007\u0005\u0010012'3\u0010,\u0011\u0007\u0005\u0010\u0016\u0017\u000b\u0005\u0006\u0007\u0002\b\u0010\u0005\u0011\u0002\u0017\f\n\u0010#\u0001\u0007\b\u000e\u0010\u0006\u0002\u0010\u0010\u0007\b\n\u0005\u0002\u0010\u000b\u0010\u0012\u0002\u0005\u0007\u0006\u0007\u0015\u000b\u0010\u0002\u0017\u0006\u0003\u0002\u0010\u000b\u0005\u00104\u0014\u0002\u0001\u0010\u0007\b\u0005\u0006\u0004\b\u0003\u000b\u0018\u0010\u0006\u0011\u000b\u0010\u0005\u0004\u0006\u0007\u0005\u0014\u0004\u0003\u0006\u0007\u0002\b\u0010\u0002\u0014\u0010\u0003\u0002\u0010\u0012\f\u000b\u0006\u0007\b\u000e\u0010\u0004\u0010\u0003\u0011\u0002\u0001\u000b\n\u0004\b\n\u0018\u0010\u0012\u0002\u0006\u000b\b\u0006\u0007\u0004\f\f\r\u0018\u0010\u0001\u000b\u0010\n\u0003\u000b\u0007\u0015\u0010\n\u0007\b\u000e\u0010\u0004\u0010\u0006\u0004\u0019\u0010\u0001\u000b\u0014\u0017\b\n\u0010\u0005\u0002\u0002\b\u000b\u00015\u0010\u0004\b\n\u0010\u0005\u0002\u0010\u000b\u0010\u0006\u0011\u0004\u0006\u0010\u0004\u0001\u000b\u0010\b\u000b\u000e\u0004\u0006\u0007\u0015\u000b\n4\u0005\u0017\u0003\u0011\u0010\u0004\u0005\u0010\u0006\u0011\u000b\u0010\u0006\u000b\n\u0007\u0002\u0017\u0005\b\u000b\u0005\u0005\u0010\u0002\u0014\u0010\u0006\u0011\u000b\u0010\u0006\u0004\u0005\u001f5\u001d\n6786689:;\u001066=>>\u0010?@\nABC\u0010DEFGHE\u0010DIFJIKLMNOKME;\u0010KOP\u0010QFR\u0010MF\u0010STEIJFUE\u0010VM\u0010W\u0010XJNEOMNYNJ\u0010?UEINJKO\nBMMGL=88RRRZLJNEOMNYNJKUEINJKOZJFU8KIMNJHE8RBC[GEFGHE[GIFJIKLMNOKME[KOP[BFR[MF[FTEIJFUE[NM8\n\\8]\n\n\u0000\u0001\u0002\u0003\u0004\u0001\u0006\u0006\u0007\u0002\u0006\b\t\u0001\u0006\n\u000b\f\u0004\n\u000b\u0001\r\u0006\u000e\u0002\u0006\u000f\u0001\u0001\u0006\u000e\u0007\u0001\u0006\u000b\u0001\u0010\b\u000e\n\u0011\u0001\u000f\n\t\b\u000e\u0007\u0001\t\u0006\u000e\u0007\b\u000b\u0006\u000e\u0007\u0001\u0006\u0003\u0002\u000f\n\u000e\n\u0011\u0001\u000f\u0006\b\t\u0001\u0006\u0012\u0002\t\u0001\u0006\u0004\n\u0013\u0001\u0004\u0014\u0006\u000e\u0002\u0006\r\u0001\u0004\b\u0014\n\u000e\b\u000f\u0013\u000f\u0015\u0006\u0001\u000f\u0003\u0001\f\n\b\u0004\u0004\u0014\u0006\n\u0016\u0006\u000e\u0007\u0001\u0014\u0006\u000e\u0001\u000b\r\u0006\u000e\u0002\u0006\u0017\u0001\u0006\u0003\u0002\u0002\t\u0006\b\u000e\u0006\u000f\u0001\u0004\u0016\u0018\n\f\u0002\u000b\u000e\t\u0002\u0004\u0019\n\u001a\u001b\u001c\u001d\u001e\u001f\u001c \u001b!\u0006\u001c# \u0006$%&\u001d\u001c\u001d' &\u0006\u001e(&\u001c\u0006) \u0006* \u001d+# ,\u0006\u001f+\u001f\u001d-&\u001c\u0006\u001c# \u0006- +\u001f\u001c\u001d' &.\u0006/%\u001c\u001f)\u001b!\u0006\u001c# 0 \n\u001f0 \u0006\u001d-,\u001d'\u001d,(\u001f\u001b\u0006,\u001d1 0 -2 &\u0006\u001d-\u0006#%*\u0006$ %$\u001b \u0006+ - 0\u001f\u001b\u001b!\u0006* \u001d+#\u0006$%&\u001d\u001c\u001d' \u0006\u001f-,\u0006- +\u001f\u001c\u001d' \n&\u001d+-\u001f\u001b&3\u001f\u00062#\u001f0\u001f2\u001c 0\u001d&\u001c\u001d2\u0006\u001c#\u001f\u001c\u0006$&!2#%\u001b%+\u001d&\u001c&\u00062\u001f\u001b\u001b\u0006'\u001f\u001b -2 \u0006* \u001d+#\u001c\u001d-+\u0006)\u001d\u001f&.\n4# 0 \u001f&\u0006&%\u001e \u0006$ %$\u001b \u0006\u001c -,\u0006\u001c%\u0006+\u001d' \u0006+0 \u001f\u001c 0\u0006* \u001d+#\u001c\u0006\u001c%\u0006\u001c# \u0006$0%&5\u0006%\u001c# 0&\u0006+\u001d' \n+0 \u001f\u001c 0\u0006* \u001d+#\u001c\u0006\u001c%\u0006\u001c# \u00062%-&.\u00064 \u00060 \u001f&%- ,\u0006\u001c#\u001f\u001c\u0006\u001c#%& \u0006*\u001d\u001c#\u0006\u001f\u0006\u001e%0 \u0006- +\u001f\u001c\u001d' \n* \u001d+#\u001c\u001d-+\u0006)\u001d\u001f&\u0006&#%(\u001b,\u0006) \u0006\u001e%0 \u0006\u001b\u001d6 \u001b!\u0006\u001c%\u0006$0%20\u001f&\u001c\u001d-\u001f\u001c .\n7(0\u000680&\u001c\u0006&\u001c(,!\u0006(& ,\u0006&(0' !&\u0006\u001c%\u0006\u001d, -\u001c\u001d9!\u0006$ %$\u001b \u0006*#%\u0006+ - 0\u001f\u001b\u001b!\u0006 :$ 2\u001c ,\u0006\u001c%\n0 2 \u001d' \u0006\u001f\u0006\u001c\u001f:\u00060 9(-,\u0006)(\u001c\u0006\u001c -, ,\u0006\u001c%\u0006&()\u001e\u001d\u001c\u0006\u001c# \u001d0\u0006\u001c\u001f: &\u0006 \u001d\u001c# 0\u0006 \u001f0\u001b!\u0006;,(0\u001d-+\u0006\u001c# \n\u001b\u001f&\u001c\u0006\u001c*%\u0006*  6&\u0006%9\u0006<\u001f-(\u001f0!\u0006%0\u0006 \u001f0\u001b!\u0006= )0(\u001f0!>\u0006%0\u0006\u001b\u001f\u001c \u0006\u001d-\u0006\u001c\u001f:\u0006& \u001f&%-\u0006;\u001c# \u000680&\u001c\u0006\u001c*%\n*  6&\u0006%9\u0006?$0\u001d\u001b>.\u0006@%\u001e \u0006ABA\u0006$ %$\u001b \u0006*#%\u0006\u001e \u001c\u0006%(0\u0006 \u001b\u001d+\u001d)\u001d\u001b\u001d\u001c!\u000620\u001d\u001c 0\u001d\u001f\u0006$\u001f0\u001c\u001d2\u001d$\u001f\u001c ,\n\u001d-\u0006\u001f\u00069%\u001b\u001b%*C($\u0006& &&\u001d%-5\u0006\u001d-\u0006*#\u001d2#\u0006* \u0006\u001e \u001f&(0 ,\u0006\u001c# \u001d0\u0006'\u001f\u0006\n\u001b\u0006\n -2 \u0006* \u001d+#\u001c\u001d-+\u0006)\u001d\u001f&5\n(&\u001d-+\u0006\u001f\u0006+\u001f\u001e \u0006\u001f1 2\u001c\u001d%-\u001f\u001c \u001b!\u00062\u001f\u001b\u001b ,\u0006DE \u001f-= &\u001c.F\nG-\u0006\u001c#\u001d&\u0006+\u001f\u001e 5\u0006$ %$\u001b \u0006'\u001d * ,\u0006\u001d\u001e\u001f+ &\u0006%9\u0006) \u001f-&\u0006\u001c#\u001f\u001c\u0006'\u001f0\u001d ,\u0006\u001d-\u0006&#\u001f$ \u0006\u001f-,\u0006-(\u001e) 0\n%9\u0006&$ 26\u001b &.\u0006@%\u001e \u0006) \u001f-&5\u0006*# -\u0006& \u001b 2\u001c ,5\u0006!\u001d \u001b, ,\u0006$%\u001d-\u001c&5\u0006*# 0 \u001f&\u0006%\u001c# 0&\u0006\u001b ,\u0006\u001c%\u0006\u001f\n\u001b%&&.\u00064 \u0006\u001b\u001f\u001c 0\u0006\u001f&& && ,\u0006#%*\u0006$\u001f0\u001c\u001d2\u001d$\u001f-\u001c&"
+        }
+      ],
+      "manual_review": {
+        "relevant": null,
+        "metadata_verified": null,
+        "unsupported_claims": null,
+        "import_attempts": null,
+        "import_successes": null
+      },
+      "seconds": 28.72,
+      "intent_prompt_tokens": 303,
+      "intent_completion_tokens": 29,
+      "ai_calls": [
+        {
+          "purpose": "explore_intent",
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 303,
+          "cached_tokens": 0,
+          "completion_tokens": 29,
+          "web_searches": 0,
+          "cost_usd": 0.00016760000000000004,
+          "ok": true,
+          "duration_ms": 1515
+        },
+        {
+          "purpose": "explore_intent",
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 303,
+          "cached_tokens": 0,
+          "completion_tokens": 29,
+          "web_searches": 0,
+          "cost_usd": 0.00016760000000000004,
+          "ok": true,
+          "duration_ms": 1750
+        },
+        {
+          "purpose": "explore_search",
+          "model": "gpt-4.1",
+          "prompt_tokens": 17510,
+          "cached_tokens": 2432,
+          "completion_tokens": 1654,
+          "web_searches": 1,
+          "cost_usd": 0.054604,
+          "ok": true,
+          "duration_ms": 12969
+        },
+        {
+          "purpose": "explore_choose",
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 12653,
+          "cached_tokens": 0,
+          "completion_tokens": 495,
+          "web_searches": 0,
+          "cost_usd": 0.005853200000000001,
+          "ok": true,
+          "duration_ms": 4594
+        }
+      ]
+    },
+    {
+      "query": "Tôi muốn tìm bài nghiên cứu về thói quen đọc sách",
+      "language": "vi",
+      "intent": "DISCOVERY",
+      "predicted": "DISCOVERY",
+      "correct": true,
+      "guidance": "",
+      "documents": [
+        {
+          "url": "https://www.frontiersin.org/journals/education/articles/10.3389/feduc.2025.1644168/full",
+          "title": "The antecedents of reading behavior in university libraries: a meta-analysis",
+          "source": "Frontiers in Education",
+          "authors": "Zhao, Ximei",
+          "year": 2026,
+          "kind": "article",
+          "summary": "Bài nghiên cứu này là một meta-analysis tổng hợp các nhân tố ảnh hưởng đến hành vi đọc sách tại thư viện đại học, tập trung vào các yếu tố nội tại, ngoại cảnh và bối cảnh. Nghiên cứu phân tích dữ liệu từ 37 nghiên cứu với hơn 15 nghìn người tham gia để hiểu sâu hơn về thói quen đọc và cách cải thiện nó.",
+          "reason": "Bài nghiên cứu này rất phù hợp vì nó phân tích sâu về thói quen đọc sách, xác định các nhân tố ảnh hưởng đến hành vi đọc, cung cấp kiến thức khoa học có hệ thống và có thể áp dụng cho mục đích nghiên cứu về thói quen đọc sách.",
+          "access": "FULLTEXT_AVAILABLE"
+        },
+        {
+          "url": "https://qandme.net/vi/baibaocao/Thoi-quen-doc-sach-bao-tap-chi-cua-nguoi-Viet-Nam.html",
+          "title": "Thói quen đọc sách, báo và tạp chí của người Việt Nam - Báo cáo nghiên cứu thị trường | Q&Me",
+          "source": "qandme.net",
+          "authors": "Asia Plus Inc.",
+          "year": null,
+          "kind": "report",
+          "summary": "Báo cáo nghiên cứu thị trường khảo sát thói quen đọc sách, báo và tạp chí của người Việt Nam trong độ tuổi 16-49 với các số liệu thống kê cụ thể về tần suất đọc và các thể loại sách được ưa thích. Báo cáo chỉ rõ tỷ lệ độc giả thường xuyên và sự khác biệt về sở thích đọc giữa các nhóm giới tính và độ tuổi.",
+          "reason": "Báo cáo này cung cấp thông tin cụ thể về thói quen đọc sách của người Việt Nam, giúp hiểu rõ hơn về đặc điểm người đọc và xu hướng đọc trong thực tế ở Việt Nam, rất hữu ích cho người quan tâm về thói quen đọc sách.",
+          "access": "PARTIAL_CONTENT"
+        }
+      ],
+      "evidence": [
+        {
+          "url": "https://www.frontiersin.org/journals/education/articles/10.3389/feduc.2025.1644168/full",
+          "title": "The antecedents of reading behavior in university libraries: a meta-analysis",
+          "source": "Frontiers in Education",
+          "authors": "Zhao, Ximei",
+          "year": 2026,
+          "access": "FULLTEXT_AVAILABLE",
+          "text": "## Abstract\n\n**Introduction:**\n\nAlthough university libraries have become important places for readers to improve their literacy, acquire knowledge, and conduct academic research, however, scholars still have limited understanding of the antecedents of reading behavior.\n\n**Methods:**\n\nDrawing upon a comprehensive theoretical framework, we conducted a systematic review and meta-analysis to systematically summarize and outline the key determinants of current reading behavior.\n\n**Results:**\n\nThis study included 37 studies (*N* = 15,434), our results identified 44 antecedents and compared their differences based on the following factors: (1) internal factors (individual, motivations, and habit preferences), (2) external factors (reading environment, society and culture), and (3) contextual factors. Among them, attitude (*r* = 0.51) is the strongest predictor of reading intention. In addition, we conducted an exploratory analysis to determine the moderating effects of publication time, cultural background (national development level), population type, methods (sample collection and measurement methods), and reading style on the relationship between antecedents and behavior. Finally, we evaluated publication’s bias and literature quality is used to determine the robustness and scalability of the results.\n\n**Conclusion:**\n\nWe present the first systematic meta-analysis study evidence on antecedents and reading behavior, which summarizes ample empirical knowledge about reading behavior in the literature and follows contemporary meta-analysis guidelines and best practices to produce transparent and replicable scientific discoveries. Our research findings also contribute to reading interventions and provide policy and practical implications for future research on reading promotion.\n\n## 1 Introduction\n\nAs is well known, reading ability is an important indicator for predicting overall educational success and even life success. Reading is of great significance for individual cognition, future development, cultural inheritance, etc. (Snow et al., 2007; UNESCO Education Sector, 2004). It is worrying that the reading performance of students in universities around the world continues to decline (Avvisati, 2020; OECD, 2021). The possible cause of this phenomenon is the decrease in reading frequency. Taking the Netherlands as an example, the time spent by university readers on reading books each week is decreasing year by year (Wennekers et al., 2018). At the same time, data from over 1.8 million readers worldwide shows that the reading rate of newspapers, magazines, or (longer) online texts has also decreased from about 65% in 2006 to 40% in 2016, and the average weekly reading time is gradually decreasing (OECD, 2021; Sabri and Weber, 2021). Although effective intervention measures can improve reading performance, reading as a skill still needs to be practiced: if students do not read frequently, it will trigger a negative cycle and damage their reading ability (Mol and Bus, 2011; Schiefele and Loweke, 2017). Managers, practitioners, and education policy makers are seeking strategies to reverse the trend of declining reading frequency. Therefore, it is particularly important to construct a systematic explanatory framework through interdisciplinary theoretical integration to understand the antecedents of reading behavior.\n\nIn the past decades, scholars have studied the influencing factors of reading behavior of readers in college libraries from many different theoretical perspectives. For example, Theory of Reasoned Action (TRA), Theory of Planned Behavior (TPB), Grounded Theory, Self-Determination Theory, etc. have been analyzed in terms of internal factors (individual traits, motivation, and habitual preferences), external factors (reading environment, society and culture), and situational factors. TRA and its extended TPB were prioritized due to their dominant role in behavior prediction, because they systematically linked internal psychologi"
+        },
+        {
+          "url": "https://nalibali.org/",
+          "title": "Home",
+          "source": "Nalibali",
+          "authors": "",
+          "year": null,
+          "access": "PARTIAL_CONTENT",
+          "text": "### Kids’ Corner\n\nDive into a world of stories, games and activities! Explore More >\n\n### Teaching Toolkit\n\nEmpowering young minds with our resources! Explore More >\n\n### Supporters’ Hub\n\nDiscover how your generosity can make a difference! Explore More >\n\n### Parents’ Place\n\nDiscover tips, tools and fun ideas to support your little reader! Explore More >\n\n### Reading CLub\n\nBuild your skills with expert resources and exciting workshops! Explore More >\n\n### Training Hub\n\nJoin the adventure with books, buddies and reading fun! Explore More >"
+        },
+        {
+          "url": "https://qandme.net/vi/baibaocao/Thoi-quen-doc-sach-bao-tap-chi-cua-nguoi-Viet-Nam.html",
+          "title": "Thói quen đọc sách, báo và tạp chí của người Việt Nam - Báo cáo nghiên cứu thị trường |  Q&Me",
+          "source": "qandme.net",
+          "authors": "Asia Plus Inc.",
+          "year": null,
+          "access": "PARTIAL_CONTENT",
+          "text": "-------------- Phong cách sống --------------\n\n# Thói quen đọc sách, báo và tạp chí của người Việt Nam\n\n## Thói quen đọc sách, báo, tạp chí của người Việt như thế nào? Có bao nhiêu người đọc đọc sách, báo và tạp chí thường xuyên và họ thường đọc những sách nào?\n\n![Thói quen đọc sách, báo và tạp chí của người Việt Nam](https://qandme.net/images/books_1.jpg)\n\n![Thói quen đọc sách, báo và tạp chí của người Việt Nam](https://qandme.net/images/books_2.jpg)\n\n27% là độc giả thường xuyên.\n\nNam giới thích đọc sách công nghệ, trong khi phụ nữ thích đọc tiểu thuyết.\n\n32% người thường xuyên đọc tạp chí\n\n16% người thường xuyên đọc báo\n\nTuổi Trẻ (49%) và Thanh Niên (34%) là những tờ báo nổi tiếng\n\nNgười trẻ thường đọc báo ở nhà, trong khi người lớn tuổi hơn thường đọc báo ở văn phòng\n\n![](https://qandme.net/images/qandme_icon_3.png)\n\nTheo dõi báo cáo\n\nĐể coi báo cáo đầy đủ, hãy nhấn vào nút dưới đây\n\nThói quen đọc sách, báo và tạp chí của người Việt Nam\n\nSố người khảo sát: 518 người Việt Nam từ 16-49 tuổi\n\nKhảo sát thực hiện vào tháng 10/2015\n\n## [Nghiên cứu thị trường Việt Nam](https://qandme.net/)"
+        }
+      ],
+      "manual_review": {
+        "relevant": null,
+        "metadata_verified": null,
+        "unsupported_claims": null,
+        "import_attempts": null,
+        "import_successes": null
+      },
+      "seconds": 120.16,
+      "intent_prompt_tokens": 307,
+      "intent_completion_tokens": 24,
+      "ai_calls": [
+        {
+          "purpose": "explore_intent",
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 307,
+          "cached_tokens": 0,
+          "completion_tokens": 24,
+          "web_searches": 0,
+          "cost_usd": 0.00016120000000000002,
+          "ok": true,
+          "duration_ms": 1984
+        },
+        {
+          "purpose": "explore_intent",
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 307,
+          "cached_tokens": 0,
+          "completion_tokens": 24,
+          "web_searches": 0,
+          "cost_usd": 0.00016120000000000002,
+          "ok": true,
+          "duration_ms": 1405
+        },
+        {
+          "purpose": "explore_search",
+          "model": "gpt-4.1",
+          "prompt_tokens": 17544,
+          "cached_tokens": 2432,
+          "completion_tokens": 1505,
+          "web_searches": 1,
+          "cost_usd": 0.05348,
+          "ok": true,
+          "duration_ms": 12203
+        },
+        {
+          "purpose": "explore_choose",
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 0,
+          "cached_tokens": 0,
+          "completion_tokens": 0,
+          "web_searches": 0,
+          "cost_usd": 0.0,
+          "ok": false,
+          "duration_ms": 90327
+        },
+        {
+          "purpose": "explore_choose",
+          "model": "gpt-4.1-mini",
+          "prompt_tokens": 2115,
+          "cached_tokens": 1920,
+          "completion_tokens": 346,
+          "web_searches": 0,
+          "cost_usd": 0.0008236000000000001,
+          "ok": true,
+          "duration_ms": 4250
+        }
+      ]
+    }
+  ]
+}

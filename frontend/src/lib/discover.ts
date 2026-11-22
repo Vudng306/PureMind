@@ -8,6 +8,7 @@ export const MIN_QUERY = 3;
 export const MAX_QUERY = 500;
 
 export type Kind = "article" | "report" | "paper" | "book" | "other";
+export type SourceAccess = "FULLTEXT_AVAILABLE" | "PARTIAL_CONTENT" | "METADATA_ONLY" | "ACCESS_RESTRICTED" | "UNAVAILABLE";
 
 /** A document the AI chose. The address and the title are the web search's own; `document_id` is the reader's
  * copy, when the address is in their library already. */
@@ -21,9 +22,15 @@ export type Found = {
   summary: string;
   reason: string;
   document_id: string | null;
+  access?: SourceAccess;
 };
 
-export type SearchResult = { documents: Found[]; chat_quota_remaining: number };
+export type SearchResult = {
+  documents: Found[];
+  chat_quota_remaining: number;
+  intent: "DISCOVERY" | "DIRECT_QUERY" | "AMBIGUOUS";
+  guidance: string;
+};
 
 /** What one visit to the address says: a forecast, so adding the document can still fail afterwards. */
 export type Check = {
@@ -113,8 +120,9 @@ export function hostOf(url: string): string {
 }
 
 /** The last search stays with the tab, so coming back from the reader finds the results still there. */
-const STORE = "pm.explore-discover";
-export type Kept = { query: string; documents: Found[] };
+// Earlier cached recommendations were ranked before independent source verification.
+const STORE = "pm.explore-discover.v2";
+export type Kept = { query: string; documents: Found[]; intent?: SearchResult["intent"]; guidance?: string };
 
 export function loadKept(): Kept | null {
   try {

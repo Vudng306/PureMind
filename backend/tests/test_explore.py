@@ -5,7 +5,7 @@ import pytest
 
 from app.core.config import get_settings
 from app.core.messages import MSG
-from app.services import discover, openai_client
+from app.services import discover, explore_quality, openai_client
 from app.services.openai_client import AIError, Completion, Usage
 from tests.pdfs import text_pdf
 from tests.test_epub_web import ARTICLE, fake_web  # noqa: F401 — the fixture is used by name
@@ -123,12 +123,43 @@ def explore_ai(monkeypatch):
         return state["search"]
 
     async def chat(settings, messages, **kw):
+        if kw["purpose"] == "explore_intent":
+            query = json.loads(messages[1]["content"])["query"]
+            return Completion(
+                json.dumps(
+                    {
+                        "intent": state.get("intent", "DISCOVERY"),
+                        "topic": query,
+                        "document_type": state.get("document_type", "general"),
+                        "guidance": state.get("guidance", ""),
+                    }
+                ),
+                Usage(100, 50),
+            )
         state["choices"].append((messages, kw))
         if isinstance(state["choice"], Exception):
             raise state["choice"]
         return Completion(json.dumps({"documents": state["choice"]}), Usage(300, 90))
 
+    async def verify(candidates, contact):
+        return state.get(
+            "evidence",
+            [
+                explore_quality.Evidence(
+                    c.url,
+                    c.title if c.url == SLEEP else "Naps",
+                    "Journal of Sleep",
+                    "A. Author" if c.url == SLEEP else "",
+                    2019 if c.url == SLEEP else None,
+                    "FULLTEXT_AVAILABLE",
+                    "Sleep supports memory consolidation.",
+                )
+                for c in candidates
+            ],
+        )
+
     monkeypatch.setattr(discover, "_responses", responses)
+    monkeypatch.setattr(explore_quality, "verify", verify)
     monkeypatch.setattr(openai_client, "chat", chat)
     return state
 
@@ -175,6 +206,7 @@ async def test_search_returns_the_chosen_documents(client, auth, explore_ai):
         "summary": "Bài tổng quan về giấc ngủ và trí nhớ.",
         "reason": "Trả lời đúng câu hỏi.",
         "document_id": None,
+        "access": "FULLTEXT_AVAILABLE",
     }
     assert body["documents"][0]["authors"] == "" and body["documents"][0]["year"] is None
     assert body["chat_quota_remaining"] == get_settings().chat_daily_quota - 1
@@ -196,13 +228,23 @@ async def test_nothing_found_and_failures_cost_no_question(client, auth, explore
     # The search cited nothing: no second call, an empty list, no question spent.
     explore_ai["search"] = {"status": "completed", "output": [], "usage": {}}
     r = await ask(client, h)
-    assert r.status_code == 200 and r.json() == {"documents": [], "chat_quota_remaining": quota}
+    assert r.status_code == 200 and r.json() == {
+        "documents": [],
+        "chat_quota_remaining": quota,
+        "intent": "DISCOVERY",
+        "guidance": "",
+    }
     assert not explore_ai["choices"]
 
     # The AI judged none of them good enough.
     explore_ai["search"], explore_ai["choice"] = searched(), []
     r = await ask(client, h)
-    assert r.status_code == 200 and r.json() == {"documents": [], "chat_quota_remaining": quota}
+    assert r.status_code == 200 and r.json() == {
+        "documents": [],
+        "chat_quota_remaining": quota,
+        "intent": "DISCOVERY",
+        "guidance": "",
+    }
 
     explore_ai["choice"] = AIError("HTTP 500")
     r = await ask(client, h)

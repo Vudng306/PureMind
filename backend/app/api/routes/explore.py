@@ -1,5 +1,5 @@
-"""Explore: the reader describes a subject, the AI finds three to five documents worth reading in full, and
-each one is checked for whether its text can be brought into the library.
+"""Explore classifies a learning goal, verifies sources and returns zero to five reading recommendations.
+Non-discovery queries receive guidance without running the web-search pipeline.
 
 Nothing is saved here. The reader adds a document with the library's own "save a link", which is when it is
 fetched and processed; a page that does not let itself be read is opened where it is.
@@ -47,6 +47,9 @@ class FoundOut(BaseModel):
     kind: str
     summary: str
     reason: str
+    access: Literal[
+        "FULLTEXT_AVAILABLE", "PARTIAL_CONTENT", "METADATA_ONLY", "ACCESS_RESTRICTED", "UNAVAILABLE"
+    ]
     # The reader's copy, when the address is in their library already.
     document_id: str | None = None
 
@@ -54,6 +57,8 @@ class FoundOut(BaseModel):
 class SearchOut(BaseModel):
     documents: list[FoundOut]
     chat_quota_remaining: int
+    intent: Literal["DISCOVERY", "DIRECT_QUERY", "AMBIGUOUS"] = "DISCOVERY"
+    guidance: str = ""
 
 
 class CheckIn(BaseModel):
@@ -97,7 +102,8 @@ async def search(payload: SearchIn, user: CurrentUser, session: SessionDep, sett
 
     _searching.add(user.id)
     try:
-        found = await discover.discover(settings, payload.query, payload.language)
+        result = await discover.discover(settings, payload.query, payload.language)
+        found = result.documents
     except AIError:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, MSG["MSG-26"]) from None
     finally:
@@ -110,6 +116,8 @@ async def search(payload: SearchIn, user: CurrentUser, session: SessionDep, sett
     return SearchOut(
         documents=[FoundOut(**vars(f), document_id=copies.get(f.url)) for f in found],
         chat_quota_remaining=ai_quota.chat_remaining(user, settings.chat_daily_quota),
+        intent=result.intent,
+        guidance=result.guidance,
     )
 
 

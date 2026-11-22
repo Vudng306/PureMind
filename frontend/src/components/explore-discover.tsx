@@ -60,7 +60,7 @@ export function ExploreDiscover({ signedIn }: { signedIn: boolean }) {
     setPending(query);
     try {
       const result = await searchExplore(query, lang);
-      const next = { query, documents: result.documents };
+      const next = { query, documents: result.documents, intent: result.intent, guidance: result.guidance };
       setKept(next);
       keep(next);
       qc.setQueryData<User>(accountKey, (u) => (u ? { ...u, chat_quota_remaining: result.chat_quota_remaining } : u));
@@ -216,12 +216,14 @@ function Results({ kept, onStartOver }: { kept: Kept; onStartOver: () => void })
   if (documents.length === 0) {
     return (
       <div className="card flex flex-col gap-3 p-6">
-        <h2 className="text-[17px] font-semibold text-ink">{t("discover.noneTitle")}</h2>
-        <p className="text-[15px] leading-relaxed text-muted">{t("discover.noneBody")}</p>
-        <div>
+        <h2 className="text-[17px] font-semibold text-ink">{t(kept.intent === "AMBIGUOUS" ? "discover.clarifyTitle" : kept.intent === "DIRECT_QUERY" ? "discover.scopeTitle" : "discover.noneTitle")}</h2>
+        <p className="text-[15px] leading-relaxed text-muted">{kept.guidance || t("discover.noneBody")}</p>
+        {kept.intent && kept.intent !== "DISCOVERY" && <p className="text-sm text-muted">{t("discover.noCharge")}</p>}
+        <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-outline" onClick={onStartOver}>
             {t("discover.another")}
           </button>
+          {kept.intent === "DIRECT_QUERY" && <Link href="/library" className="btn-outline">{t("nav.library")}</Link>}
         </div>
       </div>
     );
@@ -380,6 +382,7 @@ function Result({ found, n }: { found: Found; n: number }) {
           <span className="eyebrow uppercase">{t(`discover.kind.${found.kind}` as Key)}</span>
           <h3 className="break-words font-serif text-[20px] font-medium leading-snug text-ink">{found.title}</h3>
           <p className="break-words text-[13px] text-muted">{meta.join(" · ")}</p>
+          {found.access && <p className="text-xs text-muted">{t(`discover.access.${found.access}` as Key)}</p>}
         </div>
       </div>
       {found.summary && <p className="text-[15px] leading-relaxed text-body">{found.summary}</p>}

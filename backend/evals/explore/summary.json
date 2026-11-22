@@ -1,0 +1,28 @@
+{
+  "intent_accuracy": 0.9833333333333333,
+  "source_sample": [
+    {
+      "documents": 4,
+      "seconds": 28.78,
+      "estimated_usd": 0.05822,
+      "retries": 0
+    },
+    {
+      "documents": 3,
+      "seconds": 28.72,
+      "estimated_usd": 0.060792,
+      "retries": 0
+    },
+    {
+      "documents": 2,
+      "seconds": 120.16,
+      "estimated_usd": 0.054626,
+      "retries": 1
+    }
+  ],
+  "precision_at_5": null,
+  "import_success_rate": null,
+  "metadata_accuracy": null,
+  "unsupported_claims": null,
+  "baseline_measured": false
+}
