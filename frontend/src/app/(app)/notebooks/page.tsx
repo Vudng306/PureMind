@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Icon } from "@/components/icons";
+import { NotebookCard } from "@/components/notebook-card";
 import { Alert, PageHeader, Spinner } from "@/components/ui";
 import { KIND_CLASS, KIND_LABEL, relativeTime } from "@/lib/doc-view";
 import { useLang, useT } from "@/lib/i18n";
@@ -13,6 +14,8 @@ import { readingState, useNotebookGroups, type NotebookGroup } from "@/lib/noteb
 import { useNotebooks } from "@/lib/notebooks";
 
 const SEARCH_DELAY = 300;
+/** AI notebooks shown at the top of the page; the rest are one click away. */
+const RECENT_NOTEBOOKS = 3;
 
 function GroupCard({ g, searching }: { g: NotebookGroup; searching: boolean }) {
   const t = useT();
@@ -82,7 +85,8 @@ export default function NotebookPage() {
   }, [text]);
 
   const query = useNotebookGroups(q);
-  const { data: old } = useNotebooks();
+  const { data: notebooks } = useNotebooks();
+  const recent = [...(notebooks ?? [])].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, RECENT_NOTEBOOKS);
   // An AI notebook is made from one document (on its page) or by topic from one collection: only the latter here.
   const { data: shelves } = useCollections();
   const hasShelf = (shelves ?? []).some((c) => c.document_count > 0);
@@ -104,6 +108,30 @@ export default function NotebookPage() {
           ) : undefined
         }
       />
+
+      {recent.length > 0 && !searching && (
+        <section aria-labelledby="ai-notebooks" className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <h2 id="ai-notebooks" className="flex items-center gap-2 font-display text-[22px] font-semibold">
+              <Icon name="spark" size={18} className="text-accent-text" />
+              {t("notebooks.aiTitle")}
+            </h2>
+            <Link href="/notebooks/archive" className="ml-auto flex items-center gap-1 text-sm text-muted hover:text-ink max-md:h-11">
+              {t("notebooks.seeAll", { n: notebooks?.length ?? 0 })}
+              <Icon name="arrow" size={16} />
+            </Link>
+          </div>
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {recent.map((nb) => (
+              <NotebookCard key={nb.id} nb={nb} />
+            ))}
+          </ul>
+          <h2 className="mt-3 flex items-center gap-2 font-display text-[22px] font-semibold">
+            <Icon name="highlighter" size={18} className="text-accent-text" />
+            {t("notebooks.byDocument")}
+          </h2>
+        </section>
+      )}
 
       {(!empty || searching || text) && !query.isError && (
         <label className="relative block max-w-[480px]">
@@ -151,12 +179,6 @@ export default function NotebookPage() {
         </ul>
       )}
 
-      {(old?.length ?? 0) > 0 && (
-        <Link href="/notebooks/archive" className="flex items-center gap-2 self-start text-sm text-muted hover:text-ink">
-          <Icon name="history" size={16} />
-          {t("notebook.archiveLink", { n: old?.length ?? 0 })}
-        </Link>
-      )}
     </div>
   );
 }

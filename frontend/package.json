@@ -13,6 +13,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
     "@tanstack/react-query": "^5.103.1",
+    "docx": "9.15.3",
     "katex": "^0.16.47",
     "next": "^15.5.25",
     "pdfjs-dist": "^6.3.289",

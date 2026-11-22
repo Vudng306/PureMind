@@ -10,10 +10,9 @@ import { NotebookDocuments } from "@/components/notebook-documents";
 import { NotebookMarkdown } from "@/components/notebook-markdown";
 import { HighlightDigest, SourceGroups } from "@/components/notebook-sources";
 import { Alert, ConfirmDialog, Spinner, useModal } from "@/components/ui";
-import { fromDto } from "@/lib/annotations";
 import { ApiError } from "@/lib/api";
 import { formatDate } from "@/lib/documents";
-import { downloadText, exportFileName, highlightsMarkdown } from "@/lib/export";
+import { downloadBlob, downloadText, exportFileName, notebookExportMarkdown } from "@/lib/export";
 import { useLang, useT } from "@/lib/i18n";
 import { MSG } from "@/lib/messages";
 import {
@@ -34,7 +33,6 @@ import {
   type NotebookVersion,
   type SourceGroup,
 } from "@/lib/notebooks";
-import { usePreferences } from "@/lib/preferences";
 import { useUi } from "@/lib/ui-store";
 
 const AUTOSAVE_MS = 5000; // FR-NB-03
@@ -84,6 +82,85 @@ function PrintSheet({
           <h2 className="mb-5 font-serif text-[16pt] font-semibold text-ink">{t("nb.modeDigest")}</h2>
           <HighlightDigest groups={groups} />
         </section>
+      )}
+    </div>
+  );
+}
+
+type ExportFormat = "docx" | "md";
+
+/** The download button: the notebook as a Word file (to read and print) or as Markdown (for other note apps).
+ * Closes on Escape, on a click outside and after a choice. */
+function ExportMenu({ disabled, onExport }: { disabled: boolean; onExport: (format: ExportFormat) => void }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    root.current?.querySelector<HTMLElement>("[role=menuitem]")?.focus();
+    const onDown = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [open]);
+
+  function onKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Escape" && open) {
+      setOpen(false);
+      button.current?.focus();
+    } else if (open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      e.preventDefault();
+      const items = [...(root.current?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
+      const i = items.indexOf(document.activeElement as HTMLElement);
+      items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus();
+    }
+  }
+
+  const choose = (format: ExportFormat) => () => {
+    setOpen(false);
+    onExport(format);
+  };
+  const item = "flex w-full items-start gap-2.5 rounded-lg px-3 py-2 text-left hover:bg-soft focus:bg-soft focus:outline-none";
+
+  return (
+    <div ref={root} className="relative max-md:order-3" onKeyDown={onKeyDown}>
+      <button
+        ref={button}
+        type="button"
+        className="icon-btn h-10 w-10 max-md:h-11 max-md:w-11"
+        aria-label={t("nb.export")}
+        title={t("nb.export")}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        disabled={disabled}
+        onClick={() => setOpen(!open)}
+      >
+        <Icon name="download" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          aria-label={t("nb.export")}
+          className="absolute right-0 top-12 z-30 flex w-64 flex-col gap-0.5 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-float"
+        >
+          <button type="button" role="menuitem" className={item} onClick={choose("docx")}>
+            <Icon name="file" size={16} className="mt-0.5 shrink-0" />
+            <span className="flex flex-col">
+              <span className="text-sm font-medium">{t("nb.exportDocx")}</span>
+              <span className="text-xs text-muted">{t("nb.exportDocxHint")}</span>
+            </span>
+          </button>
+          <button type="button" role="menuitem" className={item} onClick={choose("md")}>
+            <Icon name="note" size={16} className="mt-0.5 shrink-0" />
+            <span className="flex flex-col">
+              <span className="text-sm font-medium">{t("nb.exportMd")}</span>
+              <span className="text-xs text-muted">{t("nb.exportMdHint")}</span>
+            </span>
+          </button>
+        </div>
       )}
     </div>
   );
@@ -353,7 +430,6 @@ function Editor({ notebook }: { notebook: Notebook }) {
   const sources = notebook.sources;
   const sourceIds = useMemo(() => new Set(sources.map((s) => s.highlight.id)), [sources]);
   const groups = useMemo(() => groupSources(sources), [sources]);
-  const labels = usePreferences((s) => s.colorLabels);
   const printContent = useDeferredValue(content); // the hidden print sheet never slows typing down
   const missing = useMemo(() => {
     const have = new Set(sources.map((s) => s.position));
@@ -397,13 +473,29 @@ function Editor({ notebook }: { notebook: Notebook }) {
     }
   }
 
-  /** The highlights by document, with notes, as a .md file (the same format as the Highlights page). */
-  function exportDigest() {
-    const docs = new Map(groups.map((g) => [g.documentId, { title: g.title, file_type: g.fileType, url: null }]));
-    const all = groups.flatMap((g) => g.sources.map((s) => fromDto(s.highlight)));
+  /** The notebook as it stands in the editor, with the passages its [n] cite: a Word file laid out like the
+   * page (title, the line under it, the notebook's headings), or the Markdown itself. */
+  async function exportNotebook(format: ExportFormat) {
     const now = new Date();
-    downloadText(highlightsMarkdown(all, docs, labels, {}, now, lang), exportFileName(title.trim() || null, now));
-    showToast(t("nb.exported"));
+    const name = exportFileName(title.trim() || null, now, "puremind-notebook", format);
+    try {
+      if (format === "docx") {
+        const { notebookDocxBlob } = await import("@/lib/notebook-docx");
+        const madeOn = t("nb.madeOn", { date: formatDate(notebook.created_at) });
+        // The same two lines as under the title on the page, in the same order.
+        const meta = [
+          topic.trim() ? `${t("nb.topicLabel")}: ${topic.trim()}` : "",
+          sources.length > 0 ? `${madeOn} · ${t("nb.meta", { n: sources.length, docs: groups.length })}` : madeOn,
+        ];
+        const blob = await notebookDocxBlob({ title, meta, content, sources, lang, origin: window.location.origin, now });
+        downloadBlob(blob, name);
+      } else {
+        downloadText(notebookExportMarkdown(title, content, sources, now, lang, window.location.origin), name);
+      }
+      showToast(t("nb.exported"));
+    } catch {
+      setSaveError(MSG["MSG-99"]);
+    }
   }
 
   // The browser names a printed PDF after the page title.
@@ -466,6 +558,7 @@ function Editor({ notebook }: { notebook: Notebook }) {
           >
             <Icon name="print" />
           </button>
+          <ExportMenu disabled={!content.trim()} onExport={(f) => void exportNotebook(f)} />
           <button
             type="button"
             className="icon-btn h-10 w-10 max-md:order-3 max-md:h-11 max-md:w-11"
@@ -571,12 +664,6 @@ function Editor({ notebook }: { notebook: Notebook }) {
                       <p className="min-w-0 flex-1 basis-[260px] text-sm text-muted">
                         {sources.length > 0 ? t("nb.digestLede", { n: sources.length, docs: groups.length }) : t("nb.noSources")}
                       </p>
-                      {sources.length > 0 && (
-                        <button type="button" className="btn-outline h-10 px-3.5 text-sm max-md:h-11" onClick={exportDigest}>
-                          <Icon name="download" size={16} />
-                          {t("highlights.export")}
-                        </button>
-                      )}
                       <button
                         type="button"
                         className="btn-outline h-10 px-3.5 text-sm max-md:h-11"
