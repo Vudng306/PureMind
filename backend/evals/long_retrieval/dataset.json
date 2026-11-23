@@ -1,0 +1,9 @@
+{
+  "name": "gestalt-long-pdf-pilot-v1",
+  "filename": "125976903.pdf",
+  "sha256": "906fce6c2d71c2b46f80eb619aca954588320d9a0945b4ea06eb56b090418c05",
+  "labels": "../pdf_retrieval_gold.json",
+  "chunk_sizes": [200, 400, 800],
+  "min_chunks_per_configuration": 20,
+  "description": "Real English PDF, 13 pages, 12 Vietnamese evidence-anchor questions. Assistant-authored labels, not independently human-reviewed. A single-document pilot, not a general benchmark."
+}

@@ -1,0 +1,13 @@
+{
+  "note": "Initial source-span labels assigned by the coding assistant from the source documents before embedding retrieval. Not independently human-reviewed. Every listed span is relevant, including repeated answers in the abstract. Questions without answers are excluded.",
+  "cases": [
+    {"document": "paper", "question_index": 0, "spans": ["Eighty-four adult learners of Spanish", "The participants were 84 adults"]},
+    {"document": "paper", "question_index": 1, "spans": ["Learners in the spaced retrieval group recalled 62%", "the spaced retrieval group recalled 62% of the target words on average"]},
+    {"document": "paper", "question_index": 2, "spans": ["It was run at a single college with one teacher", "the test measured written recall only, not speaking"]},
+    {"document": "paper", "question_index": 5, "spans": ["A response counted as correct when the spelling allowed only one reading of the word."]},
+    {"document": "essay", "question_index": 0, "spans": ["Bài viết đề xuất ba thói quen đơn giản.", "Thứ hai, ghi chú bằng tay", "Thứ ba, một tuần sau đọc lại"]},
+    {"document": "essay", "question_index": 1, "spans": ["Ta không dừng lại để hỏi chuyện đó có nghĩa gì", "thói quen lướt làm ta mất kiên nhẫn"]},
+    {"document": "essay", "question_index": 4, "spans": ["Gặp một câu dài, ta bỏ qua thay vì đọc lại"]},
+    {"document": "partial", "question_index": 0, "spans": ["The library welcomed 212,000 visits in 2025"]}
+  ]
+}

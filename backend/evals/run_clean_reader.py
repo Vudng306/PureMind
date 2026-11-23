@@ -58,6 +58,7 @@ from pathlib import Path
 import pymupdf
 
 from app.services import extraction
+from evals.progress import Progress
 
 HERE = Path(__file__).parent / "clean_reader"
 PDFS = HERE / "pdfs"
@@ -482,10 +483,13 @@ def main() -> None:
     parser.add_argument("ids", nargs="*")
     parser.add_argument("--adapter", default="current", choices=sorted(ADAPTERS))
     parser.add_argument("--dump", action="store_true", help="write each reading flow to pdfs/_flows/")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show per-PDF scoring and timing")
     args = parser.parse_args()
+    progress = Progress(args.verbose)
 
     spec = json.loads((HERE / "labels.json").read_text(encoding="utf-8"))
     docs = [d for d in spec["docs"] if not args.ids or d["id"] in args.ids]
+    progress.log(f"Loaded PDFs={len(docs)}; adapter={args.adapter}; no AI calls")
     for d in docs:  # a label of an unknown type is a mistake in labels.json, not a miss
         unknown = {lab["type"] for lab in d["labels"]} - set(GROUP_OF)
         if unknown:
@@ -494,7 +498,14 @@ def main() -> None:
     results = []
     for d in docs:
         print(f"{d['id']} …", flush=True)
-        results.append(evaluate(d, ADAPTERS[args.adapter], args.dump))
+        with progress.step(f"extract and evaluate PDF={d['id']}"):
+            results.append(evaluate(d, ADAPTERS[args.adapter], args.dump))
+        result = results[-1]
+        if "skipped" in result:
+            progress.log(f"SKIP {d['id']}: {result['skipped']}")
+        else:
+            for key, value in score([result]).items():
+                progress.log(f"Score PDF={d['id']}; {key}={pct(value)}")
     totals = score([r for r in results if "skipped" not in r])
 
     before = None
@@ -512,6 +523,7 @@ def main() -> None:
     )
     md = report(args.adapter, results, totals, before)
     (RESULTS / f"{args.adapter}.md").write_text(md, encoding="utf-8")
+    progress.log(f"Saved {RESULTS / args.adapter}.json and .md")
     for key, name in NAMES.items():
         print(f"{name}: {pct(totals[key])}")
 

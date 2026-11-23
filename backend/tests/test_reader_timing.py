@@ -19,6 +19,7 @@ pytestmark = pytest.mark.skipif(not os.environ.get("READER_TIMING"), reason="set
 
 RUNS = 60
 SAVE_P95_S = 1.5  # NFR-103
+OPEN_P95_S = 3.0  # NFR-101, server portion only
 
 
 def p95(samples: list[float]) -> float:
@@ -63,3 +64,4 @@ async def test_reader_requests_are_quick(client, auth):
         print(f"{name:20} p50 {statistics.median(ms):7.1f} ms   p95 {p95(ms):7.1f} ms   n={len(ms)}")
     for name in ("save highlight", "save note", "save reading place"):
         assert p95(times[name]) < SAVE_P95_S
+    assert p95(times["open document"]) < OPEN_P95_S

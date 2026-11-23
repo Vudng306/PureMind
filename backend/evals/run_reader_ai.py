@@ -24,6 +24,7 @@ The checks are mechanical, so they are a floor, not a verdict:
   (`AiCoverage`), and a summary point must rest on a passage, which a missing page is not.
 """
 
+import argparse
 import asyncio
 import json
 import re
@@ -37,6 +38,7 @@ from app.core.config import get_settings
 from app.services import doc_chat, embeddings, reader_ai
 from app.services.openai_client import Usage
 from app.services.summarizer import detect_language
+from evals.progress import Progress
 
 HERE = Path(__file__).parent / "reader_ai"
 SUPPORT_MIN = 0.4  # share of a point's content words found in the passages it cites
@@ -269,11 +271,14 @@ def judge_answer(case: dict, result: dict, disclose: list[str]) -> dict:
     }
 
 
-async def run_document(settings, tally: Tally, doc: dict) -> dict:
+async def run_document(settings, tally: Tally, doc: dict, progress=None) -> dict:
+    progress = progress or Progress()
+    progress.log(f"Read document={doc['id']}")
     text = (HERE / doc["file"]).read_text(encoding="utf-8")
     title = text.splitlines()[0].lstrip("# ").strip()
     language = detect_language(text)
     chunks = doc_chat.split_chunks(text, settings.chat_chunk_tokens, doc["page_count"])
+    progress.log(f"Split document={doc['id']}; chunks={len(chunks)}; target={settings.chat_chunk_tokens}")
     coverage = doc_chat.coverage_note(doc["issues"])
     out: dict = {
         "id": doc["id"],
@@ -284,11 +289,13 @@ async def run_document(settings, tally: Tally, doc: dict) -> dict:
     }
 
     for kind in doc["summaries"]:
+        progress.log(f"START generate document={doc['id']}; kind={kind}")
         started = time.monotonic()
         if kind == "analysis":
             try:
                 payload, usage = await reader_ai.generate(settings, kind, title, chunks, language, coverage)
             except reader_ai.NotResearch as e:
+                progress.log(f"DONE document={doc['id']}; analysis refused for non-research type")
                 tally.usage.add(e.usage)
                 tally.calls += 1
                 out["summaries"][kind] = {
@@ -337,10 +344,17 @@ async def run_document(settings, tally: Tally, doc: dict) -> dict:
             }
             entry["type_ok"] = doc["type"] in reader_ai.RESEARCH_TYPES and all(entry["field_checks"].values())
         out["summaries"][kind] = entry
+        progress.log(
+            f"DONE document={doc['id']}; kind={kind}; points={entry['points']}; with_source={entry['with_source']}; supported={entry['supported']}"
+        )
 
-    for case in doc["questions"]:
-        result = await ask(settings, tally, title, chunks, language, coverage, case["q"], case.get("quote"))
+    for i, case in enumerate(doc["questions"], 1):
+        with progress.step(f"answer document={doc['id']}; question={i}/{len(doc['questions'])}"):
+            result = await ask(
+                settings, tally, title, chunks, language, coverage, case["q"], case.get("quote")
+            )
         result["verdict"] = judge_answer(case, result, doc.get("disclose", []))
+        progress.log(f"Score kind={result['verdict']['kind']}; passed={result['verdict']['ok']}")
         out["answers"].append(result)
     return out
 
@@ -437,20 +451,27 @@ def report(results: list[dict], settings, tally: Tally, seconds: float) -> str:
     return "\n".join(lines)
 
 
-async def main(only: list[str]) -> None:
+async def main(only: list[str], verbose=False) -> None:
+    progress = Progress(verbose)
     settings = get_settings()
     if not settings.openai_api_key:
         sys.exit("OPENAI_API_KEY is not set in backend/.env")
     cases = json.loads((HERE / "cases.json").read_text(encoding="utf-8"))
     docs = [d for d in cases["documents"] if not only or d["id"] in only]
     tally, started = Tally(), time.monotonic()
-    results = [await run_document(settings, tally, d) for d in docs]
+    progress.log(f"Loaded documents={len(docs)}; real AI calls enabled")
+    results = [await run_document(settings, tally, d, progress) for d in docs]
     (HERE / "results.json").write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
     text = report(results, settings, tally, time.monotonic() - started)
     (HERE / "results.md").write_text(text, encoding="utf-8")
+    progress.log(f"Saved {HERE / 'results.json'} and results.md")
     sys.stdout.reconfigure(encoding="utf-8")
     print(text)
 
 
 if __name__ == "__main__":
-    asyncio.run(main(sys.argv[1:]))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("ids", nargs="*", help="Optional document IDs, e.g. paper")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show document and question progress")
+    args = parser.parse_args()
+    asyncio.run(main(args.ids, verbose=args.verbose))

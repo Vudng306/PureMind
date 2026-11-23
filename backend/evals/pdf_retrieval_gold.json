@@ -1,0 +1,18 @@
+{
+  "source": "125976903.pdf",
+  "note": "Pilot evidence anchors assigned by the assistant from extracted PDF text before retrieval. Not independently human-reviewed; not exhaustive relevance judgments.",
+  "cases": [
+    {"q": "Theo nguyên lý gần nhau, khoảng cách giữa các phần tử ảnh hưởng cách người dùng nhóm chúng như thế nào?", "span": "things that are close to each other"},
+    {"q": "Những thuộc tính nào khiến người dùng coi các thành phần giao diện là tương tự nhau?", "span": "whether it is color, shape or size"},
+    {"q": "Bài viết minh họa nguyên lý liên tục bằng logo của công ty nào?", "span": "logo design of IBM"},
+    {"q": "Nguyên lý khép kín giải thích việc kết hợp các hình chưa hoàn chỉnh như thế nào?", "span": "combines incomplete individuals"},
+    {"q": "Tại sao thiết kế quá đối xứng đôi khi nên được bổ sung yếu tố bất đối xứng?", "span": "monotonous and boring"},
+    {"q": "Theo nguyên lý cùng chuyển động, các vật thể chuyển động cùng nhau được nhận thức ra sao?", "span": "objects moving together"},
+    {"q": "Ví dụ Find My của iOS phân biệt cửa sổ bật lên và trang nền như thế nào?", "span": "darkened home page interface"},
+    {"q": "Trong ví dụ màn hình chào QQ, tác giả dùng hình ảnh nào làm điểm tập trung thị giác?", "span": "picture in the shape of a penguin"},
+    {"q": "Vì sao nguyên lý cân bằng khuyên phối thêm màu có độ bão hòa thấp?", "span": "some colors with low saturation"},
+    {"q": "Apple sử dụng khoảng trắng và lề để hướng người dùng chú ý vào đâu?", "span": "leaving white space and margins"},
+    {"q": "Theo phân tích các website, ba nguyên lý Gestalt nào được áp dụng thường xuyên nhất?", "span": "similarity, proximity and continuity are most frequently"},
+    {"q": "Vì sao thiết kế giao diện tối giản có thể giảm chi phí phát triển?", "span": "fewer code requirements"}
+  ]
+}

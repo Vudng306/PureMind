@@ -15,27 +15,32 @@ from pathlib import Path
 from app.core.config import get_settings
 from app.services import ai_usage, discover, explore_quality
 from app.services.openai_client import AIError, Usage
+from evals.progress import Progress
 
 HERE = Path(__file__).parent / "explore"
 
 
 async def run(args):
+    progress = Progress(getattr(args, "verbose", False))
     settings = get_settings()
     cases = json.loads((HERE / "cases.json").read_text(encoding="utf-8"))
     rows = []
     selected = cases[args.start : args.start + args.limit]
-    for case in selected:
+    progress.log(f"Loaded explore cases={len(selected)}; discovery={args.discover}")
+    for i, case in enumerate(selected, 1):
         started = time.monotonic()
         first_event = len(ai_usage._waiting)
         usage = Usage()
         row = dict(case)
         try:
-            intent = await explore_quality.classify(settings, case["query"], case["language"], usage)
+            with progress.step(f"classify case={i}/{len(selected)}; expected={case['intent']}"):
+                intent = await explore_quality.classify(settings, case["query"], case["language"], usage)
             row.update(
                 predicted=intent.intent, correct=intent.intent == case["intent"], guidance=intent.guidance
             )
             if args.discover and intent.intent == "DISCOVERY":
-                result = await discover.discover(settings, case["query"], case["language"])
+                with progress.step(f"search and verify documents; case={i}"):
+                    result = await discover.discover(settings, case["query"], case["language"])
                 row["documents"] = [asdict(item) for item in result.documents]
                 row["evidence"] = [item.notes() for item in result.evidence]
                 row["manual_review"] = {
@@ -70,6 +75,7 @@ async def run(args):
             for event in ai_usage._waiting[first_event:]
         ]
         rows.append(row)
+        progress.log(f"Score case={i}; correct={row['correct']}; seconds={row['seconds']}")
         print(
             json.dumps(
                 {key: row[key] for key in ("query", "predicted", "correct", "seconds", "error") if key in row}
@@ -94,6 +100,7 @@ async def run(args):
     }
     filename = "results-discovery.json" if args.discover else "results.json"
     (HERE / filename).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    progress.log(f"Saved {HERE / filename}")
 
 
 if __name__ == "__main__":
@@ -103,6 +110,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--discover", action="store_true", help="Also search and verify web documents")
     parser.add_argument("--limit", type=int, default=60)
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show classification/search stages")
     parser.add_argument("--start", type=int, default=0, help="Zero-based first case")
     arguments = parser.parse_args()
     if not arguments.live:

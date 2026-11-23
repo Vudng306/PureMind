@@ -1,0 +1,350 @@
+{
+  "date_utc": "2026-11-23T06:50:48.893337+00:00",
+  "model": "text-embedding-3-small",
+  "dimensions": 1536,
+  "chunk_tokens_target": 800,
+  "prompt_tokens": 2307,
+  "label_note": "Initial source-span labels assigned by the coding assistant from the source documents before embedding retrieval. Not independently human-reviewed. Every listed span is relevant, including repeated answers in the abstract. Questions without answers are excluded.",
+  "macro_recall": {
+    "1": 0.75,
+    "3": 0.875,
+    "5": 1.0,
+    "8": 1.0
+  },
+  "results": [
+    {
+      "document": "paper",
+      "question": "How many adults took part in the study?",
+      "chunk_count": 8,
+      "gold_positions": [
+        1,
+        3
+      ],
+      "ranking": [
+        [
+          3,
+          0.5890041811212346
+        ],
+        [
+          1,
+          0.41112232656620484
+        ],
+        [
+          6,
+          0.4034379275728554
+        ],
+        [
+          2,
+          0.3830540829295505
+        ],
+        [
+          4,
+          0.35330699878650207
+        ],
+        [
+          7,
+          0.3508548816921412
+        ],
+        [
+          8,
+          0.3463090266081237
+        ],
+        [
+          5,
+          0.3259969050718301
+        ]
+      ],
+      "recall": {
+        "1": 0.5,
+        "3": 1.0,
+        "5": 1.0,
+        "8": 1.0
+      }
+    },
+    {
+      "document": "paper",
+      "question": "What share of the target words did the spaced retrieval group recall after four weeks?",
+      "chunk_count": 8,
+      "gold_positions": [
+        1,
+        6
+      ],
+      "ranking": [
+        [
+          6,
+          0.7058857743342902
+        ],
+        [
+          1,
+          0.6437381745798332
+        ],
+        [
+          8,
+          0.5710907205795266
+        ],
+        [
+          4,
+          0.5528781996776815
+        ],
+        [
+          5,
+          0.5499337095492813
+        ],
+        [
+          7,
+          0.48504089522046123
+        ],
+        [
+          2,
+          0.430035262432255
+        ],
+        [
+          3,
+          0.36938686293588
+        ]
+      ],
+      "recall": {
+        "1": 0.5,
+        "3": 1.0,
+        "5": 1.0,
+        "8": 1.0
+      }
+    },
+    {
+      "document": "paper",
+      "question": "What are the study's limitations?",
+      "chunk_count": 8,
+      "gold_positions": [
+        7
+      ],
+      "ranking": [
+        [
+          7,
+          0.5261610358659417
+        ],
+        [
+          3,
+          0.36796469307408386
+        ],
+        [
+          2,
+          0.30837906099483914
+        ],
+        [
+          8,
+          0.307316412710681
+        ],
+        [
+          1,
+          0.2929412724268977
+        ],
+        [
+          6,
+          0.29191104348554875
+        ],
+        [
+          4,
+          0.26458662650316295
+        ],
+        [
+          5,
+          0.2263039769725535
+        ]
+      ],
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "8": 1.0
+      }
+    },
+    {
+      "document": "paper",
+      "question": "Explain this passage.",
+      "chunk_count": 8,
+      "gold_positions": [
+        5
+      ],
+      "ranking": [
+        [
+          8,
+          0.37086799434428597
+        ],
+        [
+          6,
+          0.362539214998445
+        ],
+        [
+          4,
+          0.35477394731849077
+        ],
+        [
+          5,
+          0.35312924602362217
+        ],
+        [
+          1,
+          0.29795455198493787
+        ],
+        [
+          7,
+          0.27844202539419516
+        ],
+        [
+          2,
+          0.27720508026023444
+        ],
+        [
+          3,
+          0.23548171778044855
+        ]
+      ],
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 1.0,
+        "8": 1.0
+      }
+    },
+    {
+      "document": "essay",
+      "question": "Bài viết đề xuất những thói quen nào?",
+      "chunk_count": 5,
+      "gold_positions": [
+        3
+      ],
+      "ranking": [
+        [
+          3,
+          0.5199390159079623
+        ],
+        [
+          2,
+          0.4357048485309004
+        ],
+        [
+          5,
+          0.42466177099419183
+        ],
+        [
+          4,
+          0.3791301851934524
+        ],
+        [
+          1,
+          0.3769299614911074
+        ]
+      ],
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "8": 1.0
+      }
+    },
+    {
+      "document": "essay",
+      "question": "Vì sao theo tác giả đọc nhanh không giúp ta nhớ?",
+      "chunk_count": 5,
+      "gold_positions": [
+        2
+      ],
+      "ranking": [
+        [
+          2,
+          0.7947491545813892
+        ],
+        [
+          1,
+          0.5834055644837388
+        ],
+        [
+          5,
+          0.5563760787724981
+        ],
+        [
+          4,
+          0.4658990793616809
+        ],
+        [
+          3,
+          0.4180306688161995
+        ]
+      ],
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "8": 1.0
+      }
+    },
+    {
+      "document": "essay",
+      "question": "Giải thích đoạn này.",
+      "chunk_count": 5,
+      "gold_positions": [
+        2
+      ],
+      "ranking": [
+        [
+          2,
+          0.690231713310176
+        ],
+        [
+          1,
+          0.5986239727427952
+        ],
+        [
+          5,
+          0.5968166486411721
+        ],
+        [
+          4,
+          0.5098637415802012
+        ],
+        [
+          3,
+          0.46576105132133433
+        ]
+      ],
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "8": 1.0
+      }
+    },
+    {
+      "document": "partial",
+      "question": "How many visits did the library have in 2025?",
+      "chunk_count": 4,
+      "gold_positions": [
+        2
+      ],
+      "ranking": [
+        [
+          2,
+          0.6834786841887903
+        ],
+        [
+          4,
+          0.602475310705842
+        ],
+        [
+          1,
+          0.5087164405141553
+        ],
+        [
+          3,
+          0.4524221683739581
+        ]
+      ],
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0,
+        "8": 1.0
+      }
+    }
+  ]
+}
