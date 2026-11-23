@@ -1,0 +1,514 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for frontend/src/lib/messages.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../prettify.css" />
+    <link rel="stylesheet" href="../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">frontend/src/lib</a> messages.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">98.29% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>115/117</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">66.66% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>2/3</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">33.33% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>2/6</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">98.29% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>115/117</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
+ * SRS Appendix B, in both languages.
+ *
+ * `MSG["MSG-99"]` still reads like a plain dictionary at every call site; it answers in the language
+ * the user has chosen, read at the moment of the lookup. That is what error handlers want — they
+ * build a string once and keep it — while anything rendered directly should go through `useMsg()`
+ * so it follows a change of language.
+ */
+&nbsp;
+import { usePreferences } from "./preferences";
+&nbsp;
+export const MSG_VI = {
+  "MSG-01": "Email không hợp lệ.",
+  "MSG-02": "Mật khẩu phải có 8–72 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.",
+  "MSG-03": "Email này đã được đăng ký. Hãy đăng nhập hoặc dùng email khác.",
+  "MSG-04": "Email hoặc mật khẩu không đúng.",
+  "MSG-05": "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau ít phút.",
+  "MSG-06": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+  "MSG-07": "Họ tên không được để trống và tối đa 255 ký tự.",
+  "MSG-08": "Ảnh đại diện phải là JPEG, PNG hoặc WebP.",
+  "MSG-09": "Ảnh đại diện không được vượt quá 2 MB.",
+  "MSG-10": "Chỉ hỗ trợ tệp PDF hoặc EPUB.",
+  "MSG-11": "Tệp vượt quá giới hạn 50 MB.",
+  "MSG-12": "Không thể tải tệp lên. Vui lòng thử lại.",
+  "MSG-13": "Không mở được tệp. Tệp có thể bị hỏng.",
+  "MSG-14": "PDF được bảo vệ bằng mật khẩu nên không thể trích xuất nội dung.",
+  "MSG-15": "Không tìm thấy văn bản trong tài liệu (có thể là bản scan). Bạn vẫn có thể xem bản gốc.",
+  "MSG-16": "Đường link không hợp lệ. Link phải bắt đầu bằng http:// hoặc https://.",
+  "MSG-17": "Không thể lưu đường link này.",
+  "MSG-18": "Không truy cập được trang web. Kiểm tra lại đường link hoặc thử lại sau.",
+  "MSG-18-REFUSED": "Trang web này không cho phép PureMind tải nội dung. Bạn có thể lưu trang thành PDF (Ctrl+P) rồi tải lên.",
+  "MSG-19": "Không tìm thấy tài liệu.",
+  "MSG-20": "Đã lưu thay đổi.",
+  "MSG-21": "Không thể mở tài liệu này.",
+  "MSG-22": "Đoạn chọn quá dài. Hãy chọn tối đa 5.000 ký tự.",
+  "MSG-23": "Không thể lưu. Kiểm tra kết nối và thử lại.",
+  "MSG-24": "Ghi chú tối đa 10.000 ký tự.",
+  "MSG-25": "Bạn đã dùng hết lượt AI hôm nay. Lượt sẽ được làm mới lúc 00:00.",
+  "MSG-26": "Dịch vụ AI đang gặp sự cố. Vui lòng thử lại sau ít phút.",
+  "MSG-27": "Hãy chọn ít nhất một highlight.",
+  "MSG-28": "Chỉ có thể chọn tối đa 100 highlight cho một notebook.",
+  "MSG-29": "Notebook vượt quá giới hạn độ dài.",
+  "MSG-30": "Thư viện của bạn đang trống.",
+  "MSG-31": "0 kết quả.",
+  "MSG-32": "Chưa có highlight nào.",
+  "MSG-33": "Tài liệu này chưa có bản tóm tắt.",
+  "MSG-34": "Bạn cần tạo highlight trước khi tạo notebook.",
+  "MSG-35": "Chưa có notebook nào.",
+  "MSG-36": "Không tìm thấy kết quả phù hợp. Thử từ khóa khác hoặc bỏ bộ lọc.",
+  // Chat with a document: added after SRS v1.1, so these codes are named rather than numbered.
+  "MSG-CHAT-EMPTY": "Câu hỏi không được để trống.",
+  "MSG-CHAT-LONG": "Câu hỏi tối đa 2.000 ký tự.",
+  "MSG-CHAT-QUOTA": "Bạn đã dùng hết lượt hỏi AI hôm nay. Lượt sẽ được làm mới lúc 00:00.",
+  "MSG-CHAT-FULL": "Cuộc trò chuyện này đã quá dài. Hãy bắt đầu cuộc trò chuyện mới.",
+  "MSG-CHAT-NOT-FOUND": "Không tìm thấy cuộc trò chuyện.",
+  "MSG-CHAT-NO-TEXT": "Tài liệu này chưa có văn bản để trò chuyện.",
+  // Admin page (FR-ADM), also added after SRS v1.1.
+  "MSG-ACC-DISABLED": "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.",
+  "MSG-ADM-FORBIDDEN": "Bạn không có quyền truy cập trang quản trị.",
+  "MSG-99": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+  // The server was never reached; not in SRS Appendix B because it never leaves the browser.
+  "MSG-NET": "Không kết nối được máy chủ. Kiểm tra kết nối và thử lại.",
+} as const;
+&nbsp;
+export type MsgCode = keyof typeof MSG_VI;
+&nbsp;
+export const MSG_EN: Record&lt;MsgCode, string&gt; = {
+  "MSG-01": "That email address is not valid.",
+  "MSG-02": "A password must be 8–72 characters and include uppercase, lowercase, a number and a special character.",
+  "MSG-03": "This email is already registered. Sign in, or use another address.",
+  "MSG-04": "That email or password is wrong.",
+  "MSG-05": "Too many attempts. Please try again in a few minutes.",
+  "MSG-06": "Your session has expired. Please sign in again.",
+  "MSG-07": "A display name is required and can be at most 255 characters.",
+  "MSG-08": "The profile picture must be a JPEG, PNG or WebP image.",
+  "MSG-09": "The profile picture must be 2 MB or smaller.",
+  "MSG-10": "Only PDF and EPUB files are supported.",
+  "MSG-11": "The file is larger than the 50 MB limit.",
+  "MSG-12": "The file could not be uploaded. Please try again.",
+  "MSG-13": "The file could not be opened. It may be damaged.",
+  "MSG-14": "This PDF is password-protected, so its text cannot be read.",
+  "MSG-15": "No text was found in this document (it may be a scan). You can still read the original.",
+  "MSG-16": "That link is not valid. It has to start with http:// or https://.",
+  "MSG-17": "This link cannot be saved.",
+  "MSG-18": "The page could not be reached. Check the link or try again later.",
+  "MSG-18-REFUSED":
+    "This site does not let PureMind fetch its pages. You can save the page as a PDF (Ctrl+P) and upload it.",
+  "MSG-19": "Document not found.",
+  "MSG-20": "Changes saved.",
+  "MSG-21": "This document could not be opened.",
+  "MSG-22": "That selection is too long. Please select at most 5,000 characters.",
+  "MSG-23": "Could not save. Check your connection and try again.",
+  "MSG-24": "A note can be at most 10,000 characters.",
+  "MSG-25": "You have used all of today's AI credits. They are renewed at midnight.",
+  "MSG-26": "The AI service is having trouble. Please try again in a few minutes.",
+  "MSG-27": "Please select at least one highlight.",
+  "MSG-28": "A notebook can be built from at most 100 highlights.",
+  "MSG-29": "The notebook is longer than the limit.",
+  "MSG-30": "Your library is empty.",
+  "MSG-31": "0 results.",
+  "MSG-32": "No highlights yet.",
+  "MSG-33": "This document has no summary yet.",
+  "MSG-34": "Make some highlights before building a notebook.",
+  "MSG-35": "No notebooks yet.",
+  "MSG-36": "Nothing matched. Try another keyword or clear the filters.",
+  "MSG-CHAT-EMPTY": "The question cannot be empty.",
+  "MSG-CHAT-LONG": "A question can be at most 2,000 characters.",
+  "MSG-CHAT-QUOTA": "You have used all of today's chat credits. They are renewed at midnight.",
+  "MSG-CHAT-FULL": "This conversation has grown too long. Please start a new one.",
+  "MSG-CHAT-NOT-FOUND": "Conversation not found.",
+  "MSG-CHAT-NO-TEXT": "This document has no text to chat about.",
+  "MSG-ACC-DISABLED": "Your account has been locked. Please contact the administrator.",
+  "MSG-ADM-FORBIDDEN": "You do not have access to the admin pages.",
+  "MSG-99": "Something went wrong. Please try again.",
+  "MSG-NET": "The server could not be reached. Check your connection and try again.",
+};
+&nbsp;
+const TABLES = { vi: MSG_VI, en: MSG_EN } as const;
+&nbsp;
+export function messageIn(lang: "vi" | "en", code: MsgCode): string {
+  return TABLES[lang][code<span class="branch-0 cbranch-no" title="branch not covered" >] ?? MSG_VI[code];</span>
+}
+&nbsp;
+/**
+ * The messages, in the language chosen right now. A Proxy rather than a plain object so the 70-odd
+ * `MSG["MSG-xx"]` call sites did not have to change when the app became bilingual.
+ */
+export const MSG = new Proxy({} as Record&lt;MsgCode, string&gt;, {
+  get: (_t, code: string) =&gt; messageIn(usePreferences.getState().language, code as MsgCode),
+  has: <span class="fstat-no" title="function not covered" >(_t, code: string) =&gt; code in MSG_VI,</span>
+  ownKeys: <span class="fstat-no" title="function not covered" >() =&gt; Reflect.ownKeys(MSG_VI),</span>
+  getOwnPropertyDescriptor: <span class="fstat-no" title="function not covered" >() =&gt; ({ enumerable: true, configurable: true }),</span>
+});
+&nbsp;
+export <span class="fstat-no" title="function not covered" >function messageFor(code: string | null | undefined): string {</span>
+<span class="cstat-no" title="statement not covered" >  return (code &amp;&amp; code in MSG_VI ? MSG[code as MsgCode] : null) || MSG["MSG-99"];</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+&nbsp;
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Password policy for registration and password changes. Spaces are not accepted as special characters. */
+export const PASSWORD_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s])\S{8,72}$/;
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+export const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-11-23T09:22:58.270Z
+            </div>
+        <script src="../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../sorter.js"></script>
+        <script src="../../../block-navigation.js"></script>
+    </body>
+</html>
+    

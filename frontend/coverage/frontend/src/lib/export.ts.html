@@ -1,0 +1,628 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for frontend/src/lib/export.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../prettify.css" />
+    <link rel="stylesheet" href="../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">frontend/src/lib</a> export.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">80.29% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>110/137</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">66.66% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>32/48</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">62.5% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>5/8</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">80.29% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>110/137</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line high'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { categoryLabel, fromDto, type Highlight, type HighlightCategory, type HighlightPage } from "./annotations";
+import { api } from "./api";
+import { KIND_LABEL } from "./doc-view";
+import { colorLabel, currentLang, type HighlightColor } from "./preferences";
+import type { Lang } from "./types";
+&nbsp;
+/** F-35: highlights and their notes as a Markdown file. */
+&nbsp;
+export interface ExportDoc {
+  title: string;
+  file_type: "pdf" | "epub" | "web";
+  url: string | null;
+}
+&nbsp;
+export interface ExportFilter {
+  documentId?: string;
+  category?: HighlightCategory;
+  color?: HighlightColor;
+}
+&nbsp;
+const EXPORT_PAGE = 500; // the API's largest page
+&nbsp;
+/** Every highlight matching the filter, grouped by document then page (the API's "document" order). */
+<span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >export async function fetchAllHighlights(filter: ExportFilter): Promise&lt;Highlight[]&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >  const out: Highlight[] = [];</span>
+<span class="cstat-no" title="statement not covered" >  for (let page = 1; ; page++) {</span>
+<span class="cstat-no" title="statement not covered" >    const params = new URLSearchParams({ sort: "document", page: String(page), page_size: String(EXPORT_PAGE) });</span>
+<span class="cstat-no" title="statement not covered" >    if (filter.documentId) params.set("document_id", filter.documentId);</span>
+<span class="cstat-no" title="statement not covered" >    if (filter.category) params.set("category", filter.category);</span>
+<span class="cstat-no" title="statement not covered" >    if (filter.color) params.set("color", filter.color);</span>
+<span class="cstat-no" title="statement not covered" >    const res = await api&lt;HighlightPage&gt;(`/highlights?${params}`);</span>
+<span class="cstat-no" title="statement not covered" >    out.push(...res.items.map(fromDto));</span>
+<span class="cstat-no" title="statement not covered" >    if (res.items.length &lt; EXPORT_PAGE || out.length &gt;= res.total) return out;</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+&nbsp;
+const oneLine = (s: string) =&gt; s.replace(/\s+/g, " ").trim();
+const quote = (s: string) =&gt;
+  s
+    .trim()
+    .split(/\r?\n/)
+    .map((line) =&gt; (line.trim() ? `&gt; ${line.trimEnd()<span class="branch-0 cbranch-no" title="branch not covered" >}` : "&gt;"))</span>
+    .join("\n");
+&nbsp;
+export function highlightsMarkdown(
+  highlights: Highlight[],
+  docs: Map&lt;string, ExportDoc&gt;,
+  labels: Record&lt;HighlightColor, string&gt;,
+  filter: ExportFilter = {},
+  now: Date = new Date(),
+  lang: Lang = currentLang(),
+): string {
+  const en = lang === "en";
+  const groups = new Map&lt;string, Highlight[]&gt;();
+  for (const h of highlights) {
+    const list = groups.get(h.docId);
+    if (list) list.push(h);
+    else groups.set(h.docId, [h]);
+  }
+&nbsp;
+  const date = <span class="branch-0 cbranch-no" title="branch not covered" >en</span>
+<span class="cstat-no" title="statement not covered" >    ? now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })</span>
+    : now.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const filters = [
+    filter.category &amp;&amp; categoryLabel(filter.category, lang),
+    filter.<span class="branch-0 cbranch-no" title="branch not covered" >color &amp;&amp;</span>
+<span class="cstat-no" title="statement not covered" >      (en ? `${colorLabel(labels, filter.color, lang)}` : `màu ${colorLabel(labels, filter.color, lang)}`),</span>
+  ].filter(Boolean);
+  const count = <span class="branch-0 cbranch-no" title="branch not covered" >en</span>
+<span class="cstat-no" title="statement not covered" >    ? `${highlights.length} highlight${highlights.length === 1 ? "" : "s"}`</span>
+    : `${highlights.length} highlight`;
+  const lines = [
+<span class="branch-0 cbranch-no" title="branch not covered" >    en ? "# Highlights" : "</span># Highlight",
+    "",
+<span class="branch-0 cbranch-no" title="branch not covered" >    en</span>
+<span class="cstat-no" title="statement not covered" >      ? `Exported from PureMind on ${date} · ${count}${filters.length ? ` · Filters: ${filters.join(", ")}` : ""}`</span>
+      : `Xuất từ PureMind ngày ${date} · ${count}${filters.length ? ` · Bộ lọc: ${filters.join(", ")}` : ""}`,
+  ];
+&nbsp;
+  for (const [docId, items] of groups) {
+    const doc = docs.get(docId);
+    lines.push("", `## ${oneLine(doc?.<span class="branch-0 cbranch-no" title="branch not covered" >title ?? (en ? "Document" : "Tài liệu"))</span>}`, "");
+    if (doc) lines.push(`${KIND_LABEL[doc.file_type]}${doc.url ? ` · &lt;${doc.url}&gt;` : ""}`, "");
+    items.forEach((h, i) =&gt; {
+      if (i &gt; 0) lines.push("", "---", "");
+      lines.push(quote(h.text), "");
+      const pageLabel = h.page ? (<span class="branch-0 cbranch-no" title="branch not covered" >en ? `Page ${h.page}` : `</span>Trang ${h.page}`) : null;
+      const meta = [pageLabel, colorLabel(labels, h.color, lang), h.category &amp;&amp; categoryLabel(h.category, lang)];
+      lines.push(`*${meta.filter(Boolean).join(" · ")}*`);
+      // Line breaks in the note are kept as Markdown hard breaks.
+      if (h.note.trim())
+        lines.push("", `**${<span class="branch-0 cbranch-no" title="branch not covered" >en ? "Note" : "</span>Ghi chú"}:** ${h.note.trim().replace(/\r?\n/g, "  \n")}`);
+    });
+  }
+  return `${lines.join("\n")}\n`;
+}
+&nbsp;
+/** The source a notebook's [n] points at, as much of it as the export needs. */
+export interface ExportSource {
+  position: number;
+  document_title: string;
+  highlight: { id: string; document_id: string; selected_text: string; page_number: number | null };
+}
+&nbsp;
+const SOURCE_QUOTE_CHARS = 300;
+&nbsp;
+/**
+ * FR-NB-03: the notebook as the author left it, as a Markdown file. The text goes out as written; the passages
+ * its [n] cite follow under "Sources", so the numbers still mean something outside PureMind. `origin` (the
+ * app's address) adds a link back to each passage in the reader.
+ */
+export function notebookExportMarkdown(
+  title: string,
+  content: string,
+  sources: ExportSource[],
+  now: Date = new Date(),
+  lang: Lang = currentLang(),
+  origin?: string,
+): string {
+  const en = lang === "en";
+  const name = oneLine(title<span class="branch-0 cbranch-no" title="branch not covered" >) || "Notebook";</span>
+  const body = content.trim();
+  const firstLine = body.split(/\r?\n/, 1)[0<span class="branch-0 cbranch-no" title="branch not covered" >] ?? "";</span>
+  // The AI writes the title as the first heading; a notebook typed by hand may not have one.
+  const heading = /^#\s+/.test(firstLine) ? "" : `# ${name}\n\n`;
+  const lines = [`${heading}${body}`];
+&nbsp;
+  const cited = new Set([...body.matchAll(/\[(\d{1,3})\]/g)].map((m) =&gt; Number(m[1])));
+  const used = sources.filter((s) =&gt; cited.has(s.position)).sort((a, b) =&gt; a.position - b.position);
+  if (used.length) {
+    lines.push("", "---", "", <span class="branch-0 cbranch-no" title="branch not covered" >en ? "## Sources" : "</span>## Nguồn", "");
+    for (const s of used) {
+      const text = oneLine(s.highlight.selected_text);
+      const cut = text.length &gt; <span class="branch-0 cbranch-no" title="branch not covered" >SOURCE_QUOTE_CHARS ? `${text.slice(0, SOURCE_QUOTE_CHARS).trimEnd()}…` : t</span>ext;
+      const page = s.highlight.page_number ? (<span class="branch-0 cbranch-no" title="branch not covered" >en ? `, page ${s.highlight.page_number}` : `</span>, trang ${s.highlight.page_number<span class="branch-0 cbranch-no" title="branch not covered" >}`) : "";</span>
+      const link = origin ? ` · &lt;${origin}/reader/${s.highlight.document_id}?hl=${s.highlight.id<span class="branch-0 cbranch-no" title="branch not covered" >}&gt;` : "";</span>
+      lines.push(`${s.position}. “${cut}” — *${oneLine(s.document_title)}*${page}${link}`);
+    }
+  }
+&nbsp;
+  const date = en
+    ? now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    : now.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  lines.push("", en ? `*Exported from PureMind on ${date}*` : `*Xuất từ PureMind ngày ${date}*`);
+  return `${lines.join("\n")}\n`;
+}
+&nbsp;
+/** A file name safe on every OS, e.g. "puremind-highlight-giao-trinh-hoc-may-2026-09-19.md". */
+export function exportFileName(
+  title: string | null,
+  now: Date = new Date(),
+  prefix: "puremind-highlight" | "puremind-notebook" = "puremind-highlight",
+  extension: "md" | "docx" = "md",
+): string {
+  const slug = (title ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[đĐ]/g, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+    .replace(/-+$/, "");
+  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return `${prefix}${slug ? `-${slug}` : ""}-${day}.${extension}`;
+}
+&nbsp;
+export <span class="fstat-no" title="function not covered" >function downloadText(text: string, fileName: string, type = "text/markdown;charset=utf-8") {</span>
+<span class="cstat-no" title="statement not covered" >  downloadBlob(new Blob([text], { type }), fileName);</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+&nbsp;
+export <span class="fstat-no" title="function not covered" >function downloadBlob(blob: Blob, fileName: string) {</span>
+<span class="cstat-no" title="statement not covered" >  const url = URL.createObjectURL(blob);</span>
+<span class="cstat-no" title="statement not covered" >  const a = document.createElement("a");</span>
+<span class="cstat-no" title="statement not covered" >  a.href = url;</span>
+<span class="cstat-no" title="statement not covered" >  a.download = fileName;</span>
+<span class="cstat-no" title="statement not covered" >  document.body.appendChild(a);</span>
+<span class="cstat-no" title="statement not covered" >  a.click();</span>
+<span class="cstat-no" title="statement not covered" >  a.remove();</span>
+<span class="cstat-no" title="statement not covered" >  setTimeout(() =&gt; URL.revokeObjectURL(url), 0);</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-11-23T09:22:58.270Z
+            </div>
+        <script src="../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../sorter.js"></script>
+        <script src="../../../block-navigation.js"></script>
+    </body>
+</html>
+    
