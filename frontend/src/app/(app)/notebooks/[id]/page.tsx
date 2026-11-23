@@ -684,7 +684,6 @@ function Editor({ notebook }: { notebook: Notebook }) {
               </div>
             </div>
             <span className="px-1 text-xs text-muted">
-              {notebook.ai_model ? `AI: ${notebook.ai_model} · ` : ""}
               {t("nb.aiCaveat")}
             </span>
           </div>
