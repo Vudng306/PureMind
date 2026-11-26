@@ -82,9 +82,63 @@ class Evidence:
     year: int | None = None
     access: Access = "UNAVAILABLE"
     text: str = ""
+    doi: str = ""  # the work's DOI, when the page names one: the same paper behind two addresses
 
     def notes(self) -> dict:
         return asdict(self)
+
+
+# How readable a copy is: of two copies of one document, the more readable is kept.
+READABLE = {"FULLTEXT_AVAILABLE": 4, "PARTIAL_CONTENT": 3, "METADATA_ONLY": 2, "ACCESS_RESTRICTED": 1}
+SAME_TITLE_WORDS = 6  # a title this long is one document's own; a shorter one ("Giấc ngủ") may be many
+SHINGLE = 5  # words in a row compared between two texts
+MIN_SHINGLES = 30  # less text than this says too little to call two pages one document
+SAME_TEXT = 0.6  # share of the shorter text's word runs found in the other
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"\w+", text.casefold())
+
+
+def _shingles(text: str) -> set[tuple[str, ...]]:
+    words = _words(text)
+    return {tuple(words[i : i + SHINGLE]) for i in range(len(words) - SHINGLE + 1)}
+
+
+def normalize_doi(raw: str) -> str:
+    """The DOI however it is written (a doi.org address, "doi:", or bare), or "" for what is no DOI."""
+    doi = re.sub(r"^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)", "", raw.strip(), flags=re.I).casefold()
+    return doi if re.fullmatch(r"10\.\d{4,9}/\S+", doi) else ""
+
+
+def same_document(a: Evidence, b: Evidence) -> bool:
+    """Whether two pages are one document: one paper's DOI, one long title, or one text.
+
+    A news story is often published again by another site, and many sites keep a mobile or AMP copy at an
+    address of its own. No address says so, but the words do: most of the shorter text's runs of five words
+    are in the other. An abstract is in its paper's full text in the same way, so the two are one document.
+    """
+    if a.doi and a.doi == b.doi:
+        return True
+    title_a, title_b = " ".join(_words(a.title)), " ".join(_words(b.title))
+    if title_a and title_a == title_b and len(title_a.split()) >= SAME_TITLE_WORDS:
+        return True
+    runs_a, runs_b = _shingles(a.text), _shingles(b.text)
+    if min(len(runs_a), len(runs_b)) < MIN_SHINGLES:
+        return False
+    return len(runs_a & runs_b) / min(len(runs_a), len(runs_b)) >= SAME_TEXT
+
+
+def unique(evidence: list[Evidence]) -> list[Evidence]:
+    """One copy of each document, in the order first found; a more readable copy takes an earlier one's place."""
+    kept: list[Evidence] = []
+    for item in evidence:
+        twin = next((n for n, other in enumerate(kept) if same_document(item, other)), None)
+        if twin is None:
+            kept.append(item)
+        elif READABLE.get(item.access, 0) > READABLE.get(kept[twin].access, 0):
+            kept[twin] = item
+    return kept
 
 
 def extract(html: bytes, url: str) -> Evidence:
@@ -125,6 +179,7 @@ def extract(html: bytes, url: str) -> Evidence:
         source=meta("citation_journal_title", "og:site_name") or httpx.URL(url).host,
         authors=authors,
         year=year,
+        doi=normalize_doi(meta("citation_doi", "dc.identifier", "DC.identifier", "prism.doi", "DOI")),
     )
     # A title alone verifies identity, not the contents or conclusions of the document.
     if article.paywalled:

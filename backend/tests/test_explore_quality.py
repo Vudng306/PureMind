@@ -161,3 +161,60 @@ def test_an_index_record_is_never_evidence_of_full_text():
     # The ranking step may name it, but never summarize a 51-page paper from its abstract page.
     assert result.access == "ACCESS_RESTRICTED" and result.text == "Downloadable!"
     assert result.title == "Trust in AI-driven decision-making: a systematic literature review"
+
+
+STORY = " ".join(
+    f"Ngủ đủ giấc giúp não bộ củng cố trí nhớ, câu thứ {n} của bài viết nói về giấc ngủ và việc học."
+    for n in range(40)
+)
+OTHER = " ".join(
+    f"Uống đủ nước mỗi ngày giữ cho cơ thể khỏe mạnh, ý thứ {n} về dinh dưỡng." for n in range(40)
+)
+
+
+def _page(url, title="", text="", access="FULLTEXT_AVAILABLE", doi=""):
+    return explore_quality.Evidence(url, title, access=access, text=text, doi=doi)
+
+
+def test_one_story_at_two_sites_is_one_document():
+    same = explore_quality.same_document
+    # Published again elsewhere, under the other site's title and with its own lines around it.
+    original = _page("https://a.example.vn/ngu", "Ngủ để nhớ lâu", STORY)
+    copy = _page("https://b.example.vn/x", "Vì sao cần ngủ đủ - Báo B", "Theo báo A. " + STORY + " Xem thêm.")
+    assert same(original, copy)
+    # A mobile or AMP copy: the text is the same, the address is not.
+    assert same(original, _page("https://m.a.example.vn/ngu", "Ngủ để nhớ lâu", STORY[:1500]))
+    # An abstract is in its paper's full text.
+    assert same(original, _page("https://c.example.org/abs", "", STORY[:900], "PARTIAL_CONTENT"))
+    # One DOI, however written, or one long title, even with no text to compare.
+    assert same(_page("https://x.org/1", doi="10.1007/abc"), _page("https://y.org/2", doi="10.1007/abc"))
+    assert explore_quality.normalize_doi("https://doi.org/10.1007/ABC") == "10.1007/abc"
+    assert explore_quality.normalize_doi("RePEc:spr:manrev") == ""
+    long_title = "Sleep and memory consolidation in adolescents: a review"
+    assert same(_page("https://x.org/1", long_title), _page("https://y.org/2", long_title + "."))
+    # Different documents stay apart: other words, or only a short title in common.
+    assert not same(original, _page("https://d.example.vn/nuoc", "Ngủ để nhớ lâu", OTHER))
+    assert not same(_page("https://x.org/1", "Giấc ngủ"), _page("https://y.org/2", "Giấc ngủ"))
+
+
+def test_the_more_readable_copy_is_kept_in_the_first_ones_place():
+    pages = [
+        _page("https://a.example.vn/ngu", "Ngủ", STORY[:900], "PARTIAL_CONTENT"),
+        _page("https://d.example.vn/nuoc", "Nước", OTHER),
+        _page("https://b.example.vn/ngu", "Ngủ", STORY),
+        _page("https://m.b.example.vn/ngu", "Ngủ", STORY),
+    ]
+    kept = explore_quality.unique(pages)
+    assert [p.url for p in kept] == ["https://b.example.vn/ngu", "https://d.example.vn/nuoc"]
+
+
+async def test_a_story_published_twice_is_offered_once(client, auth, explore_ai):  # noqa: F811
+    headers = auth()
+    await consent(client, headers)
+    explore_ai["evidence"] = [
+        _page(SLEEP, "Sleep and memory", STORY),
+        _page(NAP, "Why naps help - Health", "Republished. " + STORY),
+    ]
+    explore_ai["choice"] = [pick(1), pick(2)]
+    documents = (await ask(client, headers)).json()["documents"]
+    assert [d["url"] for d in documents] == [SLEEP]

@@ -359,7 +359,7 @@ async def discover(settings: Settings, query: str, language: str) -> Discovery:
     if not candidates:
         return Discovery([])
     evidence = await explore_quality.verify(candidates, settings.web_contact)
-    verified, sources, seen = [], [], set()
+    sources, seen = [], set()
     for item in evidence:
         url = clean_url(item.url)
         if (
@@ -373,8 +373,10 @@ async def discover(settings: Settings, query: str, language: str) -> Discovery:
             continue
         seen.add(_same(url))
         item.url = url
-        verified.append(Candidate(url, tidy_title(item.title, url)))
         sources.append(item)
+    # The same document at two addresses: a story another site published again, a mobile or AMP copy.
+    sources = explore_quality.unique(sources)
+    verified = [Candidate(item.url, tidy_title(item.title, item.url)) for item in sources]
     if not verified:
         return Discovery([])
     notes = json.dumps(
