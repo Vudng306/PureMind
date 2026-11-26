@@ -225,7 +225,8 @@ class Article:
     content: str
     word_count: int
     published_at: datetime | None
-    # The page says its text is for subscribers: what is on it is a preview, never the whole document.
+    # What is on the page is a preview, never the whole document: the page says its text is for subscribers,
+    # or it is a scholarly record (an abstract with the site's notes) far too short for the work it describes.
     paywalled: bool = False
 
 
@@ -442,11 +443,33 @@ def _content(html: bytes, url: str, title: str, *, drop_hidden: bool, drop_named
     return content, share
 
 
+RECORD_MIN_WORDS = 1000  # a scholarly work's full text, when the record gives no page range
+RECORD_WORDS_PER_PAGE = 150  # a printed page holds 400 and more: a text under this is not the whole work
+
+
+def _record_min_words(soup: BeautifulSoup) -> int:
+    """How many words the text of a scholarly record's page must have to be the work itself, or 0 for a page
+    that is no such record.
+
+    Publishers and indexes (IDEAS/RePEc, library catalogues, PubMed) tag a work's page with `citation_*` for
+    Google Scholar. An index's page carries an abstract, a citation and its own notes: hundreds of words,
+    enough to pass for an article, for a work that is fifty pages long and kept elsewhere behind a login.
+    """
+    if not _meta(soup, "citation_title"):
+        return 0
+    first, last = _meta(soup, "citation_firstpage") or "", _meta(soup, "citation_lastpage") or ""
+    if first.isdigit() and last.isdigit() and 0 < int(last) - int(first) < 2000:
+        return max(MIN_ARTICLE_WORDS, (int(last) - int(first) + 1) * RECORD_WORDS_PER_PAGE)
+    return RECORD_MIN_WORDS
+
+
 def extract_article(html: bytes, url: str) -> Article:
     soup = BeautifulSoup(html, "html.parser")
     ld_body = _ld_body(soup)  # read before clean_soup drops the <script> tags
     paywalled = _paywalled(soup)
-    title = _meta(soup, "og:title", "twitter:title")
+    record_min = _record_min_words(soup)
+    # An index may cut og:title short ("…: a"); the title a scholarly page gives Google Scholar is whole.
+    title = _meta(soup, "citation_title", "og:title", "twitter:title")
     if not title and soup.title and soup.title.string:
         title = soup.title.string.strip()
     if not title:
@@ -477,10 +500,11 @@ def extract_article(html: bytes, url: str) -> Article:
     # rather than saving an empty document.
     if word_count(content) < MIN_WORDS and word_count(ld_body) > word_count(content):
         content = ld_body
+    words = word_count(content)
     return Article(
         title=title[:500],
         content=content,
-        word_count=word_count(content),
+        word_count=words,
         published_at=published_at,
-        paywalled=paywalled,
+        paywalled=paywalled or words < record_min,
     )

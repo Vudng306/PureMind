@@ -383,6 +383,17 @@ async def test_check_does_not_call_a_subscribers_page_importable(client, auth, f
     assert body["pdf_url"] == "https://journal.example.com/articles/closed.pdf"
 
 
+async def test_check_does_not_call_an_index_record_importable(client, auth, fake_web):  # noqa: F811
+    from tests.test_epub_web import SPAN, _record
+
+    h = auth()
+    fake_web.dns["ideas.repec.org"] = ["93.184.216.34"]
+    fake_web.routes["ideas.repec.org/a/x.html"] = page(_record(600, SPAN))
+    body = (await check(client, h, "https://ideas.repec.org/a/x.html")).json()
+    # Six hundred words, but an abstract and the index's notes for a 51-page paper kept elsewhere.
+    assert body["status"] == "blocked" and body["import_url"] == ""
+
+
 async def test_check_calls_a_bot_check_blocked_not_worth_retrying(client, auth, fake_web):  # noqa: F811
     h = auth()
     fake_web.dns["papers.example.org"] = ["93.184.216.34"]

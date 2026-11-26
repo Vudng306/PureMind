@@ -151,3 +151,13 @@ async def test_direct_guidance_does_not_promise_live_lookup(monkeypatch):
     monkeypatch.setattr(openai_client, "chat", chat)
     result = await explore_quality.classify(get_settings(), "weather today", "en", Usage())
     assert "city" not in result.guidance and "deeper reading" in result.guidance
+
+
+def test_an_index_record_is_never_evidence_of_full_text():
+    from tests.test_epub_web import SPAN, _record
+
+    html = _record(600, SPAN).replace(b"<head>", b'<head><meta name="description" content="Downloadable!">')
+    result = explore_quality.extract(html, "https://ideas.repec.org/a/x.html")
+    # The ranking step may name it, but never summarize a 51-page paper from its abstract page.
+    assert result.access == "ACCESS_RESTRICTED" and result.text == "Downloadable!"
+    assert result.title == "Trust in AI-driven decision-making: a systematic literature review"
