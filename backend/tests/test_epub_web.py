@@ -681,3 +681,51 @@ async def test_a_bot_check_is_a_refusal_not_a_page_to_keep(client, auth, fake_we
     assert "không cho phép PureMind" in r.json()["detail"] and "PDF" in r.json()["detail"]
     assert (await client.get("/api/documents", headers=h)).json() == []
     assert len(fake_web.requests) == 1  # one visit: no second try to get past the check
+
+
+def _record(body_words: int, pages: bytes = b"") -> bytes:
+    """A scholarly record's page, as an index (IDEAS/RePEc) shows one: Google Scholar tags, a whole title that
+    og:title cuts short, an abstract and the site's own notes."""
+    prose = b" ".join(b"word%d" % n for n in range(body_words))
+    return (
+        b"<html><head><title>Trust in AI-driven decision-making: a systematic literature review</title>"
+        b'<meta name="citation_title" content="Trust in AI-driven decision-making: a systematic literature review">'
+        b'<meta property="og:title" content="Trust in AI-driven decision-making: a">'
+        + pages
+        + b"</head><body>"
+        b"<div id='content'><h2>Abstract</h2><p>" + prose + b"</p>"
+        b"<h2>Download full text from publisher</h2><p>As the access to this document is restricted, you may"
+        b" want to search for a different version of it.</p></div></body></html>"
+    )
+
+
+SPAN = b'<meta name="citation_firstpage" content="2179"><meta name="citation_lastpage" content="2229">'
+
+
+def test_an_index_record_is_a_preview_not_the_work():
+    # 600 words for a 51-page paper: an abstract and the index's notes.
+    record = web.extract_article(_record(600, SPAN), "https://ideas.repec.org/a/x.html")
+    assert record.word_count >= web.MIN_ARTICLE_WORDS and record.paywalled is True
+    assert record.title == "Trust in AI-driven decision-making: a systematic literature review"
+    # No page range: a scholarly work's full text still runs past a thousand words.
+    assert web.extract_article(_record(600), "https://ideas.repec.org/a/x.html").paywalled is True
+    # The full text on the publisher's own page is the work.
+    assert web.extract_article(_record(9000, SPAN), "https://journal.example.com/a").paywalled is False
+    assert web.extract_article(_record(1500), "https://journal.example.com/a").paywalled is False
+    # A page with no scholarly tags is judged as an article, by its length alone.
+    plain = _record(600).replace(b'name="citation_title"', b'name="x_title"')
+    assert web.extract_article(plain, "https://blog.example.com/a").paywalled is False
+
+
+async def test_save_url_does_not_keep_an_index_record_as_the_document(client, auth, fake_web):
+    fake_web.dns["ideas.repec.org"] = ["93.184.216.34"]
+    fake_web.routes["ideas.repec.org/a/x.html"] = httpx.Response(
+        200, headers={"content-type": "text/html"}, content=_record(600, SPAN)
+    )
+    h = auth()
+    r = await client.post(
+        "/api/documents/save-url", headers=h, json={"url": "https://ideas.repec.org/a/x.html"}
+    )
+    assert r.status_code == 422, r.text
+    assert "xem trước" in r.json()["detail"]
+    assert (await client.get("/api/documents", headers=h)).json() == []
