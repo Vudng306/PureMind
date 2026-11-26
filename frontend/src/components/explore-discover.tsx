@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { AiConsentDialog } from "@/components/ai-consent-dialog";
+import { useAuth } from "@/components/auth-provider";
 import { Icon } from "@/components/icons";
 import { ApiError, api } from "@/lib/api";
 import {
-  MAX_QUERY, MIN_QUERY, actionsFor, checkUrl, hostOf, keep, loadKept, searchExplore, stageOf,
-  type Action, type Found, type Kept, type Stage,
+  MAX_QUERY, MIN_QUERY, actionsFor, checkUrl, hostOf, loadHistory, saveHistory, searchExplore, stageOf, withSearch,
+  type Action, type Found, type Kept, type Past, type Stage,
 } from "@/lib/discover";
+import { relativeTime } from "@/lib/doc-view";
 import { documentsKey, useSaveUrl } from "@/lib/documents";
 import { useLang, useT, type Key } from "@/lib/i18n";
 import { MSG, messageFor } from "@/lib/messages";
@@ -30,9 +32,12 @@ export function ExploreDiscover({ signedIn }: { signedIn: boolean }) {
   const touch = useCoarsePointer();
   const lang = useLang();
   const qc = useQueryClient();
+  const { session } = useAuth();
   const { data: user } = useAccount();
   const [draft, setDraft] = useState("");
-  const [kept, setKept] = useState<Kept | null>(null);
+  // What is on screen: the search just made, or one opened from the history. The page always opens empty.
+  const [kept, setKept] = useState<Kept | Past | null>(null);
+  const [history, setHistory] = useState<Past[]>([]);
   const [pending, setPending] = useState<string | null>(null); // the subject being searched
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
@@ -43,12 +48,15 @@ export function ExploreDiscover({ signedIn }: { signedIn: boolean }) {
   const busy = pending !== null;
   const tooShort = draft.trim().length < MIN_QUERY;
 
+  const userId = signedIn ? session?.user.id : undefined;
   useEffect(() => {
-    const last = loadKept();
-    if (!last) return;
-    setKept(last);
-    setDraft(last.query);
-  }, []);
+    setHistory(userId ? loadHistory(userId) : []);
+  }, [userId]);
+
+  function remember(next: Past[]) {
+    setHistory(next);
+    if (userId) saveHistory(userId, next);
+  }
 
   async function find(text?: string) {
     const query = (text ?? draft).trim().replace(/\s+/g, " ");
@@ -61,8 +69,9 @@ export function ExploreDiscover({ signedIn }: { signedIn: boolean }) {
     try {
       const result = await searchExplore(query, lang);
       const next = { query, documents: result.documents, intent: result.intent, guidance: result.guidance };
-      setKept(next);
-      keep(next);
+      const updated = withSearch(history, next);
+      remember(updated);
+      setKept(updated[0]);
       qc.setQueryData<User>(accountKey, (u) => (u ? { ...u, chat_quota_remaining: result.chat_quota_remaining } : u));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : MSG["MSG-99"]);
@@ -73,7 +82,6 @@ export function ExploreDiscover({ signedIn }: { signedIn: boolean }) {
 
   function startOver() {
     setKept(null);
-    keep(null);
     setDraft("");
     setError(null);
     input.current?.focus();
@@ -158,6 +166,19 @@ export function ExploreDiscover({ signedIn }: { signedIn: boolean }) {
         <Results kept={kept} onStartOver={startOver} />
       ) : (
         <div className="flex flex-col gap-8">
+          {history.length > 0 && (
+            <History
+              history={history}
+              onOpen={(past) => {
+                setError(null);
+                setDraft(past.query);
+                setKept(past);
+                window.scrollTo({ top: 0 });
+              }}
+              onRemove={(id) => remember(history.filter((p) => p.id !== id))}
+              onClear={() => remember([])}
+            />
+          )}
           {signedIn && (
             <div className="flex flex-col gap-2.5">
               <span className="text-sm font-medium text-muted">{t("discover.try")}</span>
@@ -193,6 +214,57 @@ export function ExploreDiscover({ signedIn }: { signedIn: boolean }) {
   );
 }
 
+/** Earlier searches, newest first: each opens again with the documents the AI chose then. */
+function History({ history, onOpen, onRemove, onClear }: {
+  history: Past[];
+  onOpen: (past: Past) => void;
+  onRemove: (id: string) => void;
+  onClear: () => void;
+}) {
+  const t = useT();
+  const lang = useLang();
+  return (
+    <section className="flex flex-col gap-2.5" aria-labelledby="discover-history">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="discover-history" className="flex items-center gap-2 text-sm font-medium text-muted">
+          <Icon name="history" size={16} />
+          {t("discover.history")}
+        </h2>
+        <button type="button" className="btn-ghost h-8 px-2.5 text-xs max-md:h-11" onClick={onClear}>
+          {t("discover.historyClear")}
+        </button>
+      </div>
+      <p className="text-xs text-muted">{t("discover.historyHint")}</p>
+      <ul className="card divide-y divide-line overflow-hidden">
+        {history.map((past) => (
+          <li key={past.id} className="flex items-stretch">
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-soft max-md:min-h-11"
+              onClick={() => onOpen(past)}
+            >
+              <span className="line-clamp-2 break-words text-[15px] leading-snug text-ink">{past.query}</span>
+              <span className="text-xs text-muted">
+                {relativeTime(past.at, lang)} ·{" "}
+                {past.documents.length ? t("discover.historyDocs", { n: past.documents.length }) : t("discover.historyNoDocs")}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="flex w-11 shrink-0 items-center justify-center text-muted transition-colors hover:bg-soft hover:text-danger"
+              aria-label={t("discover.historyRemove", { q: past.query })}
+              title={t("common.delete")}
+              onClick={() => onRemove(past.id)}
+            >
+              <Icon name="x" size={16} />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** The road from a subject to a document being read, so the page says what happens after the search. */
 function HowItWorks() {
   const t = useT();
@@ -209,9 +281,11 @@ function HowItWorks() {
   );
 }
 
-function Results({ kept, onStartOver }: { kept: Kept; onStartOver: () => void }) {
+function Results({ kept, onStartOver }: { kept: Kept | Past; onStartOver: () => void }) {
   const t = useT();
+  const lang = useLang();
   const { query, documents } = kept;
+  const at = "at" in kept ? kept.at : null;
 
   if (documents.length === 0) {
     return (
@@ -234,6 +308,7 @@ function Results({ kept, onStartOver }: { kept: Kept; onStartOver: () => void })
         <div className="flex min-w-0 flex-col gap-1">
           <h2 className="text-[19px] font-semibold leading-snug text-ink">{t("discover.resultsTitle", { n: documents.length })}</h2>
           <p className="truncate text-sm text-muted max-md:line-clamp-2 max-md:whitespace-normal max-md:break-words">{t("discover.resultsFor", { q: query })}</p>
+          {at && <p className="text-xs text-muted">{t("discover.historyAt", { when: relativeTime(at, lang) })}</p>}
         </div>
         <button type="button" className="btn-ghost h-9 px-3 text-sm max-md:h-11" onClick={onStartOver}>
           <Icon name="plus" size={15} />

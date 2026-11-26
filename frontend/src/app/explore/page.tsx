@@ -19,7 +19,7 @@ export default function ExplorePage() {
       </div>
     );
   }
-  return session ? <SignedInExplore /> : <PublicExplore />;
+  return session ? <SignedInExplore key={session.user.id} /> : <PublicExplore />;
 }
 
 /** It is outside the app's pages, so what they ask of an account is asked here too. */

@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { actionsFor, hostOf, stageOf, type Check } from "./discover";
+import { actionsFor, hostOf, loadHistory, saveHistory, stageOf, withSearch, type Check, type Found } from "./discover";
 
 const check = (status: Check["status"]): Check => ({
   status, kind: status === "importable" ? "article" : "", import_url: "https://a.example/x", title: "", word_count: 0, pdf_url: "", document_id: null,
@@ -42,5 +42,47 @@ describe("a result on Explore", () => {
   it("names a site without its www", () => {
     expect(hostOf("https://www.nature.com/articles/x")).toBe("nature.com");
     expect(hostOf("not a url")).toBe("not a url");
+  });
+});
+
+describe("the history of searches on Explore", () => {
+  const doc = { url: "https://a.example/x", title: "A", source: "", authors: "", year: null, kind: "article", summary: "", reason: "", document_id: null } as Found;
+
+  it("puts the newest search on top and keeps its answer", () => {
+    const first = withSearch([], { query: "giấc ngủ", documents: [doc] }, new Date("2026-11-20T08:00:00Z"));
+    const both = withSearch(first, { query: "khí hậu", documents: [] }, new Date("2026-11-21T08:00:00Z"));
+    expect(both.map((p) => p.query)).toEqual(["khí hậu", "giấc ngủ"]);
+    expect(both[1].documents).toEqual([doc]);
+    expect(both[0].at).toBe("2026-11-21T08:00:00.000Z");
+    expect(new Set(both.map((p) => p.id)).size).toBe(2);
+  });
+
+  it("replaces an older answer to the same subject and stays short", () => {
+    let history = withSearch([], { query: "Giấc ngủ", documents: [] });
+    history = withSearch(history, { query: "giấc ngủ", documents: [doc] });
+    expect(history).toHaveLength(1);
+    expect(history[0].documents).toEqual([doc]);
+    for (let i = 0; i < 5; i++) history = withSearch(history, { query: `chủ đề ${i}`, documents: [] }, new Date(), 3);
+    expect(history.map((p) => p.query)).toEqual(["chủ đề 4", "chủ đề 3", "chủ đề 2"]);
+  });
+
+  it("loads only searches saved for the current account", () => {
+    const saved = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => saved.get(key) ?? null,
+      setItem: (key: string, value: string) => saved.set(key, value),
+    });
+    vi.stubGlobal("sessionStorage", {
+      getItem: () => JSON.stringify({ query: "previous tab search", documents: [doc] }),
+      removeItem: vi.fn(),
+    });
+    try {
+      const first = withSearch([], { query: "first account search", documents: [doc] });
+      saveHistory("first", first);
+      expect(loadHistory("second")).toEqual([]);
+      expect(loadHistory("first")).toEqual(first);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
