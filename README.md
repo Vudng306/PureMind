@@ -9,11 +9,15 @@ Tài liệu dự án (trong [`docs/`](docs/)):
 | Yêu cầu sản phẩm (PRD) | [`PureMind_PRD_v1.5.docx`](docs/PureMind_PRD_v1.5.docx) |
 | Đặc tả yêu cầu phần mềm (SRS) | [`PureMind_SRS_v1.5.docx`](docs/PureMind_SRS_v1.5.docx) |
 | Sơ đồ thực thể liên kết | [`ERD_PureMind.docx`](docs/ERD_PureMind.docx), [`ERD_PureMind.drawio`](docs/ERD_PureMind.drawio), [`ERD_PureMind.png`](docs/ERD_PureMind.png) |
-| Báo cáo đồ án | [`Bao_cao_DATN_PureMind_v8.docx`](docs/Bao_cao_DATN_PureMind_v8.docx) |
+| Báo cáo đồ án | [`DATN2026-1_CNTT_CNPM_0029968_DuongVanVu_Baocao_20261127_v1.docx`](docs/DATN2026-1_CNTT_CNPM_0029968_DuongVanVu_Baocao_20261127_v1.docx) |
+| Nhật ký thực hiện ĐATN | [`DATN2026-1_CNTT_CNPM_0029968_DuongVanVu_Nhatky_20261127_v1.docx`](docs/DATN2026-1_CNTT_CNPM_0029968_DuongVanVu_Nhatky_20261127_v1.docx) |
 | Tình trạng Reader v2 | [`reader-v2-release.md`](docs/reader-v2-release.md) |
 | Tình trạng Clean Reader | [`clean-reader-release.md`](docs/clean-reader-release.md), nhật ký làm việc [`clean-reader-audit.md`](docs/clean-reader-audit.md) |
+| Giao diện điện thoại | [`mobile-responsive.md`](docs/mobile-responsive.md) |
+| Nâng cấp Khám phá bằng AI | [`AI_EXPLORE_UPGRADE.md`](docs/AI_EXPLORE_UPGRADE.md) |
+| Kiểm thử lại yêu cầu phi chức năng | [`nfr-retest-2026-11-23.md`](docs/nfr-retest-2026-11-23.md) |
 
-Các bản v1.1–v1.4 vẫn được giữ trong `docs/` để đối chiếu.
+`docs/` chỉ giữ bản mới nhất của mỗi tài liệu. Các bản cũ (PRD, SRS v1.1–v1.4, báo cáo v8) vẫn xem được trong lịch sử git.
 
 | Thành phần | Công nghệ |
 |---|---|
